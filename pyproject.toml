@@ -1,0 +1,25 @@
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311"]
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | venv
+  | build
+  | dist
+)/
+'''
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[project]
+name = "english-learning-agent"
+version = "0.1.0"
+description = "AI-powered English learning agent for TOEFL ITP preparation"
+requires-python = ">=3.10"
