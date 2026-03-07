@@ -1,0 +1,45 @@
+# ================================================
+# File dan folder yang TIDAK ikut masuk ke Docker image
+# Tujuan: memperkecil ukuran image dan menjaga keamanan
+# ================================================
+
+# Jangan pernah masukkan API keys ke dalam image!
+.env
+.env.local
+
+# Virtual environment — container punya Python sendiri
+venv/
+.venv/
+
+# Database — data persist via volume mount, bukan di dalam image
+*.db
+*.sqlite3
+
+# Vector store — sama seperti database, di-mount via volume
+vector_store/
+
+# Python cache — tidak dibutuhkan di production
+__pycache__/
+*.pyc
+*.pyo
+
+# Git history — tidak relevan di dalam container
+.git/
+.gitignore
+
+# Development & testing files
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs — di-mount via volume
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db

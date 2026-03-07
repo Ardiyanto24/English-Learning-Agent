@@ -1,0 +1,81 @@
+# ================================================
+# GitHub Actions — CI Pipeline
+# Berjalan otomatis setiap kali ada push atau pull request
+# Jobs: lint (flake8 + black) dan test (pytest)
+# ================================================
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # -----------------------------------------------
+  # JOB 1: Lint — cek code style dan formatting
+  # -----------------------------------------------
+  lint:
+    name: Lint (flake8 + black)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-dev-${{ hashFiles('requirements-dev.txt') }}
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Jalankan flake8
+        run: flake8 .
+
+      - name: Jalankan black check
+        run: black --check .
+
+  # -----------------------------------------------
+  # JOB 2: Test — jalankan pytest
+  # -----------------------------------------------
+  test:
+    name: Test (pytest)
+    runs-on: ubuntu-latest
+    # Test hanya jalan jika lint lolos
+    needs: lint
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install semua dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Buat file .env dummy untuk test
+        run: |
+          echo "ANTHROPIC_API_KEY=test_key" >> .env
+          echo "OPENAI_API_KEY=test_key" >> .env
+          echo "DATABASE_PATH=./test.db" >> .env
+          echo "CHROMA_DB_PATH=./vector_store/chroma_db" >> .env
+
+      - name: Jalankan pytest
+        run: pytest tests/ -v --tb=short

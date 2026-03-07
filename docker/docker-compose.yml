@@ -1,0 +1,23 @@
+# ================================================
+# Docker Compose — Production / Run utama
+# Gunakan: make docker-up  atau  docker-compose up
+# ================================================
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8501:8501"
+    volumes:
+      # Persist database dan vector store di luar container
+      # Agar data tidak hilang saat container di-restart
+      - ../data:/app/data
+      - ../vector_store:/app/vector_store
+      - ../logs:/app/logs
+    env_file:
+      # Load semua variabel dari file .env di root project
+      - ../.env
+    restart: unless-stopped

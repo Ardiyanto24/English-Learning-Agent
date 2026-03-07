@@ -1,0 +1,32 @@
+# ================================================
+# Docker Compose — Development mode
+# Perbedaan dari production:
+# - Volume mount seluruh kode (live reload saat file diubah)
+# - Streamlit runOnSave aktif
+# Gunakan: docker-compose -f docker/docker-compose.dev.yml up
+# ================================================
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8501:8501"
+    volumes:
+      # Mount seluruh kode — perubahan file langsung ter-reflect
+      # tanpa harus rebuild container
+      - ..:/app
+      # Kecualikan venv di dalam container agar tidak di-overwrite
+      - /app/venv
+    env_file:
+      - ../.env
+    environment:
+      # Aktifkan auto-reload Streamlit saat file berubah
+      - STREAMLIT_SERVER_RUN_ON_SAVE=true
+    command: >
+      streamlit run app.py
+      --server.port=8501
+      --server.address=0.0.0.0
+      --server.runOnSave=true
