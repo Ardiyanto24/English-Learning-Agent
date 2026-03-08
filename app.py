@@ -58,16 +58,19 @@ if page == "🏠 Dashboard":
     col1, col2 = st.columns(2)
     with col1:
         st.info("📚 **Vocab Agent**\nLatihan kosakata dengan spaced repetition")
-        st.warning("📝 **Quiz Agent**\n_Coming soon — Phase 3_")
+        st.info("📝 **Quiz Agent**\nLatihan grammar dengan feedback 4 lapisan")
     with col2:
         st.warning("🎤 **Speaking Agent**\n_Coming soon — Phase 4_")
         st.warning("📊 **TOEFL Simulator**\n_Coming soon — Phase 5_")
 
 elif page == "📚 Vocab Agent":
-    # Import dan jalankan halaman vocab
     from pages.vocab import main as vocab_main
     vocab_main()
 
-elif page in ["📝 Quiz Agent", "🎤 Speaking Agent", "📊 TOEFL Simulator"]:
+elif page == "📝 Quiz Agent":
+    from pages.quiz import main as quiz_main
+    quiz_main()
+
+elif page in ["🎤 Speaking Agent", "📊 TOEFL Simulator"]:
     st.title(page)
     st.info("🚧 Fitur ini sedang dalam pengembangan. Coming soon!")
