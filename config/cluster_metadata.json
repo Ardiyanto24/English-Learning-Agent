@@ -1,0 +1,97 @@
+{
+  "clusters": {
+    "Tense System": {
+      "cluster_id": 1,
+      "topics": [
+        "Present Tenses",
+        "Past Tenses",
+        "Future Tenses",
+        "Verb Tense Consistency"
+      ]
+    },
+    "Verb Forms & Usage": {
+      "cluster_id": 2,
+      "topics": [
+        "Passive Voice",
+        "Causative Verbs",
+        "Gerund vs Infinitive",
+        "Parallel Verb Forms",
+        "Linking Verbs"
+      ]
+    },
+    "Subject-Verb Agreement": {
+      "cluster_id": 3,
+      "topics": [
+        "Subject-Verb Agreement",
+        "Intervening Phrases",
+        "Compound Subjects"
+      ]
+    },
+    "Noun Clause": {
+      "cluster_id": 4,
+      "topics": [
+        "Noun Clause That",
+        "Omitted That",
+        "Wh- Noun Clause",
+        "If/Whether Noun Clause",
+        "Question Inversion vs Noun Clause",
+        "Advanced Noun Clause"
+      ]
+    },
+    "Adjective Clause": {
+      "cluster_id": 5,
+      "topics": [
+        "Who / Whom",
+        "Which / That",
+        "Whose",
+        "Where / When",
+        "Reduced Adjective Clause Level 1",
+        "Reduced Adjective Clause Level 2",
+        "Non-essential vs Essential Clause"
+      ]
+    },
+    "Adverb Clause": {
+      "cluster_id": 6,
+      "topics": [
+        "Time Clauses",
+        "Cause-effect Clauses",
+        "Contrast Clauses",
+        "Conditional Clauses",
+        "Advanced Conditional Patterns",
+        "Elliptical Clauses Complex"
+      ]
+    },
+    "Parallel Structure": {
+      "cluster_id": 7,
+      "topics": [
+        "Parallel in Words",
+        "Parallel in Verb Forms",
+        "Parallel in Clauses",
+        "Correlative Conjunctions",
+        "Parallel Structure Complex"
+      ]
+    },
+    "Comparison": {
+      "cluster_id": 8,
+      "topics": [
+        "Comparatives",
+        "Superlatives",
+        "Illogical Comparison"
+      ]
+    },
+    "Advanced Sentence Structure": {
+      "cluster_id": 9,
+      "topics": [
+        "Conjunctions vs Conjunctive Adverbs",
+        "Inversion Advanced",
+        "Clause Reduction Level 2",
+        "Implied Subjects",
+        "Modifiers vs Verb Placement",
+        "Adjective vs Adverb Positioning",
+        "Sentence Pattern Integration"
+      ]
+    }
+  },
+  "total_clusters": 9,
+  "total_topics": 46
+}

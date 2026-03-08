@@ -1,0 +1,201 @@
+{
+  "Present Tenses": {
+    "requires": [],
+    "cluster": "Tense System"
+  },
+  "Past Tenses": {
+    "requires": ["Present Tenses"],
+    "cluster": "Tense System"
+  },
+  "Future Tenses": {
+    "requires": ["Present Tenses", "Past Tenses"],
+    "cluster": "Tense System"
+  },
+  "Verb Tense Consistency": {
+    "requires": ["Present Tenses", "Past Tenses", "Future Tenses"],
+    "cluster": "Tense System"
+  },
+
+  "Passive Voice": {
+    "requires": ["Present Tenses", "Past Tenses"],
+    "cluster": "Verb Forms & Usage"
+  },
+  "Causative Verbs": {
+    "requires": ["Passive Voice"],
+    "cluster": "Verb Forms & Usage"
+  },
+  "Gerund vs Infinitive": {
+    "requires": ["Present Tenses"],
+    "cluster": "Verb Forms & Usage"
+  },
+  "Parallel Verb Forms": {
+    "requires": ["Gerund vs Infinitive"],
+    "cluster": "Verb Forms & Usage"
+  },
+  "Linking Verbs": {
+    "requires": ["Present Tenses"],
+    "cluster": "Verb Forms & Usage"
+  },
+
+  "Subject-Verb Agreement": {
+    "requires": ["Present Tenses"],
+    "cluster": "Subject-Verb Agreement"
+  },
+  "Intervening Phrases": {
+    "requires": ["Subject-Verb Agreement"],
+    "cluster": "Subject-Verb Agreement"
+  },
+  "Compound Subjects": {
+    "requires": ["Subject-Verb Agreement"],
+    "cluster": "Subject-Verb Agreement"
+  },
+
+  "Noun Clause That": {
+    "requires": ["Present Tenses", "Past Tenses"],
+    "cluster": "Noun Clause"
+  },
+  "Omitted That": {
+    "requires": ["Noun Clause That"],
+    "cluster": "Noun Clause"
+  },
+  "Wh- Noun Clause": {
+    "requires": ["Noun Clause That"],
+    "cluster": "Noun Clause"
+  },
+  "If/Whether Noun Clause": {
+    "requires": ["Noun Clause That"],
+    "cluster": "Noun Clause"
+  },
+  "Question Inversion vs Noun Clause": {
+    "requires": ["Wh- Noun Clause", "If/Whether Noun Clause"],
+    "cluster": "Noun Clause"
+  },
+  "Advanced Noun Clause": {
+    "requires": ["Question Inversion vs Noun Clause", "Omitted That"],
+    "cluster": "Noun Clause"
+  },
+
+  "Who / Whom": {
+    "requires": ["Subject-Verb Agreement"],
+    "cluster": "Adjective Clause"
+  },
+  "Which / That": {
+    "requires": ["Subject-Verb Agreement"],
+    "cluster": "Adjective Clause"
+  },
+  "Whose": {
+    "requires": ["Who / Whom"],
+    "cluster": "Adjective Clause"
+  },
+  "Where / When": {
+    "requires": ["Which / That"],
+    "cluster": "Adjective Clause"
+  },
+  "Reduced Adjective Clause Level 1": {
+    "requires": ["Who / Whom", "Which / That"],
+    "cluster": "Adjective Clause"
+  },
+  "Reduced Adjective Clause Level 2": {
+    "requires": ["Reduced Adjective Clause Level 1"],
+    "cluster": "Adjective Clause"
+  },
+  "Non-essential vs Essential Clause": {
+    "requires": ["Who / Whom", "Which / That", "Whose"],
+    "cluster": "Adjective Clause"
+  },
+
+  "Time Clauses": {
+    "requires": ["Verb Tense Consistency"],
+    "cluster": "Adverb Clause"
+  },
+  "Cause-effect Clauses": {
+    "requires": ["Present Tenses", "Past Tenses"],
+    "cluster": "Adverb Clause"
+  },
+  "Contrast Clauses": {
+    "requires": ["Cause-effect Clauses"],
+    "cluster": "Adverb Clause"
+  },
+  "Conditional Clauses": {
+    "requires": ["Present Tenses", "Past Tenses", "Future Tenses"],
+    "cluster": "Adverb Clause"
+  },
+  "Advanced Conditional Patterns": {
+    "requires": ["Conditional Clauses"],
+    "cluster": "Adverb Clause"
+  },
+  "Elliptical Clauses Complex": {
+    "requires": ["Time Clauses", "Contrast Clauses"],
+    "cluster": "Adverb Clause"
+  },
+
+  "Parallel in Words": {
+    "requires": ["Subject-Verb Agreement"],
+    "cluster": "Parallel Structure"
+  },
+  "Parallel in Verb Forms": {
+    "requires": ["Parallel Verb Forms", "Parallel in Words"],
+    "cluster": "Parallel Structure"
+  },
+  "Parallel in Clauses": {
+    "requires": ["Parallel in Verb Forms"],
+    "cluster": "Parallel Structure"
+  },
+  "Correlative Conjunctions": {
+    "requires": ["Parallel in Words"],
+    "cluster": "Parallel Structure"
+  },
+  "Parallel Structure Complex": {
+    "requires": ["Parallel in Clauses", "Correlative Conjunctions"],
+    "cluster": "Parallel Structure"
+  },
+
+  "Comparatives": {
+    "requires": ["Subject-Verb Agreement"],
+    "cluster": "Comparison"
+  },
+  "Superlatives": {
+    "requires": ["Comparatives"],
+    "cluster": "Comparison"
+  },
+  "Illogical Comparison": {
+    "requires": ["Comparatives", "Superlatives"],
+    "cluster": "Comparison"
+  },
+
+  "Conjunctions vs Conjunctive Adverbs": {
+    "requires": ["Contrast Clauses", "Cause-effect Clauses"],
+    "cluster": "Advanced Sentence Structure"
+  },
+  "Inversion Advanced": {
+    "requires": ["Subject-Verb Agreement", "Conditional Clauses"],
+    "cluster": "Advanced Sentence Structure"
+  },
+  "Clause Reduction Level 2": {
+    "requires": ["Reduced Adjective Clause Level 2", "Elliptical Clauses Complex"],
+    "cluster": "Advanced Sentence Structure"
+  },
+  "Implied Subjects": {
+    "requires": ["Time Clauses", "Passive Voice"],
+    "cluster": "Advanced Sentence Structure"
+  },
+  "Modifiers vs Verb Placement": {
+    "requires": ["Linking Verbs", "Implied Subjects"],
+    "cluster": "Advanced Sentence Structure"
+  },
+  "Adjective vs Adverb Positioning": {
+    "requires": ["Modifiers vs Verb Placement"],
+    "cluster": "Advanced Sentence Structure"
+  },
+  "Sentence Pattern Integration": {
+    "requires": [
+      "Advanced Noun Clause",
+      "Reduced Adjective Clause Level 2",
+      "Advanced Conditional Patterns",
+      "Parallel Structure Complex",
+      "Illogical Comparison",
+      "Adjective vs Adverb Positioning"
+    ],
+    "cluster": "Advanced Sentence Structure"
+  }
+}
