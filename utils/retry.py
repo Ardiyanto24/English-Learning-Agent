@@ -20,7 +20,7 @@ Penggunaan:
 """
 
 import functools
-from typing import Callable, Optional, Type, tuple
+from typing import Callable, Optional, Type
 
 from tenacity import (
     retry,

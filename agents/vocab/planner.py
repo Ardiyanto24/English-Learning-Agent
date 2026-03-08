@@ -1,168 +1,196 @@
 """
-prompts/vocab/planner_prompt.py
----------------------------------
-Prompt untuk Vocab Planner Agent.
+agents/vocab/planner.py
+------------------------
+Vocab Planner Agent.
 
-Planner bertugas membaca history user dari DB dan memutuskan
-konfigurasi sesi vocab yang optimal berdasarkan 2 logic:
+Tugas: Baca history user → tentukan konfigurasi sesi optimal.
 
-1. Difficulty Progression : Easy → Medium → Hard
-   - Naik difficulty jika avg mastery_score >= 80% di level saat ini
-   - Turun difficulty jika avg mastery_score < 40%
+Keunikan agent ini:
+- Cold start → SKIP LLM call, langsung pakai DEFAULT_PLANNER_CONFIG
+- Returning user → panggil Claude Haiku untuk tentukan config adaptif
 
-2. Cognitive Load Management:
-   - Maksimal 5 kata baru per sesi
-   - Sisa slot → review kata yang mastery_score < 60% (spaced repetition)
-
-Cold start (user baru): gunakan default config langsung tanpa LLM.
+Input  : topic (str), user_id (str, default "default_user")
+Output : dict sesuai spesifikasi Part 5
 """
 
-PLANNER_SYSTEM_PROMPT = """You are a vocabulary learning planner for an English learning app.
+import json
+from typing import Optional
 
-Your job is to analyze a student's learning history and create an optimal session plan \
-that balances new learning with spaced repetition review.
+import anthropic
+from dotenv import load_dotenv
 
-## Planning Logic
+from prompts.vocab.planner_prompt import (
+    PLANNER_SYSTEM_PROMPT,
+    DEFAULT_PLANNER_CONFIG,
+    build_planner_prompt,
+)
+from database.repositories.vocab_repository import (
+    get_weak_words,
+    get_word_tracking,
+)
+from utils.helpers import is_cold_start, calculate_score_pct
+from utils.logger import log_error, logger
+from utils.retry import retry_llm
 
-### 1. Difficulty Progression
-- Start at "easy" for new users (cold start)
-- Upgrade to "medium" when: average mastery_score >= 80% for easy words
-- Upgrade to "hard" when: average mastery_score >= 80% for medium words  
-- Downgrade one level when: average mastery_score < 40% for current level
+load_dotenv()
 
-### 2. Cognitive Load Management
-- Maximum 5 new words per session (to avoid cognitive overload)
-- Remaining slots → review words with mastery_score < 60% (spaced repetition)
-- Total words per session: 10 (default)
-
-### 3. Format Distribution
-Distribute formats roughly equally, adjusted for difficulty:
-- easy   : tebak_arti heavy (most accessible format)
-- medium : balanced distribution
-- hard   : sinonim_antonim and tebak_inggris heavy (more challenging)
-
-## Output Format
-You MUST respond with a valid JSON object only. No explanation, no markdown, no extra text.
-
-## Example Output (returning student, medium level)
-History shows: avg mastery_score medium words = 65%, 12 weak words available for review
-
-{
-  "topic": "sehari_hari",
-  "total_words": 10,
-  "new_words": 5,
-  "review_words": 5,
-  "difficulty_target": "medium",
-  "format_distribution": {
-    "tebak_arti": 3,
-    "sinonim_antonim": 4,
-    "tebak_inggris": 3
-  }
-}
-
-## Example Output (cold start / new user)
-No history available — use default config:
-
-{
-  "topic": "sehari_hari",
-  "total_words": 10,
-  "new_words": 5,
-  "review_words": 5,
-  "difficulty_target": "easy",
-  "format_distribution": {
-    "tebak_arti": 4,
-    "sinonim_antonim": 3,
-    "tebak_inggris": 3
-  }
-}
-
-Remember: respond with JSON only."""
+MODEL = "claude-haiku-4-5-20251001"
+_client: Optional[anthropic.Anthropic] = None
 
 
-def build_planner_prompt(
-    topic: str,
-    history_summary: dict,
-) -> str:
+def _get_client() -> anthropic.Anthropic:
+    global _client
+    if _client is None:
+        _client = anthropic.Anthropic()
+    return _client
+
+
+def _build_history_summary(topic: str) -> dict:
     """
-    Bangun user prompt untuk Vocab Planner Agent.
+    Ambil dan ringkas history user dari DB untuk dikirim ke Planner LLM.
+
+    Returns dict dengan struktur yang diharapkan build_planner_prompt().
+    """
+    try:
+        # Cek weak words untuk spaced repetition
+        weak_words = get_weak_words(topic=topic, threshold=60.0, limit=50)
+        weak_count = len(weak_words) if weak_words else 0
+
+        # Hitung rata-rata mastery per difficulty level
+        # Ambil sample kata dari DB untuk estimasi mastery per level
+        avg_mastery = {"easy": -1.0, "medium": -1.0, "hard": -1.0}
+
+        # Cold start jika tidak ada weak words dan tidak ada tracking
+        if weak_count == 0:
+            # Coba cek apakah ada data sama sekali
+            sample = get_word_tracking("sample_check", topic)
+            if is_cold_start(sample) and weak_count == 0:
+                return {"is_cold_start": True}
+
+        # Hitung avg mastery dari weak words yang ada
+        if weak_words:
+            by_difficulty: dict[str, list] = {}
+            for w in weak_words:
+                diff = w.get("difficulty", "easy")
+                score = w.get("mastery_score", 0.0)
+                by_difficulty.setdefault(diff, []).append(score)
+
+            for diff, scores in by_difficulty.items():
+                if scores:
+                    avg_mastery[diff] = round(sum(scores) / len(scores), 1)
+
+        return {
+            "is_cold_start": False,
+            "current_difficulty": _determine_current_difficulty(avg_mastery),
+            "avg_mastery_easy": avg_mastery["easy"],
+            "avg_mastery_medium": avg_mastery["medium"],
+            "avg_mastery_hard": avg_mastery["hard"],
+            "weak_words_count": weak_count,
+            "total_sessions": 0,  # Simplified — bisa diperluas nanti
+        }
+
+    except Exception as e:
+        log_error(
+            error_type="db_error",
+            agent_name="vocab_planner",
+            context={"topic": topic, "error": str(e)},
+            fallback_used=True,
+        )
+        # DB error → fallback cold start
+        return {"is_cold_start": True}
+
+
+def _determine_current_difficulty(avg_mastery: dict) -> str:
+    """Tentukan difficulty level saat ini berdasarkan mastery scores."""
+    easy = avg_mastery.get("easy", -1)
+    medium = avg_mastery.get("medium", -1)
+
+    if medium >= 0 and medium >= 80:
+        return "hard"
+    elif easy >= 0 and easy >= 80:
+        return "medium"
+    else:
+        return "easy"
+
+
+@retry_llm
+def _call_planner_llm(topic: str, history_summary: dict) -> dict:
+    """
+    Panggil Claude Haiku untuk generate planner config.
+    Di-wrap @retry_llm: max 3x retry, exponential backoff 2s→4s→8s.
+    """
+    user_prompt = build_planner_prompt(topic, history_summary)
+
+    client = _get_client()
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=512,
+        system=PLANNER_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+
+    raw = response.content[0].text.strip()
+
+    # Handle jika LLM menambahkan markdown code block
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    raw = raw.strip()
+
+    return json.loads(raw)
+
+
+def run_planner(topic: str = "sehari_hari") -> dict:
+    """
+    Jalankan Vocab Planner Agent.
 
     Args:
-        topic          : Topik situasi yang dipilih user.
-                         Contoh: "sehari_hari", "di_kampus", "perjalanan"
-        history_summary: Ringkasan history dari DB. Struktur:
-                         {
-                           "is_cold_start": bool,
-                           "current_difficulty": "easy"|"medium"|"hard",
-                           "avg_mastery_easy": float,    # 0-100, -1 jika tidak ada data
-                           "avg_mastery_medium": float,
-                           "avg_mastery_hard": float,
-                           "weak_words_count": int,      # kata dengan mastery < 60%
-                           "total_sessions": int,
-                         }
+        topic: Topik situasi untuk sesi ini
 
     Returns:
-        String user prompt siap dikirim ke LLM.
-        Jika cold start, kembalikan None — gunakan default config langsung
-        tanpa LLM call untuk hemat token.
+        dict konfigurasi sesi:
+        {
+            "topic": str,
+            "total_words": int,
+            "new_words": int,
+            "review_words": int,
+            "difficulty_target": str,
+            "format_distribution": dict
+        }
     """
-    import json
+    history_summary = _build_history_summary(topic)
 
-    # Cold start: tidak perlu LLM, langsung pakai default
-    # Caller harus cek return None dan gunakan DEFAULT_PLANNER_CONFIG
+    # Cold start: skip LLM, pakai default config
     if history_summary.get("is_cold_start"):
-        return None
+        logger.info("[vocab_planner] Cold start detected — using default config")
+        config = DEFAULT_PLANNER_CONFIG.copy()
+        config["topic"] = topic
+        return config
 
-    current_difficulty = history_summary.get("current_difficulty", "easy")
-    avg_mastery = {
-        "easy": history_summary.get("avg_mastery_easy", -1),
-        "medium": history_summary.get("avg_mastery_medium", -1),
-        "hard": history_summary.get("avg_mastery_hard", -1),
-    }
-    weak_words_count = history_summary.get("weak_words_count", 0)
-    total_sessions = history_summary.get("total_sessions", 0)
+    # Returning user: panggil LLM
+    prompt = build_planner_prompt(topic, history_summary)
+    if prompt is None:
+        # build_planner_prompt return None = cold start
+        config = DEFAULT_PLANNER_CONFIG.copy()
+        config["topic"] = topic
+        return config
 
-    # Format mastery info
-    mastery_lines = []
-    for level, score in avg_mastery.items():
-        if score >= 0:
-            mastery_lines.append(f"  - {level}: {score:.1f}%")
-        else:
-            mastery_lines.append(f"  - {level}: no data yet")
-    mastery_str = "\n".join(mastery_lines)
+    try:
+        config = _call_planner_llm(topic, history_summary)
+        config["topic"] = topic  # Pastikan topic dari input, bukan LLM
+        logger.info(f"[vocab_planner] Config generated: {config}")
+        return config
 
-    return f"""Create a vocabulary session plan for this student.
-
-## Student Profile
-Topic selected   : {topic}
-Total sessions   : {total_sessions}
-Current level    : {current_difficulty}
-Weak words available for review: {weak_words_count} words (mastery < 60%)
-
-## Mastery Scores by Difficulty
-{mastery_str}
-
-## Instructions
-- Determine if difficulty should stay, upgrade, or downgrade based on mastery scores
-- Set new_words to maximum 5 (cognitive load limit)
-- Set review_words = total_words - new_words (use weak words for spaced repetition)
-- If weak_words_count < review_words needed, reduce review_words accordingly
-- Distribute formats appropriately for the difficulty level
-
-Respond with session plan JSON only."""
-
-
-# ===================================================
-# Default config untuk cold start — tidak butuh LLM
-# ===================================================
-DEFAULT_PLANNER_CONFIG = {
-    "topic": "sehari_hari",
-    "total_words": 10,
-    "new_words": 5,
-    "review_words": 5,
-    "difficulty_target": "easy",
-    "format_distribution": {
-        "tebak_arti": 4,
-        "sinonim_antonim": 3,
-        "tebak_inggris": 3,
-    },
-}
+    except Exception as e:
+        # Setelah 3x retry tetap gagal → fallback default config
+        log_error(
+            error_type="llm_timeout",
+            agent_name="vocab_planner",
+            context={"topic": topic, "error": str(e)},
+            fallback_used=True,
+        )
+        logger.warning("[vocab_planner] LLM failed after retries — using default config")
+        config = DEFAULT_PLANNER_CONFIG.copy()
+        config["topic"] = topic
+        return config

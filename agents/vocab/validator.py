@@ -1,126 +1,228 @@
 """
-prompts/vocab/validator_prompt.py
-----------------------------------
-Prompt untuk Vocab Validator Agent.
+agents/vocab/validator.py
+--------------------------
+Vocab Validator Agent.
 
-Validator bertugas memastikan output Generator sesuai dengan
-instruksi Planner. Bertindak sebagai quality checker, bukan
-content judge — tidak menilai kualitas soal, hanya kesesuaian
-distribusi dan format.
-
+Tugas: Cek kesesuaian output Generator dengan instruksi Planner.
 Toleransi: match_score >= 0.8 dianggap valid.
+
+Flow validasi:
+1. Panggil LLM Validator
+2. Jika match_score < 0.8 → reject → trigger regenerate (max 3x)
+3. Jika setelah 3x masih gagal → adjust output + flag is_adjusted=True + log
+4. Sesi tetap lanjut dengan data yang sudah di-adjust
+
+Input  : planner_output (dict), generator_output (dict)
+Output : dict dengan key: is_valid, match_score, issues,
+         adjusted_words, final_words, is_adjusted
 """
 
-VALIDATOR_SYSTEM_PROMPT = """You are a strict quality checker for vocabulary quiz content.
+import json
+import copy
+from typing import Optional
 
-Your ONLY job is to verify that the generated vocabulary questions match the planner's specifications.
-You do NOT evaluate question quality or content — only structural compliance.
+import anthropic
+from dotenv import load_dotenv
 
-## What You Check
-1. Total word count matches specification
-2. Format distribution matches (tebak_arti, sinonim_antonim, tebak_inggris counts)
-3. Difficulty distribution is consistent with target
-4. new_words and review_words counts match (is_new flags)
-5. All required fields present: word, difficulty, format, question_text, correct_answer, is_new
+from prompts.vocab.validator_prompt import (
+    VALIDATOR_SYSTEM_PROMPT,
+    build_validator_prompt,
+)
+from agents.vocab.generator import run_generator
+from utils.logger import log_error, logger
+from utils.retry import retry_llm
 
-## Scoring
-- match_score: float 0.0–1.0
-  - 1.0  = perfect match
-  - 0.8+ = acceptable (minor deviations)
-  - <0.8 = invalid, needs regeneration
+load_dotenv()
 
-## Output Format
-You MUST respond with a valid JSON object only. No explanation, no markdown, no extra text.
-
-## Example: Valid Output
-Planner specified: 10 words, tebak_arti:4, sinonim_antonim:3, tebak_inggris:3, new:5, review:5
-Generator produced: 10 words, tebak_arti:4, sinonim_antonim:3, tebak_inggris:3, new:5, review:5
-
-{
-  "is_valid": true,
-  "match_score": 1.0,
-  "issues": [],
-  "adjusted_words": []
-}
-
-## Example: Invalid Output (needs adjustment)
-Planner specified: 10 words, tebak_arti:4, sinonim_antonim:3, tebak_inggris:3
-Generator produced: 10 words, tebak_arti:5, sinonim_antonim:2, tebak_inggris:3
-
-{
-  "is_valid": false,
-  "match_score": 0.75,
-  "issues": [
-    "Format distribution mismatch: tebak_arti expected 4 got 5, sinonim_antonim expected 3 got 2"
-  ],
-  "adjusted_words": [
-    {
-      "word": "commute",
-      "difficulty": "medium",
-      "format": "sinonim_antonim",
-      "question_text": "Pilih sinonim dari kata 'commute':",
-      "correct_answer": "travel",
-      "is_new": true
-    }
-  ]
-}
-
-Note: adjusted_words contains ONLY the words that need to be changed, not all words.
-If is_valid is true, adjusted_words must be an empty array.
-
-Remember: respond with JSON only."""
+MODEL = "claude-haiku-4-5-20251001"
+MAX_REGENERATE_ATTEMPTS = 3
+_client: Optional[anthropic.Anthropic] = None
 
 
-def build_validator_prompt(
+def _get_client() -> anthropic.Anthropic:
+    global _client
+    if _client is None:
+        _client = anthropic.Anthropic()
+    return _client
+
+
+def _parse_validator_response(raw: str) -> dict:
+    """Parse dan validasi JSON response dari LLM Validator."""
+    text = raw.strip()
+    if text.startswith("```"):
+        parts = text.split("```")
+        text = parts[1] if len(parts) > 1 else text
+        if text.startswith("json"):
+            text = text[4:]
+    text = text.strip()
+
+    parsed = json.loads(text)
+
+    required = {"is_valid", "match_score", "issues", "adjusted_words"}
+    missing = required - set(parsed.keys())
+    if missing:
+        raise ValueError(f"Validator response missing fields: {missing}")
+
+    return parsed
+
+
+@retry_llm
+def _call_validator_llm(planner_output: dict, generator_output: dict) -> dict:
+    """Panggil Claude Haiku untuk validasi. Di-wrap @retry_llm."""
+    user_prompt = build_validator_prompt(planner_output, generator_output)
+
+    client = _get_client()
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=1024,
+        system=VALIDATOR_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+
+    raw = response.content[0].text
+    return _parse_validator_response(raw)
+
+
+def _apply_adjustments(
+    generator_output: dict,
+    adjusted_words: list,
+    planner_output: dict,
+) -> dict:
+    """
+    Terapkan adjusted_words dari Validator ke generator_output.
+
+    Validator mengembalikan hanya kata-kata yang perlu diubah.
+    Fungsi ini menggabungkannya dengan kata-kata yang sudah benar.
+    """
+    if not adjusted_words:
+        return generator_output
+
+    words = copy.deepcopy(generator_output.get("words", []))
+    target_dist = planner_output.get("format_distribution", {})
+
+    # Hitung distribusi format saat ini
+    current_dist: dict[str, list] = {}
+    for i, w in enumerate(words):
+        fmt = w.get("format", "")
+        current_dist.setdefault(fmt, []).append(i)
+
+    # Ganti kata yang formatnya berlebih dengan adjusted_words
+    for adj_word in adjusted_words:
+        adj_fmt = adj_word.get("format", "")
+        target_count = target_dist.get(adj_fmt, 0)
+        current_count = len(current_dist.get(adj_fmt, []))
+
+        if current_count < target_count:
+            # Cari format yang berlebih untuk diganti
+            for fmt, indices in current_dist.items():
+                expected = target_dist.get(fmt, 0)
+                if len(indices) > expected and indices:
+                    replace_idx = indices.pop()
+                    words[replace_idx] = adj_word
+                    current_dist.setdefault(adj_fmt, []).append(replace_idx)
+                    break
+        # Jika tidak ada yang perlu diganti, lewati
+
+    return {"words": words}
+
+
+def run_validator(
     planner_output: dict,
     generator_output: dict,
-) -> str:
+) -> dict:
     """
-    Bangun user prompt untuk Vocab Validator Agent.
+    Jalankan Vocab Validator Agent.
 
     Args:
-        planner_output  : Output dari Planner Agent (dict).
-                          Berisi: topic, total_words, new_words, review_words,
-                                  difficulty_target, format_distribution
-        generator_output: Output dari Generator Agent (dict).
-                          Berisi: words (list of word objects)
+        planner_output  : Output dari Planner Agent
+        generator_output: Output dari Generator Agent
 
     Returns:
-        String user prompt siap dikirim ke LLM
+        dict: {
+            "is_valid"     : bool,
+            "match_score"  : float,
+            "issues"       : list,
+            "final_words"  : list,   ← kata final yang siap dipakai
+            "is_adjusted"  : bool,   ← True jika ada penyesuaian paksa
+        }
     """
-    import json
+    current_generator_output = generator_output
+    last_validation = None
 
-    # Hitung distribusi aktual dari output Generator
-    words = generator_output.get("words", [])
-    actual_formats = {}
-    actual_new = 0
-    actual_review = 0
+    for attempt in range(MAX_REGENERATE_ATTEMPTS):
+        logger.info(
+            f"[vocab_validator] Validation attempt {attempt + 1}/{MAX_REGENERATE_ATTEMPTS}"
+        )
 
-    for w in words:
-        fmt = w.get("format", "unknown")
-        actual_formats[fmt] = actual_formats.get(fmt, 0) + 1
-        if w.get("is_new"):
-            actual_new += 1
-        else:
-            actual_review += 1
+        try:
+            validation = _call_validator_llm(planner_output, current_generator_output)
+            last_validation = validation
 
-    return f"""Validate the generated vocabulary questions against the planner specifications.
+            if validation.get("match_score", 0) >= 0.8:
+                # ✅ Valid
+                logger.info(
+                    f"[vocab_validator] Valid — match_score={validation['match_score']}"
+                )
+                return {
+                    "is_valid": True,
+                    "match_score": validation["match_score"],
+                    "issues": validation.get("issues", []),
+                    "final_words": current_generator_output.get("words", []),
+                    "is_adjusted": False,
+                }
 
-## Planner Specifications
-Topic             : {planner_output.get('topic')}
-Total words       : {planner_output.get('total_words')}
-New words         : {planner_output.get('new_words')}
-Review words      : {planner_output.get('review_words')}
-Difficulty target : {planner_output.get('difficulty_target')}
-Format distribution: {json.dumps(planner_output.get('format_distribution', {}), ensure_ascii=False)}
+            # ❌ Tidak valid — log issues dan coba regenerate
+            logger.warning(
+                f"[vocab_validator] Invalid (score={validation['match_score']}) "
+                f"— issues: {validation.get('issues', [])}"
+            )
 
-## Generator Output Summary
-Total words generated : {len(words)}
-New words (is_new=true) : {actual_new}
-Review words (is_new=false) : {actual_review}
-Actual format distribution : {json.dumps(actual_formats, ensure_ascii=False)}
+            if attempt < MAX_REGENERATE_ATTEMPTS - 1:
+                # Regenerate menggunakan generator
+                logger.info("[vocab_validator] Triggering regeneration...")
+                try:
+                    current_generator_output = run_generator(planner_output)
+                except RuntimeError:
+                    # Generator gagal total — langsung ke fallback
+                    break
 
-## Full Generator Output
-{json.dumps(generator_output, ensure_ascii=False, indent=2)}
+        except Exception as e:
+            log_error(
+                error_type="llm_timeout",
+                agent_name="vocab_validator",
+                context={"attempt": attempt + 1, "error": str(e)},
+                fallback_used=False,
+            )
+            if attempt == MAX_REGENERATE_ATTEMPTS - 1:
+                break
 
-Check all specifications and respond with validation result JSON only."""
+    # ⚠️ Semua attempt habis → adjust paksa + flag
+    logger.warning(
+        "[vocab_validator] All attempts failed — forcing adjustment and flagging"
+    )
+
+    adjusted_words = []
+    if last_validation:
+        adjusted_words = last_validation.get("adjusted_words", [])
+
+    final_output = _apply_adjustments(
+        current_generator_output, adjusted_words, planner_output
+    )
+
+    log_error(
+        error_type="validation_failed",
+        agent_name="vocab_validator",
+        context={
+            "final_score": last_validation.get("match_score") if last_validation else 0,
+            "issues": last_validation.get("issues", []) if last_validation else [],
+        },
+        fallback_used=True,
+    )
+
+    return {
+        "is_valid": False,
+        "match_score": last_validation.get("match_score", 0) if last_validation else 0,
+        "issues": last_validation.get("issues", []) if last_validation else [],
+        "final_words": final_output.get("words", []),
+        "is_adjusted": True,
+    }

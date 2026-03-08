@@ -1,115 +1,150 @@
 """
-prompts/vocab/generator_prompt.py
-----------------------------------
-Prompt untuk Vocab Generator Agent.
+agents/vocab/generator.py
+--------------------------
+Vocab Generator Agent.
 
-Generator bertugas membuat soal vocab sesuai instruksi Planner:
-- Topik situasi (sehari_hari, perkenalan, dll)
-- Difficulty target (easy / medium / hard)
-- Distribusi format (tebak_arti, sinonim_antonim, tebak_inggris)
-- Jumlah kata baru dan review
+Tugas: Generate soal vocab berdasarkan instruksi Planner.
 
-Pola output: JSON array of word objects.
+Input  : output dari Planner Agent (dict)
+Output : dict dengan key "words" berisi list soal vocab
+
+Error handling:
+- @retry_llm: max 3x retry untuk LLM call
+- JSON parse error: retry sekali dengan instruksi lebih ketat
+- Setelah semua retry habis: raise exception → sesi dibatalkan
 """
 
-GENERATOR_SYSTEM_PROMPT = """You are an expert English vocabulary teacher specializing in \
-everyday situational vocabulary for Indonesian learners.
+import json
+from typing import Optional
 
-Your task is to generate vocabulary quiz questions based on the given topic and specifications.
+import anthropic
+from dotenv import load_dotenv
 
-## Your Responsibilities
-- Generate English vocabulary words appropriate for the given topic and difficulty level
-- Create quiz questions in the specified formats
-- Ensure difficulty is consistent with the target level
-- For review words, use common words the student has likely seen before
-- For new words, introduce vocabulary that fits the topic naturally
+from prompts.vocab.generator_prompt import (
+    GENERATOR_SYSTEM_PROMPT,
+    build_generator_prompt,
+)
+from utils.logger import log_error, logger
+from utils.retry import retry_llm
 
-## Difficulty Guidelines
-- easy   : High-frequency words (CEFR A1-A2). Example: breakfast, hospital, laptop
-- medium : Mid-frequency words (CEFR B1-B2). Example: commute, physician, malfunction
-- hard   : Low-frequency or nuanced words (CEFR C1+). Example: convalescence, reconcile
+load_dotenv()
 
-## Format Guidelines
-- tebak_arti     : Given an English word, user answers with Indonesian meaning
-- sinonim_antonim: Given an English word, user picks synonym or antonym (specify in question_text)
-- tebak_inggris  : Given an Indonesian word/meaning, user answers with English word
-
-## Output Format
-You MUST respond with a valid JSON object only. No explanation, no markdown, no extra text.
-
-## Example Output
-Given: topic=sehari_hari, 2 words, difficulty=easy, format_distribution={tebak_arti:1, tebak_inggris:1}
-
-{
-  "words": [
-    {
-      "word": "breakfast",
-      "difficulty": "easy",
-      "format": "tebak_arti",
-      "question_text": "Apa arti kata 'breakfast' dalam bahasa Indonesia?",
-      "correct_answer": "sarapan",
-      "is_new": true
-    },
-    {
-      "word": "tidur",
-      "difficulty": "easy",
-      "format": "tebak_inggris",
-      "question_text": "Apa kata bahasa Inggris dari 'tidur'?",
-      "correct_answer": "sleep",
-      "is_new": false
-    }
-  ]
-}
-
-Remember: respond with JSON only. No text before or after the JSON object."""
+MODEL = "claude-haiku-4-5-20251001"
+_client: Optional[anthropic.Anthropic] = None
 
 
-def build_generator_prompt(
-    topic: str,
-    difficulty_target: str,
-    format_distribution: dict,
-    new_words: int,
-    review_words: int,
-) -> str:
+def _get_client() -> anthropic.Anthropic:
+    global _client
+    if _client is None:
+        _client = anthropic.Anthropic()
+    return _client
+
+
+def _parse_generator_response(raw: str) -> dict:
     """
-    Bangun user prompt untuk Vocab Generator Agent.
+    Parse JSON response dari LLM Generator.
+    Handle kasus LLM menambahkan markdown atau teks ekstra.
 
-    Args:
-        topic               : Topik situasi. Contoh: "sehari_hari", "di_kampus"
-        difficulty_target   : "easy" | "medium" | "hard"
-        format_distribution : Dict jumlah soal per format.
-                              Contoh: {"tebak_arti": 4, "sinonim_antonim": 3, "tebak_inggris": 3}
-        new_words           : Jumlah kata baru yang harus digenerate
-        review_words        : Jumlah kata review (kata yang sudah pernah dipelajari)
-
-    Returns:
-        String user prompt siap dikirim ke LLM
+    Raises:
+        ValueError jika JSON tidak valid atau struktur tidak sesuai
     """
-    total_words = new_words + review_words
+    text = raw.strip()
 
-    # Format distribusi menjadi string yang readable
-    format_lines = "\n".join(
-        f"  - {fmt}: {count} soal"
-        for fmt, count in format_distribution.items()
-        if count > 0
+    # Strip markdown code block jika ada
+    if text.startswith("```"):
+        parts = text.split("```")
+        # Ambil bagian dalam code block
+        text = parts[1] if len(parts) > 1 else text
+        if text.startswith("json"):
+            text = text[4:]
+    text = text.strip()
+
+    parsed = json.loads(text)
+
+    # Validasi struktur minimal
+    if "words" not in parsed:
+        raise ValueError(f"Response missing 'words' key: {parsed}")
+    if not isinstance(parsed["words"], list):
+        raise ValueError(f"'words' must be a list, got: {type(parsed['words'])}")
+    if len(parsed["words"]) == 0:
+        raise ValueError("'words' list is empty")
+
+    # Validasi setiap word object
+    required_fields = {"word", "difficulty", "format", "question_text",
+                       "correct_answer", "is_new"}
+    for i, word in enumerate(parsed["words"]):
+        missing = required_fields - set(word.keys())
+        if missing:
+            raise ValueError(f"Word[{i}] missing fields: {missing}")
+
+    return parsed
+
+
+@retry_llm
+def _call_generator_llm(planner_output: dict) -> dict:
+    """
+    Panggil Claude Haiku untuk generate vocab questions.
+    Di-wrap @retry_llm: max 3x retry, exponential backoff 2s→4s→8s.
+    """
+    user_prompt = build_generator_prompt(
+        topic=planner_output["topic"],
+        difficulty_target=planner_output["difficulty_target"],
+        format_distribution=planner_output["format_distribution"],
+        new_words=planner_output["new_words"],
+        review_words=planner_output["review_words"],
     )
 
-    return f"""Generate vocabulary quiz questions with the following specifications:
+    client = _get_client()
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=2048,
+        system=GENERATOR_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
 
-Topic          : {topic}
-Total words    : {total_words}
-New words      : {new_words} (introduce words not commonly reviewed)
-Review words   : {review_words} (use familiar, common words for this topic)
-Difficulty     : {difficulty_target}
-Format distribution:
-{format_lines}
+    raw = response.content[0].text
+    return _parse_generator_response(raw)
 
-Important:
-- All {new_words} new word(s) must have "is_new": true
-- All {review_words} review word(s) must have "is_new": false
-- Match the exact format distribution above
-- Ensure all words are relevant to the topic "{topic}"
-- question_text must be written in Indonesian (Bahasa Indonesia)
-- correct_answer must be a single word or short phrase
 
-Respond with JSON only."""
+def run_generator(planner_output: dict) -> dict:
+    """
+    Jalankan Vocab Generator Agent.
+
+    Args:
+        planner_output: Output dari Planner Agent
+
+    Returns:
+        dict: {"words": [list of word objects]}
+
+    Raises:
+        RuntimeError jika gagal setelah semua retry habis
+        (caller — biasanya session flow — harus batalkan sesi)
+    """
+    logger.info(
+        f"[vocab_generator] Generating {planner_output.get('total_words')} words "
+        f"for topic={planner_output.get('topic')} "
+        f"difficulty={planner_output.get('difficulty_target')}"
+    )
+
+    try:
+        result = _call_generator_llm(planner_output)
+        logger.info(
+            f"[vocab_generator] Generated {len(result.get('words', []))} words"
+        )
+        return result
+
+    except Exception as e:
+        log_error(
+            error_type="llm_timeout",
+            agent_name="vocab_generator",
+            context={
+                "topic": planner_output.get("topic"),
+                "total_words": planner_output.get("total_words"),
+                "error": str(e),
+            },
+            fallback_used=False,
+        )
+        # Tidak ada fallback untuk generator — sesi harus dibatalkan
+        raise RuntimeError(
+            f"Vocab Generator gagal setelah 3x retry: {e}"
+        ) from e
