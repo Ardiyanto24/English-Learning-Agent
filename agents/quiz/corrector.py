@@ -26,14 +26,14 @@ from typing import Optional
 import anthropic
 from dotenv import load_dotenv
 
-from config.settings import SONNET_MODEL
-from modules.rag.retriever import retrieve_context
 from prompts.quiz.corrector_prompt import (
     QUIZ_CORRECTOR_SYSTEM_PROMPT,
     build_corrector_prompt,
 )
+from modules.rag.retriever import retrieve, format_context_for_prompt
 from utils.logger import log_error, logger
 from utils.retry import retry_llm
+from config.settings import SONNET_MODEL
 
 load_dotenv()
 
@@ -57,7 +57,8 @@ def _get_rag_context_for_correction(topic: str) -> str:
     Jika RAG gagal: gunakan nama topik sebagai fallback.
     """
     try:
-        chunks = retrieve_context(query=topic, topic=topic)
+        result = retrieve(query=topic, topic=topic)
+        chunks = format_context_for_prompt(result)
         if chunks:
             return chunks
         return f"[Topic: {topic}]"

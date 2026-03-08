@@ -1,0 +1,192 @@
+{
+  "categories": {
+    "Campus Life": {
+      "category_id": 1,
+      "sub_topics": [
+        "Choosing a major",
+        "Campus facilities and resources",
+        "Student clubs and extracurricular activities",
+        "Relationship with professors",
+        "Study habits and time management",
+        "Academic pressure and stress",
+        "Living in dormitory vs off-campus",
+        "Part-time jobs while studying"
+      ]
+    },
+    "Academic Topics": {
+      "category_id": 2,
+      "sub_topics": [
+        "Research methodologies",
+        "Critical thinking in academics",
+        "Online learning vs traditional classroom",
+        "Academic integrity and plagiarism",
+        "Group projects and collaboration",
+        "Thesis and dissertation writing",
+        "Academic conferences and publications",
+        "Interdisciplinary studies"
+      ]
+    },
+    "Everyday Situations": {
+      "category_id": 3,
+      "sub_topics": [
+        "Daily routines and habits",
+        "Shopping and consumerism",
+        "Public transportation",
+        "Cooking and food preferences",
+        "Home maintenance and living arrangements",
+        "Managing personal finances",
+        "Social gatherings and events",
+        "Using technology in daily life"
+      ]
+    },
+    "Abstract & Opinion": {
+      "category_id": 4,
+      "sub_topics": [
+        "Definition of success",
+        "Work-life balance",
+        "The role of luck vs hard work",
+        "Tradition vs modernity",
+        "Individual vs collective responsibility",
+        "The meaning of happiness",
+        "Freedom and its limits",
+        "The value of failure"
+      ]
+    },
+    "Health & Medicine": {
+      "category_id": 5,
+      "sub_topics": [
+        "Preventive vs curative medicine",
+        "Mental health awareness",
+        "Healthcare accessibility",
+        "Alternative medicine",
+        "Healthy lifestyle habits",
+        "Medical technology advancements",
+        "Public health policies",
+        "Nutrition and diet trends"
+      ]
+    },
+    "Environment & Nature": {
+      "category_id": 6,
+      "sub_topics": [
+        "Climate change and global warming",
+        "Renewable energy sources",
+        "Deforestation and biodiversity",
+        "Plastic pollution and waste management",
+        "Sustainable living practices",
+        "Wildlife conservation",
+        "Natural disasters and preparedness",
+        "Urban green spaces"
+      ]
+    },
+    "Technology & Innovation": {
+      "category_id": 7,
+      "sub_topics": [
+        "Artificial intelligence and automation",
+        "Social media impact on society",
+        "Privacy and data security",
+        "Electric vehicles and transportation",
+        "Space exploration",
+        "Biotechnology and genetic engineering",
+        "Smart cities",
+        "The future of work"
+      ]
+    },
+    "Society & Culture": {
+      "category_id": 8,
+      "sub_topics": [
+        "Cultural diversity and inclusion",
+        "Globalization effects",
+        "Gender roles and equality",
+        "Immigration and multiculturalism",
+        "Social media and cultural change",
+        "Urban vs rural lifestyle",
+        "Generation gaps",
+        "Volunteerism and community service"
+      ]
+    },
+    "Education & Learning": {
+      "category_id": 9,
+      "sub_topics": [
+        "Traditional vs progressive education",
+        "Standardized testing",
+        "Early childhood education",
+        "Adult and lifelong learning",
+        "Vocational training vs university",
+        "The role of teachers",
+        "Special needs education",
+        "International student exchange programs"
+      ]
+    },
+    "Economics & Finance": {
+      "category_id": 10,
+      "sub_topics": [
+        "Income inequality",
+        "Entrepreneurship and startups",
+        "Cryptocurrency and digital finance",
+        "Global trade and tariffs",
+        "Personal investment strategies",
+        "The gig economy",
+        "Corporate social responsibility",
+        "Economic impact of tourism"
+      ]
+    },
+    "Politics & Government": {
+      "category_id": 11,
+      "sub_topics": [
+        "Democracy and its challenges",
+        "Role of media in politics",
+        "Government transparency and accountability",
+        "International relations and diplomacy",
+        "Civil rights and civil liberties",
+        "Electoral systems",
+        "Youth participation in politics",
+        "National identity and patriotism"
+      ]
+    },
+    "Psychology & Behavior": {
+      "category_id": 12,
+      "sub_topics": [
+        "Motivation and self-determination",
+        "Social conformity and peer pressure",
+        "The psychology of habits",
+        "Emotional intelligence",
+        "Cognitive biases in decision-making",
+        "The impact of social media on self-image",
+        "Resilience and coping mechanisms",
+        "Personality and leadership styles"
+      ]
+    },
+    "Arts & Media": {
+      "category_id": 13,
+      "sub_topics": [
+        "The role of art in society",
+        "Digital media vs traditional media",
+        "Censorship in art and media",
+        "Film and cultural representation",
+        "Music as a universal language",
+        "The future of journalism",
+        "Social media influencers",
+        "Preserving cultural heritage through art"
+      ]
+    },
+    "Ethics & Philosophy": {
+      "category_id": 14,
+      "sub_topics": [
+        "Moral relativism vs universal ethics",
+        "Animal rights",
+        "Capital punishment debate",
+        "Euthanasia and end-of-life decisions",
+        "The ethics of AI",
+        "Wealth redistribution and justice",
+        "Environmental ethics",
+        "The trolley problem and moral dilemmas"
+      ]
+    }
+  },
+  "total_categories": 14,
+  "sub_modes": [
+    "prompted_response",
+    "conversation_practice",
+    "oral_presentation"
+  ]
+}

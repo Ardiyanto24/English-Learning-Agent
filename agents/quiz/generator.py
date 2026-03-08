@@ -24,14 +24,14 @@ from typing import Optional
 import anthropic
 from dotenv import load_dotenv
 
+from config.settings import SONNET_MODEL
+from modules.rag.retriever import format_context_for_prompt, retrieve
 from prompts.quiz.generator_prompt import (
     QUIZ_GENERATOR_SYSTEM_PROMPT,
     build_generator_prompt,
 )
-from modules.rag.retriever import retrieve_context
 from utils.logger import log_error, logger
 from utils.retry import retry_llm
-from config.settings import SONNET_MODEL
 
 load_dotenv()
 
@@ -64,11 +64,11 @@ def _get_rag_context(topics: list[str]) -> tuple[str, bool]:
 
     for topic in topics:
         try:
-            chunks = retrieve_context(query=topic, topic=topic)
+            result = retrieve(query=topic, topic=topic)
+            chunks = format_context_for_prompt(result)
             if chunks:
                 all_chunks.append(f"## {topic}\n{chunks}")
             else:
-                # RAG berhasil dipanggil tapi tidak menemukan hasil
                 all_chunks.append(f"## {topic}\n[Topic: {topic}]")
                 rag_failed = True
         except Exception as e:
@@ -108,9 +108,9 @@ def _parse_generator_response(raw: str) -> dict:
     parsed = json.loads(text)
 
     if "questions" not in parsed:
-        raise ValueError(f"Response missing 'questions' key")
+        raise ValueError("Response missing 'questions' key")
     if not isinstance(parsed["questions"], list):
-        raise ValueError(f"'questions' must be a list")
+        raise ValueError("'questions' must be a list")
     if len(parsed["questions"]) == 0:
         raise ValueError("'questions' list is empty")
 
