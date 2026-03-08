@@ -60,7 +60,7 @@ if page == "🏠 Dashboard":
         st.info("📚 **Vocab Agent**\nLatihan kosakata dengan spaced repetition")
         st.info("📝 **Quiz Agent**\nLatihan grammar dengan feedback 4 lapisan")
     with col2:
-        st.warning("🎤 **Speaking Agent**\n_Coming soon — Phase 4_")
+        st.info("🗣️ **Speaking Agent**\nPercakapan & presentasi dengan AI")
         st.warning("📊 **TOEFL Simulator**\n_Coming soon — Phase 5_")
 
 elif page == "📚 Vocab Agent":
@@ -71,6 +71,10 @@ elif page == "📝 Quiz Agent":
     from pages.quiz import main as quiz_main
     quiz_main()
 
-elif page in ["🎤 Speaking Agent", "📊 TOEFL Simulator"]:
+elif page == "🗣️ Speaking Agent":
+    from pages.speaking import main as speaking_main
+    speaking_main()
+
+elif page in ["📊 TOEFL Simulator"]:
     st.title(page)
     st.info("🚧 Fitur ini sedang dalam pengembangan. Coming soon!")
