@@ -101,16 +101,49 @@ def _build_history_summary(topic: str) -> dict:
 
 
 def _determine_current_difficulty(avg_mastery: dict) -> str:
-    """Tentukan difficulty level saat ini berdasarkan mastery scores."""
-    easy = avg_mastery.get("easy", -1)
+    """Tentukan difficulty level saat ini berdasarkan mastery scores.
+    
+    Upgrade : avg mastery level saat ini >= 80%
+    Downgrade: avg mastery level saat ini < 40%
+    Stay    : di antara 40%-80%
+    """
+    easy   = avg_mastery.get("easy",   -1)
     medium = avg_mastery.get("medium", -1)
+    hard   = avg_mastery.get("hard",   -1)
 
-    if medium >= 0 and medium >= 80:
-        return "hard"
-    elif easy >= 0 and easy >= 80:
-        return "medium"
+    # Tentukan level tertinggi yang punya data
+    if hard >= 0:
+        current = "hard"
+        current_score = hard
+    elif medium >= 0:
+        current = "medium"
+        current_score = medium
+    elif easy >= 0:
+        current = "easy"
+        current_score = easy
     else:
-        return "easy"
+        return "easy"  # Tidak ada data sama sekali
+
+    # Upgrade
+    if current_score >= 80:
+        if current == "easy":
+            return "medium"
+        elif current == "medium":
+            return "hard"
+        else:
+            return "hard"  # Sudah di hard, tetap
+
+    # Downgrade
+    if current_score < 40:
+        if current == "hard":
+            return "medium"
+        elif current == "medium":
+            return "easy"
+        else:
+            return "easy"  # Sudah di easy, tetap
+
+    # Stay (40–79%)
+    return current
 
 
 @retry_llm
