@@ -28,6 +28,7 @@ from database.repositories.vocab_repository import (
     get_weak_words,
     get_word_tracking,
 )
+from database.repositories.session_repository import get_sessions_by_mode
 from utils.helpers import is_cold_start, calculate_score_pct
 from utils.logger import log_error, logger
 from utils.retry import retry_llm
@@ -86,7 +87,7 @@ def _build_history_summary(topic: str) -> dict:
             "avg_mastery_medium": avg_mastery["medium"],
             "avg_mastery_hard": avg_mastery["hard"],
             "weak_words_count": weak_count,
-            "total_sessions": 0,  # Simplified — bisa diperluas nanti
+            "total_sessions": len(get_sessions_by_mode("vocab")),
         }
 
     except Exception as e:
@@ -197,14 +198,6 @@ def run_planner(topic: str = "sehari_hari") -> dict:
     # Cold start: skip LLM, pakai default config
     if history_summary.get("is_cold_start"):
         logger.info("[vocab_planner] Cold start detected — using default config")
-        config = DEFAULT_PLANNER_CONFIG.copy()
-        config["topic"] = topic
-        return config
-
-    # Returning user: panggil LLM
-    prompt = build_planner_prompt(topic, history_summary)
-    if prompt is None:
-        # build_planner_prompt return None = cold start
         config = DEFAULT_PLANNER_CONFIG.copy()
         config["topic"] = topic
         return config
