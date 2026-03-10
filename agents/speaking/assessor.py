@@ -254,17 +254,24 @@ def run_assessor(
             "[speaking_assessor] Failed — using fallback decision"
         )
 
-        # Fallback: Fase 1 → new_subtopic, Fase 2 → stop
-        if (
-            sub_mode == "conversation_practice"
-            and exchange_count < CONVERSATION_PHASE2_MIN
-        ):
-            return {
-                "decision":          "new_subtopic",
-                "reason":            "Assessor tidak tersedia — lanjut dengan sub-topik baru.",
-                "suggested_followup": "That's interesting! What about approaching this from a different angle — how do you think this topic affects people in everyday life?",
-            }
+        # Fallback: Fase 1 → new_subtopic, Fase 2 → stop, prompted_response → continue
+        if sub_mode == "conversation_practice":
+            if exchange_count < CONVERSATION_PHASE2_MIN:
+                # Fase 1 — belum boleh stop
+                return {
+                    "decision":          "new_subtopic",
+                    "reason":            "Assessor tidak tersedia — lanjut dengan sub-topik baru.",
+                    "suggested_followup": "That's interesting! What about approaching this from a different angle — how do you think this topic affects people in everyday life?",
+                }
+            else:
+                # Fase 2 — aman untuk stop
+                return {
+                    "decision":          "stop",
+                    "reason":            "Assessor tidak tersedia — sesi dihentikan.",
+                    "suggested_followup": None,
+                }
         else:
+            # prompted_response — exchange belum mencapai hard limit, lanjut
             return {
                 "decision":          "continue",
                 "reason":            "Assessor tidak tersedia — lanjut conversation.",
