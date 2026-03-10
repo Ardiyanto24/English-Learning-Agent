@@ -180,3 +180,4 @@ def run_analytics() -> dict:
             fallback_used=True,
         )
         return _empty_insight()
+
