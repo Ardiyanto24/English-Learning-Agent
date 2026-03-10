@@ -54,7 +54,7 @@ heard before being redirected.
 Respond with valid JSON only:
 {
   "follow_up_prompt": "string — the complete follow-up including acknowledgment",
-  "new_angle": "string — brief description of the new angle introduced"
+  "new_angle": "string — 1-3 keywords only, e.g. 'challenges', 'future impact', 'personal experience'"
 }"""
 
 
