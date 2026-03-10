@@ -164,7 +164,7 @@ def run_generator(planner_output: dict) -> dict:
         RuntimeError jika gagal setelah semua retry habis
     """
     topics = planner_output.get("topics", [])
-    total  = planner_output.get("total_questions", 5)
+    total  = planner_output.get("total_questions", 10)
 
     logger.info(
         f"[quiz_generator] Generating {total} questions "

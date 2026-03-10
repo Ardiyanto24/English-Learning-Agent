@@ -55,11 +55,11 @@ except Exception as e:
 
 # Default format distribution (60/20/20)
 DEFAULT_FORMAT_DISTRIBUTION = {
-    "multiple_choice": 3,
+    "multiple_choice": 7,
     "error_id":        1,
-    "fill_blank":      1,
+    "fill_blank":      2,
 }
-DEFAULT_TOTAL_QUESTIONS = 5
+DEFAULT_TOTAL_QUESTIONS = 10
 
 
 # ===================================================
