@@ -45,8 +45,12 @@ try:
     PREREQUISITE_RULES = _load_json("prerequisite_rules.json")
     CLUSTER_METADATA   = _load_json("cluster_metadata.json")
 except Exception as e:
-    logger.error(f"[quiz_planner] Gagal load config: {e}")
-    PREREQUISITE_RULES = {}
+    logger.error(f"[quiz_planner] Gagal load config: {e} — blocking all topics as safe fallback")
+    # INTENTIONAL: dict kosong akan menyebabkan semua topik dianggap
+    # tidak ditemukan di _filter_by_prerequisite(), sehingga requires
+    # tidak pernah kosong. Kita gunakan sentinel khusus agar semua
+    # topik advance diblokir.
+    PREREQUISITE_RULES = None   # ← None, bukan {} — sinyal "data tidak tersedia"
     CLUSTER_METADATA   = {"clusters": {}}
 
 # Default format distribution (60/20/20)
@@ -100,19 +104,20 @@ def _filter_by_prerequisite(
     all_topics: list[str],
     topic_tracking: dict[str, dict],
 ) -> list[str]:
-    """
-    Buang topik yang prerequisite-nya belum terpenuhi.
+    # Jika config gagal load (None), blokir semua topik advance —
+    # hanya topik tanpa prerequisite yang lolos via fallback list.
+    if PREREQUISITE_RULES is None:
+        logger.warning(
+            "[quiz_planner] PREREQUISITE_RULES unavailable — "
+            "blocking all topics as safe fallback"
+        )
+        return []   # Tidak ada topik yang accessible → fallback di run_planner()
 
-    Prerequisite terpenuhi jika:
-    - Topik prerequisite sudah pernah dilatih DAN
-    - avg_score_pct >= MASTERY_THRESHOLD * 100
-    """
     accessible = []
     for topic in all_topics:
         rules = PREREQUISITE_RULES.get(topic, {})
         requires = rules.get("requires", [])
 
-        # Topik tanpa prerequisite selalu accessible
         if not requires:
             accessible.append(topic)
             continue
@@ -329,8 +334,11 @@ def run_planner(total_questions: int = DEFAULT_TOTAL_QUESTIONS) -> dict:
     prioritized_review = _prioritize_weak_topics(review_topics, topic_tracking)
 
     # Gabung: new + review (prioritized)
-    selected = new_topics + prioritized_review
-    selected = selected[:2]  # Max 2 topik per sesi
+    # Komposisi: max 1 new topic + max 1 review topic
+    # Tidak boleh new_topics mendominasi dan memotong review topics
+    selected_new    = new_topics[:1]
+    selected_review = prioritized_review[:1]
+    selected        = selected_new + selected_review
 
     # Fallback jika tidak ada topik sama sekali
     if not selected and accessible:
