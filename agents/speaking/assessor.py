@@ -7,10 +7,9 @@ Memutuskan alur conversation setelah setiap giliran user bicara.
 Menggunakan Haiku karena tugasnya keputusan binary — tidak butuh
 reasoning berat, tapi harus cepat agar conversation tidak terputus.
 
-SLIDING WINDOW: hanya 3-5 exchange terakhir yang dikirim ke LLM,
-bukan full transcript. Window size dinamis:
-  - exchange_count <= 3  → kirim semua (window = exchange_count)
-  - exchange_count > 3   → kirim 5 exchange terakhir
+SLIDING WINDOW: hanya 5 exchange terakhir yang dikirim ke LLM,
+bukan full transcript. Jika entry pertama window adalah giliran user,
+window diperluas 1 entry agar setelah trim tetap 5 entry.
 """
 
 import json
@@ -51,21 +50,21 @@ def _build_sliding_window(
     full_history: list[dict],
 ) -> list[dict]:
     """
-    Ambil WINDOW_SIZE exchange terakhir dari full history.
+    Ambil 5 exchange terakhir dari full history.
 
-    Setiap exchange = 1 turn (bisa role "ai" atau "user").
-    Kita ambil pair — selalu mulai dari giliran AI agar context
-    tidak terpotong di tengah pertanyaan.
+    Jika entry pertama window adalah giliran user, ambil 1 entry
+    ekstra dari awal agar setelah trim tetap 5 entry — konteks
+    tidak berkurang akibat pemotongan role.
     """
     if len(full_history) <= WINDOW_SIZE:
         return full_history
 
-    window = full_history[-WINDOW_SIZE:]
+    # Ambil WINDOW_SIZE + 1 agar ada cadangan jika entry pertama di-trim
+    window = full_history[-(WINDOW_SIZE + 1):]
 
     # Pastikan window mulai dari giliran AI (bukan user)
-    # agar context pertanyaan tidak hilang
     if window and window[0].get("role") == "user":
-        window = window[1:]  # Buang 1 entry agar mulai dari AI
+        window = window[1:]
 
     return window
 
