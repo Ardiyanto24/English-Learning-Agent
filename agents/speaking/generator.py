@@ -58,7 +58,14 @@ def _pick_random_topic(category: Optional[str] = None) -> tuple[str, str]:
     """
     categories = _METADATA.get("categories", {})
     if not categories:
-        return "Everyday Situations", "Daily routines and habits"
+        _FALLBACK_TOPICS = [
+            ("Everyday Situations",     "Daily routines and habits"),
+            ("Campus Life",             "Study habits and time management"),
+            ("Technology & Innovation", "Social media and communication"),
+            ("Health & Medicine",       "Healthy lifestyle choices"),
+            ("Environment & Nature",    "Environmental awareness"),
+        ]
+        return random.choice(_FALLBACK_TOPICS)
 
     if category and category in categories:
         cat_name = category
