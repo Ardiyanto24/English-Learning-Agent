@@ -127,7 +127,7 @@ def _calculate_final_score(parsed: dict, sub_mode: str) -> float:
         parsed.get(field, 0) * weight
         for field, weight in weights.items()
     )
-    return round(total, 2)
+    return round(max(1.0, min(total, 10.0)), 2)
 
 
 @retry_llm
@@ -169,9 +169,9 @@ def _ungraded_result(sub_mode: str) -> dict:
     Sesi tetap tersimpan, hanya ditandai ungraded.
     """
     base = {
-        "grammar_score":  0,
-        "relevance_score": 0,
-        "final_score":    0,
+        "grammar_score":  None,
+        "relevance_score": None,
+        "final_score":    None,
         "is_graded":      False,
         "feedback": {
             "grammar":  "-",
@@ -180,8 +180,8 @@ def _ungraded_result(sub_mode: str) -> dict:
         },
     }
     if sub_mode == "oral_presentation":
-        base["vocabulary_score"] = 0
-        base["structure_score"]  = 0
+        base["vocabulary_score"] = None
+        base["structure_score"]  = None
         base["feedback"]["vocabulary"] = "-"
         base["feedback"]["structure"]  = "-"
     return base
