@@ -4,13 +4,18 @@ agents/speaking/follow_up.py
 Follow-up Generator Agent.
 
 Dipanggil HANYA ketika Assessor memutuskan "new_subtopic".
+Decision "continue" TIDAK memanggil agent ini — session flow
+langsung menggunakan `suggested_followup` dari Assessor.
+
+Ketika dipanggil untuk "new_subtopic", ada dua jalur:
+- Jika Assessor sudah menyertakan `suggested_followup` (len > 10):
+  → return langsung tanpa memanggil LLM (source: "assessor")
+- Jika tidak ada saran dari Assessor:
+  → panggil Claude Sonnet untuk generate follow-up (source: "llm")
+
 Menggunakan Sonnet karena kualitas follow-up pertanyaan
 sangat penting — pertanyaan yang canggung akan merusak
 flow conversation.
-
-Jika Assessor sudah menyertakan `suggested_followup`,
-Follow-up Generator TIDAK dipanggil — gunakan saran dari
-Assessor langsung untuk menghemat API call.
 """
 
 import json
