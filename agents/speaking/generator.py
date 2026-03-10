@@ -195,6 +195,11 @@ def run_generator(
                 "oral_presentation":    180,
             }
             result["suggested_duration_seconds"] = defaults.get(sub_mode, 90)
+            logger.warning(
+                f"[speaking_generator] LLM did not return 'suggested_duration_seconds' "
+                f"— injecting default {result['suggested_duration_seconds']}s "
+                f"for sub_mode='{sub_mode}'"
+            )
 
         logger.info(
             f"[speaking_generator] Done — "
