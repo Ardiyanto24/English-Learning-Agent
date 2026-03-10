@@ -107,21 +107,44 @@ def _apply_adjustments(
         current_dist.setdefault(fmt, []).append(i)
 
     # Ganti kata yang formatnya berlebih dengan adjusted_words
+    applied  = 0
+    skipped  = 0
+
     for adj_word in adjusted_words:
         adj_fmt = adj_word.get("format", "")
-        target_count = target_dist.get(adj_fmt, 0)
+        target_count  = target_dist.get(adj_fmt, 0)
         current_count = len(current_dist.get(adj_fmt, []))
 
         if current_count < target_count:
-            # Cari format yang berlebih untuk diganti
+            replaced = False
             for fmt, indices in current_dist.items():
                 expected = target_dist.get(fmt, 0)
                 if len(indices) > expected and indices:
                     replace_idx = indices.pop()
                     words[replace_idx] = adj_word
                     current_dist.setdefault(adj_fmt, []).append(replace_idx)
+                    applied += 1
+                    replaced = True
                     break
-        # Jika tidak ada yang perlu diganti, lewati
+
+            if not replaced:
+                # Tidak ada format yang over-distributed — kata di-skip
+                skipped += 1
+                logger.warning(
+                    f"[vocab_validator] Adjustment skipped for word='{adj_word.get('word')}' "
+                    f"fmt='{adj_fmt}' — no over-distributed format found to replace"
+                )
+        else:
+            # Format sudah cukup — kata ini tidak perlu di-insert
+            skipped += 1
+            logger.debug(
+                f"[vocab_validator] Adjustment not needed for word='{adj_word.get('word')}' "
+                f"fmt='{adj_fmt}' already at target count"
+            )
+
+    logger.info(
+        f"[vocab_validator] Adjustments — applied={applied} skipped={skipped}"
+    )
 
     return {"words": words}
 
@@ -201,6 +224,8 @@ def run_validator(
         "[vocab_validator] All attempts failed — forcing adjustment and flagging"
     )
 
+    validator_unavailable = last_validation is None
+
     adjusted_words = []
     if last_validation:
         adjusted_words = last_validation.get("adjusted_words", [])
@@ -210,19 +235,21 @@ def run_validator(
     )
 
     log_error(
-        error_type="validation_failed",
+        error_type="validator_unavailable" if validator_unavailable else "validation_failed",
         agent_name="vocab_validator",
         context={
             "final_score": last_validation.get("match_score") if last_validation else 0,
             "issues": last_validation.get("issues", []) if last_validation else [],
+            "validator_unavailable": validator_unavailable,
         },
         fallback_used=True,
     )
 
     return {
-        "is_valid": False,
-        "match_score": last_validation.get("match_score", 0) if last_validation else 0,
-        "issues": last_validation.get("issues", []) if last_validation else [],
-        "final_words": final_output.get("words", []),
-        "is_adjusted": True,
+        "is_valid":             False,
+        "match_score":          last_validation.get("match_score", 0) if last_validation else 0,
+        "issues":               last_validation.get("issues", []) if last_validation else [],
+        "final_words":          final_output.get("words", []),
+        "is_adjusted":          not validator_unavailable,  # True hanya jika adjustment benar-benar dijalankan
+        "is_validator_unavailable": validator_unavailable,  # True jika LLM error total
     }
