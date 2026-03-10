@@ -123,11 +123,11 @@ def build_assessor_prompt(
         else:
             phase_note = "Phase 2 (10-15 exchanges): May stop if topic naturally closed."
     elif sub_mode == "prompted_response":
-        remaining = max(0, 3 - exchange_count)
+        remaining = max(0, PROMPTED_RESPONSE_MAX - exchange_count)
         phase_note = (
-            f"Max 3 exchanges for prompted_response. "
+            f"Max {PROMPTED_RESPONSE_MAX} exchanges for prompted_response. "
             f"Exchanges used: {exchange_count}. "
-            f"{'MUST STOP NOW.' if remaining == 0 else f'Remaining: {remaining}'}"
+            f"Remaining: {remaining}."
         )
 
     return f"""Assess the conversation and decide whether to continue, stop, or move to a new subtopic.
