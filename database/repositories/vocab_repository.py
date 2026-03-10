@@ -164,3 +164,37 @@ def get_weak_words(topic: str, threshold: float = 60.0,
             (topic, threshold, limit),
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def get_spaced_repetition_words(
+    topic: str,
+    threshold: float = 60.0,
+    limit: int = 5,
+) -> list[dict]:
+    """
+    Ambil kata untuk review via spaced repetition.
+    Prioritas: kata yang paling LAMA tidak dilihat (last_seen_at ASC).
+    Filter: hanya kata dengan mastery_score < threshold.
+
+    Berbeda dari get_weak_words() yang prioritas mastery terendah —
+    fungsi ini memastikan rotasi kata, bukan kata yang sama terus muncul.
+
+    Args:
+        topic    : Topik yang dicari
+        threshold: Batas mastery score (default 60%)
+        limit    : Jumlah kata yang diambil (sesuai review_words dari Planner)
+
+    Returns:
+        List dict kata, diurutkan dari yang terlama tidak dilihat
+    """
+    with get_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM vocab_word_tracking
+            WHERE topic = ? AND mastery_score < ?
+            ORDER BY last_seen_at ASC
+            LIMIT ?
+            """,
+            (topic, threshold, limit),
+        ).fetchall()
+    return [dict(row) for row in rows]
