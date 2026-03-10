@@ -71,6 +71,7 @@ def _fetch_vocab_data() -> tuple[list, list, list]:
                 """
                 SELECT * FROM vocab_word_tracking
                 ORDER BY last_seen DESC
+                LIMIT 200
                 """
             ).fetchall()
 
