@@ -81,7 +81,7 @@ def _parse_generator_response(raw: str) -> dict:
 
 
 @retry_llm
-def _call_generator_llm(planner_output: dict) -> dict:
+def _call_generator_llm(planner_output: dict, new_words_count: int) -> dict:
     """
     Panggil Claude Haiku untuk generate vocab questions.
     Di-wrap @retry_llm: max 3x retry, exponential backoff 2s→4s→8s.
@@ -90,8 +90,7 @@ def _call_generator_llm(planner_output: dict) -> dict:
         topic=planner_output["topic"],
         difficulty_target=planner_output["difficulty_target"],
         format_distribution=planner_output["format_distribution"],
-        new_words=planner_output["new_words"],
-        review_words=planner_output["review_words"],
+        new_words=new_words_count,
     )
 
     client = _get_client()
@@ -115,21 +114,60 @@ def run_generator(planner_output: dict) -> dict:
 
     Returns:
         dict: {"words": [list of word objects]}
+        - new words  : di-generate oleh LLM
+        - review words: diambil dari DB via spaced repetition (last_seen_at ASC)
 
     Raises:
-        RuntimeError jika gagal setelah semua retry habis
-        (caller — biasanya session flow — harus batalkan sesi)
+        RuntimeError jika LLM gagal setelah semua retry habis
     """
+    topic        = planner_output.get("topic")
+    new_count    = planner_output.get("new_words", 5)
+    review_count = planner_output.get("review_words", 0)
+
     logger.info(
         f"[vocab_generator] Generating {planner_output.get('total_words')} words "
-        f"for topic={planner_output.get('topic')} "
-        f"difficulty={planner_output.get('difficulty_target')}"
+        f"for topic={topic} "
+        f"difficulty={planner_output.get('difficulty_target')} "
+        f"(new={new_count}, review={review_count})"
     )
 
-    try:
-        result = _call_generator_llm(planner_output)
+    # ── Step 1: Ambil review words dari DB via spaced repetition ──────────
+    # Python yang memilih kata — bukan LLM
+    # Prioritas: kata yang paling lama tidak dilihat (last_seen_at ASC)
+    review_words = []
+    if review_count > 0:
+        db_words = get_spaced_repetition_words(
+            topic     = topic,
+            threshold = 60.0,
+            limit     = review_count,
+        )
+        for w in db_words:
+            review_words.append({
+                "word":           w["word"],
+                "difficulty":     w["difficulty"],
+                "format":         None,   # ⏳ pending decision — diisi nanti
+                "question_text":  None,   # ⏳ pending decision — diisi nanti
+                "correct_answer": None,   # ⏳ pending decision — diisi nanti
+                "is_new":         False,
+            })
+
         logger.info(
-            f"[vocab_generator] Generated {len(result.get('words', []))} words"
+            f"[vocab_generator] Spaced repetition: "
+            f"{len(review_words)}/{review_count} review words from DB"
+        )
+
+    # ── Step 2: LLM generate new words saja ──────────────────────────────
+    try:
+        result = _call_generator_llm(planner_output, new_words_count=new_count)
+
+        # Gabung: new words dari LLM + review words dari DB
+        result["words"] = result["words"] + review_words
+
+        logger.info(
+            f"[vocab_generator] Done — "
+            f"{len(result['words'])} total words "
+            f"({len(result['words']) - len(review_words)} new, "
+            f"{len(review_words)} review)"
         )
         return result
 
@@ -138,9 +176,9 @@ def run_generator(planner_output: dict) -> dict:
             error_type="llm_timeout",
             agent_name="vocab_generator",
             context={
-                "topic": planner_output.get("topic"),
+                "topic":       topic,
                 "total_words": planner_output.get("total_words"),
-                "error": str(e),
+                "error":       str(e),
             },
             fallback_used=False,
         )
