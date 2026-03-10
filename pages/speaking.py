@@ -195,18 +195,21 @@ def _render_summary():
         st.warning("⚠️ Sesi ini tidak bisa dinilai karena kendala teknis. Transcript tetap tersimpan.")
     else:
         # Tampilkan skor
+        def _fmt(val) -> str:
+            return f"{val:.1f}/10" if val is not None else "N/A"
+
         if sub_mode == "oral_presentation":
             c1, c2, c3, c4, c5 = st.columns(5)
-            c1.metric("Grammar",    f"{evaluation.get('grammar_score', 0):.1f}/10")
-            c2.metric("Relevance",  f"{evaluation.get('relevance_score', 0):.1f}/10")
-            c3.metric("Vocabulary", f"{evaluation.get('vocabulary_score', 0):.1f}/10")
-            c4.metric("Structure",  f"{evaluation.get('structure_score', 0):.1f}/10")
-            c5.metric("Final",      f"{evaluation.get('final_score', 0):.1f}/10")
+            c1.metric("Grammar",    _fmt(evaluation.get('grammar_score')))
+            c2.metric("Relevance",  _fmt(evaluation.get('relevance_score')))
+            c3.metric("Vocabulary", _fmt(evaluation.get('vocabulary_score')))
+            c4.metric("Structure",  _fmt(evaluation.get('structure_score')))
+            c5.metric("Final",      _fmt(evaluation.get('final_score')))
         else:
             c1, c2, c3 = st.columns(3)
-            c1.metric("Grammar",   f"{evaluation.get('grammar_score', 0):.1f}/10")
-            c2.metric("Relevance", f"{evaluation.get('relevance_score', 0):.1f}/10")
-            c3.metric("Final",     f"{evaluation.get('final_score', 0):.1f}/10")
+            c1.metric("Grammar",   _fmt(evaluation.get('grammar_score')))
+            c2.metric("Relevance", _fmt(evaluation.get('relevance_score')))
+            c3.metric("Final",     _fmt(evaluation.get('final_score')))
 
         # Feedback per kriteria
         feedback = evaluation.get("feedback", {})
