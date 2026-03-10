@@ -24,13 +24,19 @@ from typing import Optional
 import anthropic
 from dotenv import load_dotenv
 
+from config.settings import SONNET_MODEL
 from utils.logger import log_error, logger
 from utils.retry import retry_llm
-from config.settings import SONNET_MODEL
 
 load_dotenv()
 
 _client: Optional[anthropic.Anthropic] = None
+_FALLBACK_FOLLOW_UP_PROMPT = (
+    "That's a really interesting perspective! "
+    "What do you think would be the most significant challenge "
+    "related to what you just described?"
+)
+_FALLBACK_NEW_ANGLE = "challenge/difficulty angle (fallback)"
 
 # System prompt untuk Follow-up Generator
 # Lebih singkat dari yang lain karena tugasnya sangat spesifik
@@ -89,7 +95,7 @@ def _call_followup_llm(
     if previous_angles:
         avoid_section = f"""
 Already discussed angles (do NOT revisit):
-{chr(10).join(f'- {a}' for a in previous_angles[-4:])}
+{chr(10).join(f"- {a}" for a in previous_angles[-4:])}
 """
 
     user_prompt = f"""Generate a natural follow-up to keep the conversation going.
@@ -143,24 +149,21 @@ def run_follow_up(
     # Gunakan saran Assessor jika tersedia (hemat API call)
     if assessor_suggestion and len(assessor_suggestion.strip()) > 10:
         logger.info(
-            "[speaking_follow_up] Using assessor suggestion "
-            "(skipping LLM call)"
+            "[speaking_follow_up] Using assessor suggestion (skipping LLM call)"
         )
         return {
             "follow_up_prompt": assessor_suggestion,
-            "new_angle":        "suggested by assessor",
-            "source":           "assessor",
+            "new_angle": "suggested by assessor",
+            "source": "assessor",
         }
 
-    logger.info(
-        f"[speaking_follow_up] Generating follow-up for topic='{main_topic}'"
-    )
+    logger.info(f"[speaking_follow_up] Generating follow-up for topic='{main_topic}'")
 
     try:
         result = _call_followup_llm(
-            main_topic       = main_topic,
-            latest_user_text = latest_user_text,
-            previous_angles  = previous_angles or [],
+            main_topic=main_topic,
+            latest_user_text=latest_user_text,
+            previous_angles=previous_angles or [],
         )
 
         result["source"] = "llm"
@@ -172,11 +175,11 @@ def run_follow_up(
 
     except Exception as e:
         log_error(
-            error_type   = "llm_timeout",
-            agent_name   = "speaking_follow_up",
-            session_id   = session_id,
-            context      = {"main_topic": main_topic, "error": str(e)},
-            fallback_used = True,
+            error_type="llm_timeout",
+            agent_name="speaking_follow_up",
+            session_id=session_id,
+            context={"main_topic": main_topic, "error": str(e)},
+            fallback_used=True,
         )
         logger.warning(
             "[speaking_follow_up] Failed after 3 retries — using generic fallback"
@@ -184,11 +187,7 @@ def run_follow_up(
 
         # Fallback generik — conversation tetap jalan
         return {
-            "follow_up_prompt": (
-                "That's a really interesting perspective! "
-                "What do you think would be the most significant challenge "
-                "related to what you just described?"
-            ),
-            "new_angle": "challenge/difficulty angle (fallback)",
-            "source":    "fallback",
+            "follow_up_prompt": _FALLBACK_FOLLOW_UP_PROMPT,
+            "new_angle": _FALLBACK_NEW_ANGLE,
+            "source": "fallback",
         }
