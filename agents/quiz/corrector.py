@@ -38,6 +38,7 @@ from config.settings import SONNET_MODEL
 load_dotenv()
 
 _client: Optional[anthropic.Anthropic] = None
+_rag_cache = dict[str, str] = {} # cache RAG context per topik dalam satu proses
 
 
 def _get_client() -> anthropic.Anthropic:
@@ -51,23 +52,28 @@ def _get_rag_context_for_correction(topic: str) -> str:
     """
     Retrieve materi referensi untuk topik soal yang sedang dikoreksi.
 
-    Berbeda dari Generator yang retrieve di awal sesi,
-    Corrector retrieve ulang per soal agar konteks akurat.
+    Hasil di-cache per topik — jika topik yang sama muncul di beberapa
+    soal dalam satu sesi, retrieve ke ChromaDB hanya terjadi sekali.
 
     Jika RAG gagal: gunakan nama topik sebagai fallback.
     """
+    if topic in _rag_cache:
+        logger.debug(f"[quiz_corrector] RAG cache hit for '{topic}'")
+        return _rag_cache[topic]
+
     try:
         result = retrieve(query=topic, topic=topic)
         chunks = format_context_for_prompt(result)
-        if chunks:
-            return chunks
-        return f"[Topic: {topic}]"
+        context = chunks if chunks else f"[Topic: {topic}]"
     except Exception as e:
         logger.warning(
             f"[quiz_corrector] RAG retrieve failed for '{topic}': {e} "
             f"— using topic name as fallback"
         )
-        return f"[Topic: {topic}]"
+        context = f"[Topic: {topic}]"
+
+    _rag_cache[topic] = context
+    return context
 
 
 def _parse_corrector_response(raw: str) -> dict:
