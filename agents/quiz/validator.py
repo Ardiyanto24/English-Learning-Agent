@@ -206,6 +206,8 @@ def run_validator(
         "[quiz_validator] All attempts failed — forcing adjustment"
     )
 
+    validator_unavailable = last_validation is None
+
     adjusted_questions = []
     if last_validation:
         adjusted_questions = last_validation.get("adjusted_questions", [])
@@ -215,19 +217,21 @@ def run_validator(
     )
 
     log_error(
-        error_type="validation_failed",
+        error_type="validator_unavailable" if validator_unavailable else "validation_failed",
         agent_name="quiz_validator",
         context={
-            "final_score": last_validation.get("match_score", 0) if last_validation else 0,
-            "issues":      last_validation.get("issues", []) if last_validation else [],
+            "final_score":          last_validation.get("match_score", 0) if last_validation else 0,
+            "issues":               last_validation.get("issues", []) if last_validation else [],
+            "validator_unavailable": validator_unavailable,
         },
         fallback_used=True,
     )
 
     return {
-        "is_valid":        False,
-        "match_score":     last_validation.get("match_score", 0) if last_validation else 0,
-        "issues":          last_validation.get("issues", []) if last_validation else [],
-        "final_questions": final_output.get("questions", []),
-        "is_adjusted":     True,
+        "is_valid":                  False,
+        "match_score":               last_validation.get("match_score", 0) if last_validation else 0,
+        "issues":                    last_validation.get("issues", []) if last_validation else [],
+        "final_questions":           final_output.get("questions", []),
+        "is_adjusted":               not validator_unavailable,
+        "is_validator_unavailable":  validator_unavailable,
     }
