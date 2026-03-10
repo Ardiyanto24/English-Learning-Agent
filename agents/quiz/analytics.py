@@ -8,21 +8,21 @@ dan cluster — insight yang dihasilkan lebih kompleks.
 """
 
 import json
-from typing import Optional
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 import anthropic
 from dotenv import load_dotenv
 
+from config.settings import MIN_SESSIONS_FOR_ANALYTICS, SONNET_MODEL
+from database.connection import get_db
 from prompts.analytics.quiz_analytics_prompt import (
     QUIZ_ANALYTICS_SYSTEM_PROMPT,
     build_quiz_analytics_prompt,
 )
-from database.connection import get_db
 from utils.logger import log_error, logger
 from utils.retry import retry_llm
-from config.settings import SONNET_MODEL, MIN_SESSIONS_FOR_ANALYTICS
 
 load_dotenv()
 
@@ -58,7 +58,7 @@ def _fetch_quiz_data() -> tuple[list, list, list]:
             ).fetchall()
 
             topic_tracking = conn.execute(
-                "SELECT * FROM quiz_topic_tracking ORDER BY avg_score_pct ASC"
+                "SELECT * FROM quiz_topic_tracking ORDER BY avg_score_pct ASC LIMIT 46"
             ).fetchall()
 
             questions = conn.execute(
@@ -76,7 +76,9 @@ def _fetch_quiz_data() -> tuple[list, list, list]:
             [dict(r) for r in questions],
         )
     except Exception as e:
-        log_error("db_error", "quiz_analytics", context={"error": str(e)}, fallback_used=True)
+        log_error(
+            "db_error", "quiz_analytics", context={"error": str(e)}, fallback_used=True
+        )
         return [], [], []
 
 
@@ -87,25 +89,30 @@ def _save_snapshot(result: dict) -> None:
                 """INSERT INTO analytics_snapshots
                    (agent_type, snapshot_data, created_at)
                    VALUES (?, ?, ?)""",
-                ("quiz_analytics",
-                 json.dumps(result, ensure_ascii=False),
-                 datetime.now().isoformat()),
+                (
+                    "quiz_analytics",
+                    json.dumps(result, ensure_ascii=False),
+                    datetime.now().isoformat(),
+                ),
             )
     except Exception as e:
-        log_error("db_error", "quiz_analytics",
-                  context={"error": str(e), "action": "save_snapshot"})
+        log_error(
+            "db_error",
+            "quiz_analytics",
+            context={"error": str(e), "action": "save_snapshot"},
+        )
 
 
 def _empty_insight() -> dict:
     return {
-        "coverage_pct":             0,
-        "total_topics_practiced":   0,
-        "weakest_topics":           [],
-        "strongest_topics":         [],
-        "cluster_progress":         {},
-        "prerequisite_bottleneck":  None,
-        "trend":                    "insufficient_data",
-        "insight":                  None,
+        "coverage_pct": 0,
+        "total_topics_practiced": 0,
+        "weakest_topics": [],
+        "strongest_topics": [],
+        "cluster_progress": {},
+        "prerequisite_bottleneck": None,
+        "trend": "insufficient_data",
+        "insight": None,
     }
 
 
@@ -166,7 +173,10 @@ def run_analytics() -> dict:
         logger.info(f"[quiz_analytics] Done — trend={result.get('trend')}")
         return result
     except Exception as e:
-        log_error("llm_timeout", "quiz_analytics",
-                  context={"sessions": len(sessions), "error": str(e)},
-                  fallback_used=True)
+        log_error(
+            "llm_timeout",
+            "quiz_analytics",
+            context={"sessions": len(sessions), "error": str(e)},
+            fallback_used=True,
+        )
         return _empty_insight()
