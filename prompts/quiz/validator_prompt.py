@@ -30,6 +30,8 @@ You check STRUCTURE and COMPLIANCE only — not content quality or grammar accur
 - Calculate as: (checks_passed / total_checks)
 - 5 checks total: count, format_dist, difficulty, fields, topics
 - Score >= 0.8 = valid (4 out of 5 checks passed is acceptable)
+- EXCEPTION: if "fields" check fails, score is automatically 0.0 regardless of other checks
+  A question with missing required fields must never pass validation.
 
 ## adjusted_questions
 If match_score < 0.8, provide adjusted_questions — a list of question objects
