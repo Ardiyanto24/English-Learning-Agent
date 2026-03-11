@@ -237,7 +237,7 @@ def run_generator(
             "part_b": [list of items],
             "part_c": [list of items],
             "total_questions": int,
-            "tts_available"  : bool,  ← False jika semua TTS gagal
+            "tts_available"  : bool,  ← True jika >= 50% audio berhasil di-generate
         }
 
         Setiap item: {
@@ -315,7 +315,9 @@ def run_generator(
         )
 
     result["total_questions"] = total_q
-    result["tts_available"]   = tts_success > 0
+    result["tts_available"] = (
+        tts_success / tts_total >= 0.5 if tts_total > 0 else False
+    )
 
     logger.info(
         f"[listening_generator] Complete — "
