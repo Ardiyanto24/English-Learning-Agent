@@ -36,7 +36,14 @@ def _get_client() -> anthropic.Anthropic:
 
 
 def _fetch_speaking_data() -> tuple[list, list]:
-    """Ambil speaking sessions dan exchanges dari DB."""
+    """
+    Ambil speaking sessions dan agregasi skor per sub-mode dari DB.
+
+    Tidak mengambil raw exchanges — skor per sesi sudah tersimpan
+    di speaking_sessions sehingga agregasi bisa dilakukan di SQL.
+    Ini menghindari bias representasi akibat perbedaan jumlah
+    exchange per sub-mode.
+    """
     try:
         with get_db() as conn:
             sessions = conn.execute(
@@ -47,19 +54,28 @@ def _fetch_speaking_data() -> tuple[list, list]:
                    ORDER BY s.created_at ASC"""
             ).fetchall()
 
-            exchanges = conn.execute(
-                """SELECT se.role, se.text, se.exchange_index,
-                          s.created_at as session_date
-                   FROM speaking_exchanges se
-                   JOIN sessions s ON se.session_id = s.session_id
+            # Agregasi per sub_mode — LLM menerima data terstruktur
+            # bukan raw exchanges yang bias per jumlah exchange
+            submode_stats = conn.execute(
+                """SELECT
+                       sub_mode,
+                       COUNT(*)                    AS total_sessions,
+                       AVG(grammar_score)          AS avg_grammar,
+                       AVG(relevance_score)        AS avg_relevance,
+                       AVG(vocabulary_score)       AS avg_vocabulary,
+                       AVG(structure_score)        AS avg_structure,
+                       AVG(final_score)            AS avg_final,
+                       AVG(total_exchanges)        AS avg_exchanges
+                   FROM speaking_sessions ss
+                   JOIN sessions s ON ss.session_id = s.session_id
                    WHERE s.status = 'completed'
-                   ORDER BY s.created_at DESC, se.exchange_index ASC
-                   LIMIT 100"""
+                     AND ss.is_graded = 1
+                   GROUP BY sub_mode"""
             ).fetchall()
 
         return (
             [dict(r) for r in sessions],
-            [dict(r) for r in exchanges],
+            [dict(r) for r in submode_stats],
         )
     except Exception as e:
         log_error("db_error", "speaking_analytics",
@@ -111,10 +127,10 @@ def _parse_response(raw: str) -> dict:
 
 
 @retry_llm
-def _call_analytics_llm(sessions: list, exchanges: list) -> dict:
+def _call_analytics_llm(sessions: list, submode_stats: list) -> dict:
     prompt = build_speaking_analytics_prompt(
-        sessions_data  = sessions,
-        exchanges_data = exchanges,
+        sessions_data      = sessions,
+        submode_stats_data = submode_stats,
     )
     client = _get_client()
     response = client.messages.create(
@@ -143,7 +159,7 @@ def run_analytics() -> dict:
         return _empty_insight()
 
     try:
-        result = _call_analytics_llm(sessions, exchanges)
+        result = _call_analytics_llm(sessions, submode_stats)
         _save_snapshot(result)
         logger.info(
             f"[speaking_analytics] Done — trend={result.get('trend')} "
