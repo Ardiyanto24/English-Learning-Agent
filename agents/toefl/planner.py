@@ -77,7 +77,7 @@ _DISTRIBUTIONS = {
         "reading": {
             "total":    25,
             "passages":  3,
-            "per_passage": 8,   # 3×8=24, 1 passage 9 soal → total 25
+            "per_passage": 8,   # 3×8=24 soal aktual (total=25 adalah label, bukan enforcement)
         },
         "timers": {
             "listening": 1050,   # 17.5 menit → dibulatkan ke 17 menit 30 detik
@@ -100,7 +100,7 @@ _DISTRIBUTIONS = {
         "reading": {
             "total":    37,
             "passages":  4,
-            "per_passage": 9,   # 4×9=36, 1 passage 10 soal → total 37 (atau 4×9+1)
+            "per_passage": 9,   # 4×9=36 soal aktual (total=37 adalah label, bukan enforcement)
         },
         "timers": {
             "listening": 1575,   # ~26 menit
