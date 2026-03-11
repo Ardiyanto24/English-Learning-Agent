@@ -239,7 +239,7 @@ def run_validator(
     regen_map = {
         "listening": (
             regen_listening,
-            lambda: (planner_output["listening"], session_id),
+            lambda attempt=attempt: (planner_output["listening"], session_id, attempt),
         ),
         "structure": (
             regen_structure,

@@ -90,6 +90,7 @@ def _generate_audio(
     session_id: str,
     part: str,
     item_id: int,
+    attempt: int = 0,
 ) -> Optional[str]:
     """
     Convert script ke audio menggunakan TTS multi-voice.
@@ -115,7 +116,8 @@ def _generate_audio(
         )
         return None
 
-    filename   = f"toefl_{session_id}_L{part}_{item_id:02d}.mp3"
+    suffix = f"_r{attempt}" if attempt > 0 else ""
+    filename   = f"toefl_{session_id}_L{part}_{item_id:02d}{suffix}.mp3"
     audio_path = TEMP_AUDIO_DIR / filename
 
     try:
@@ -222,6 +224,7 @@ def _call_llm(part: str, item_count: int, questions_per_item: int) -> list[dict]
 def run_generator(
     listening_dist: dict,
     session_id: str,
+    attempt: int = 0,
 ) -> dict:
     """
     Jalankan TOEFL Listening Generator untuk semua part (A, B, C).
@@ -293,6 +296,7 @@ def run_generator(
                 session_id = session_id,
                 part       = part_label,
                 item_id    = item_id,
+                attempt    = attempt,
             )
 
             if audio_path:
