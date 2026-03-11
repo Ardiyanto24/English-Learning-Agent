@@ -171,6 +171,11 @@ def _parse_response(raw: str, part: str) -> list[dict]:
                 raise ValueError(
                     f"Item {i} Part {part} script missing [SPEAKER_A] tag"
                 )
+            if part == "B" and "[SPEAKER_B]" not in script:
+                raise ValueError(
+                    f"Item {i} Part B script missing [SPEAKER_B] tag — "
+                    f"Part B must be a two-speaker dialogue"
+                )
         elif part == "C":
             if "[NARRATOR]" not in script:
                 raise ValueError(
