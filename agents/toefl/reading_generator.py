@@ -96,12 +96,16 @@ def _parse_questions_response(raw: str, expected_count: int) -> list[dict]:
     if not questions:
         raise ValueError("Response missing 'questions'")
 
-    # Cek semua tipe wajib terpenuhi
+    # Truncation dulu sebelum validasi — agar validasi mencerminkan
+    # soal yang benar-benar akan dipakai, bukan seluruh list LLM
+    questions = questions[:expected_count]
+
+    # Cek semua tipe wajib terpenuhi (post-truncation)
     present_types = {q.get("question_type") for q in questions}
     missing_types = REQUIRED_QUESTION_TYPES - present_types
     if missing_types:
         raise ValueError(
-            f"Missing required question types: {missing_types}"
+            f"Missing required question types after truncation: {missing_types}"
         )
 
     # Validasi field per soal
@@ -115,7 +119,7 @@ def _parse_questions_response(raw: str, expected_count: int) -> list[dict]:
                 f"Question {i} invalid correct_answer: {q.get('correct_answer')}"
             )
 
-    return questions[:expected_count]
+    return questions
 
 
 # ── Step 1: Generate Passage ─────────────────────────────────────────────────
