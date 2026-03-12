@@ -200,13 +200,24 @@ def run_validator(
             reading_content   = final_reading,
         )
     except Exception as e:
-        # Jika validator sendiri gagal → lolos semua, log warning
+        # Jika validator sendiri gagal → lolos semua, tapi flag eksplisit
+        # overall_quality_score=None agar downstream tidak salah baca sebagai lolos
         logger.warning(
             f"[toefl_validator] Validator LLM failed: {e} — "
-            f"passing all content with is_adjusted=True"
+            f"passing all content with validator_unavailable=True"
+        )
+        log_error(
+            error_type    = "validator_unavailable",
+            agent_name    = "toefl_validator",
+            context       = {"error": str(e)},
+            fallback_used = True,
         )
         return {
-            "validation":        {"overall_quality_score": 1.0, "is_acceptable": True},
+            "validation": {
+                "overall_quality_score": None,
+                "is_acceptable":         True,
+                "validator_unavailable": True,
+            },
             "listening":         final_listening,
             "structure":         final_structure,
             "reading":           final_reading,
