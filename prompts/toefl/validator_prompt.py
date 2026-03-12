@@ -132,7 +132,7 @@ def build_validator_prompt(
             item = items[0]
             listening_samples.append({
                 "part":      part_key.upper().replace("_", " "),
-                "script":    item["script"][:300] + "...",
+                "script":    item["script"] + "...",
                 "questions": item["questions"][:2],
             })
 
