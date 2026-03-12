@@ -20,6 +20,8 @@ Keduanya di-generate dalam satu LLM call untuk efisiensi.
 RAG context di-inject sebagai referensi materi grammar.
 """
 
+import itertools
+
 STRUCTURE_GENERATOR_SYSTEM_PROMPT = """You are an expert TOEFL ITP test content creator \
 specializing in the Structure and Written Expression section.
 
@@ -127,7 +129,6 @@ def build_structure_prompt(
     ]
 
     # Ambil distribusi yang cukup
-    import itertools
     cycle_a = list(itertools.islice(itertools.cycle(grammar_areas_a), part_a_count))
     cycle_b = list(itertools.islice(itertools.cycle(grammar_areas_b), part_b_count))
 
