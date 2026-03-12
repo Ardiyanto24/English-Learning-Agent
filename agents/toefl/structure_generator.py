@@ -78,18 +78,19 @@ def _get_rag_context() -> tuple[str, bool]:
             chunks.append(f"## {topic}\n[Grammar topic: {topic}]")
             failed += 1
 
-    is_fallback = failed == len(_STRUCTURE_GRAMMAR_TOPICS)
+    total_topics = len(_STRUCTURE_GRAMMAR_TOPICS)
+    is_fallback = failed > total_topics * 0.25  if total_topics > 0 else True
 
     if is_fallback:
         log_error(
             error_type    = "rag_failure",
             agent_name    = "structure_generator",
-            context       = {"all_topics_failed": True},
+            context       = {"failed": failed, "total": total_topics},
             fallback_used = True,
         )
         logger.warning(
-            "[structure_generator] All RAG queries failed — "
-            "using topic names as fallback"
+            f"[structure_generator] {failed}/{total_topics} RAG quires failed"
+            f"(>25% threshold) - threating is fallback"
         )
 
     return "\n\n".join(chunks), is_fallback
