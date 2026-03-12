@@ -77,17 +77,6 @@ def _build_answer_key(section_content: dict, section: str) -> dict[int, str]:
     return answer_key
 
 
-def _count_total_questions(section_content: dict, section: str) -> int:
-    """Hitung total soal dalam konten section."""
-    if section == "listening":
-        return section_content.get("total_questions", 0)
-    elif section == "structure":
-        return section_content.get("total_questions", 0)
-    elif section == "reading":
-        return section_content.get("total_questions", 0)
-    return 0
-
-
 def run_evaluator(
     session_id: str,
     user_answers: dict,
@@ -143,6 +132,18 @@ def run_evaluator(
     mode = planner_output.get("mode", "100%")
     logger.info(f"[toefl_evaluator] Evaluating session={session_id} mode={mode}")
 
+    # ── Cek apakah ada konten yang di-adjust oleh Validator ──────────────
+    content_adjusted = any([
+        listening_content.get("is_adjusted", False),
+        structure_content.get("is_adjusted", False),
+        reading_content.get("is_adjusted", False),
+    ])
+    if content_adjusted:
+        logger.warning(
+            "[toefl_evaluator] One or more sections contain adjusted content — "
+            "score reliability may be reduced"
+        )
+
     # ── Bangun kunci jawaban dari konten generator ────────────────────────
     listening_key = _build_answer_key(listening_content, "listening")
     structure_key = _build_answer_key(structure_content, "structure")
@@ -158,9 +159,9 @@ def run_evaluator(
     r_raw = _calculate_raw_score(r_answers, reading_key)
 
     # ── Total soal di mode ini (untuk extrapolasi) ────────────────────────
-    l_total = _count_total_questions(listening_content, "listening")
-    s_total = _count_total_questions(structure_content, "structure")
-    r_total = _count_total_questions(reading_content, "reading")
+    l_total = listening_content.get("total_questions", 0)
+    s_total = structure_content.get("total_questions", 0)
+    r_total = reading_content.get("total_questions",   0)
 
     # Full-test totals (dari score_conversion di planner)
     score_conv = planner_output.get("score_conversion", {})
@@ -246,6 +247,7 @@ def run_evaluator(
         "mode": mode,
         "is_graded": not score_pending,
         "score_pending": score_pending,
+        "content_adjusted": content_adjusted,
         "total_answered": total_answered,
         "section_totals": {
             "listening": l_total,
