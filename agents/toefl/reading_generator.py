@@ -70,9 +70,9 @@ def _parse_passage_response(raw: str) -> dict:
         raise ValueError("Response missing 'title'")
 
     word_count = len(parsed["passage"].split())
-    if word_count < 300:
+    if word_count < 400:
         raise ValueError(
-            f"Passage too short: {word_count} words (minimum 300)"
+            f"Passage too short: {word_count} words (minimum 400, target 400-450)"
         )
 
     # Simpan word count aktual
