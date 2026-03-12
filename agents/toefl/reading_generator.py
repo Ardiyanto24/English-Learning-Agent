@@ -273,6 +273,11 @@ def run_generator(reading_dist: dict) -> dict:
             )
             continue
 
+        domain = passage_data.get("topic_domain", "")
+        if domain:
+            used_domains.append(domain)
+        
+        
         passages.append({
             "passage_id":   p_num,
             "title":        passage_data["title"],
