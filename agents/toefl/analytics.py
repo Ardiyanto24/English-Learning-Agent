@@ -3,40 +3,36 @@ agents/toefl/analytics.py
 --------------------------
 TOEFL Analytics Agent.
 
-Dijalankan di akhir setiap sesi simulasi TOEFL.
-Menganalisis riwayat semua sesi untuk menghasilkan insight
-perkembangan skor, kelemahan section, dan rekomendasi fokus latihan.
+Dibandingkan Quiz/Vocab Analytics, TOEFL Analytics lebih sederhana
+dari sisi data structure — tidak ada topic tracking, hanya riwayat
+estimated score dan breakdown per section.
 
-Threshold minimum: 3 simulasi (sesuai brief).
+Yang membuatnya unik:
+- Harus exclude sesi abandoned (partial data merusak trend kalkulasi)
+- Analisis lintas section, bukan lintas topik
+- Mode awareness: apakah user siap naik ke mode yang lebih berat?
 
-Flow:
-  1. Fetch semua sesi completed dari DB
-  2. Jika < 3 sesi → return empty insight
-  3. Hitung agregasi per section dan per mode
-  4. Kirim ke Sonnet untuk insight naratif
-  5. Simpan snapshot ke analytics_snapshots
+Threshold minimum: 3 simulasi completed (bukan abandoned/incomplete)
 """
 
 import json
-from typing import Optional
 from datetime import datetime
+from typing import Optional
 
 import anthropic
 from dotenv import load_dotenv
 
+from config.settings import MIN_SESSIONS_FOR_ANALYTICS, SONNET_MODEL
+from database.connection import get_db
+from database.repositories.session_repository import get_abandoned_sessions
 from prompts.analytics.toefl_analytics_prompt import (
     TOEFL_ANALYTICS_SYSTEM_PROMPT,
     build_toefl_analytics_prompt,
 )
-from database.connection import get_db
 from utils.logger import log_error, logger
 from utils.retry import retry_llm
-from config.settings import SONNET_MODEL, MIN_SESSIONS_FOR_ANALYTICS
 
 load_dotenv()
-
-# Threshold minimum sesuai brief
-MIN_TOEFL_SESSIONS = max(3, MIN_SESSIONS_FOR_ANALYTICS)
 
 _client: Optional[anthropic.Anthropic] = None
 
@@ -48,158 +44,166 @@ def _get_client() -> anthropic.Anthropic:
     return _client
 
 
-def _fetch_toefl_data() -> list[dict]:
+# ===================================================
+# Data fetching
+# ===================================================
+def _fetch_toefl_data() -> list:
     """
-    Ambil semua sesi TOEFL yang sudah selesai dari DB.
+    Ambil semua sesi TOEFL yang benar-benar selesai (status='completed',
+    score_status='completed'), exclude sesi abandoned.
 
     Returns:
-        List dict dari toefl_sessions dengan score_status='completed',
-        diurutkan dari yang paling lama ke paling baru (untuk trend).
+        List dict sesi, chronological order
     """
     try:
+        # Ambil session_id yang abandoned untuk di-exclude
+        abandoned_ids = {
+            s["session_id"] for s in get_abandoned_sessions(mode="toefl")
+        }
+
         with get_db() as conn:
-            sessions = conn.execute(
+            rows = conn.execute(
                 """
                 SELECT
                     ts.session_id,
                     ts.mode,
-                    ts.listening_raw,
-                    ts.structure_raw,
-                    ts.reading_raw,
+                    ts.estimated_score,
+                    ts.listening_raw,   ts.structure_raw,   ts.reading_raw,
+                    ts.listening_scaled, ts.structure_scaled, ts.reading_scaled,
                     ts.listening_extrapolated,
                     ts.structure_extrapolated,
                     ts.reading_extrapolated,
-                    ts.listening_scaled,
-                    ts.structure_scaled,
-                    ts.reading_scaled,
-                    ts.estimated_score,
-                    ts.score_status,
-                    ts.created_at
+                    s.started_at,
+                    s.completed_at
                 FROM toefl_sessions ts
+                JOIN sessions s ON ts.session_id = s.session_id
                 WHERE ts.score_status = 'completed'
-                ORDER BY ts.created_at ASC
+                  AND s.status = 'completed'
+                ORDER BY s.completed_at ASC
                 """
             ).fetchall()
 
-        return [dict(row) for row in sessions]
+        sessions = [dict(r) for r in rows]
+
+        # Filter keluar yang abandoned
+        sessions = [s for s in sessions if s["session_id"] not in abandoned_ids]
+
+        return sessions
 
     except Exception as e:
         log_error(
-            error_type    = "db_error",
-            agent_name    = "toefl_analytics",
-            context       = {"error": str(e)},
-            fallback_used = True,
+            error_type="db_error",
+            agent_name="toefl_analytics",
+            context=str(e),
+            fallback_used="empty_list",
         )
-        logger.error(f"[toefl_analytics] DB fetch failed: {e}")
         return []
 
 
+# ===================================================
+# Snapshot
+# ===================================================
 def _save_snapshot(result: dict) -> None:
-    """Simpan hasil analytics ke analytics_snapshots."""
+    """Simpan hasil analytics ke tabel analytics_snapshots."""
     try:
         with get_db() as conn:
             conn.execute(
                 """
-                INSERT INTO analytics_snapshots
-                    (agent_type, snapshot_data, created_at)
+                INSERT INTO analytics_snapshots (snapshot_type, content, generated_at)
                 VALUES (?, ?, ?)
                 """,
                 (
-                    "toefl",
+                    "toefl_analytics",
                     json.dumps(result, ensure_ascii=False),
                     datetime.now().isoformat(),
                 ),
             )
     except Exception as e:
         log_error(
-            error_type = "db_error",
-            agent_name = "toefl_analytics",
-            context    = {"error": str(e), "action": "save_snapshot"},
+            error_type="db_error",
+            agent_name="toefl_analytics",
+            context=str(e),
         )
-        logger.error(f"[toefl_analytics] Snapshot save failed: {e}")
 
 
+# ===================================================
+# Empty result — returned jika data tidak cukup
+# ===================================================
 def _empty_insight() -> dict:
-    """Struktur kosong jika data tidak mencukupi."""
     return {
-        "total_simulations":  0,
-        "avg_estimated_score": None,
-        "score_trend":        [],
-        "weakest_section":    None,
-        "section_breakdown": {
-            "listening": {"avg_scaled": None, "trend": "insufficient_data"},
-            "structure": {"avg_scaled": None, "trend": "insufficient_data"},
-            "reading":   {"avg_scaled": None, "trend": "insufficient_data"},
+        "total_simulations"     : 0,
+        "avg_estimated_score"   : None,
+        "best_estimated_score"  : None,
+        "latest_estimated_score": None,
+        "section_averages"      : {
+            "listening_scaled": None,
+            "structure_scaled": None,
+            "reading_scaled"  : None,
         },
-        "insight": None,
+        "weakest_section"       : None,
+        "most_improved_section" : None,
+        "score_trend"           : "insufficient_data",
+        "mode_recommendation"   : None,
+        "insight"               : None,
     }
 
 
+# ===================================================
+# Response parsing
+# ===================================================
 def _parse_response(raw: str) -> dict:
-    """Parse dan validasi JSON dari LLM."""
     text = raw.strip()
     if text.startswith("```"):
         parts = text.split("```")
         text  = parts[1] if len(parts) > 1 else text
         if text.startswith("json"):
             text = text[4:]
-    text = text.strip()
+    parsed = json.loads(text.strip())
 
-    parsed = json.loads(text)
-
-    required = {"total_simulations", "avg_estimated_score", "score_trend",
-                "weakest_section", "section_breakdown", "insight"}
-    missing = required - set(parsed.keys())
+    # Validasi field wajib
+    required = {"total_simulations", "weakest_section", "score_trend", "insight"}
+    missing  = required - set(parsed.keys())
     if missing:
-        raise ValueError(f"Analytics response missing fields: {missing}")
+        raise ValueError(f"TOEFL analytics response missing fields: {missing}")
 
     return parsed
 
 
+# ===================================================
+# LLM call
+# ===================================================
 @retry_llm
-def _call_analytics_llm(sessions: list[dict]) -> dict:
-    """Panggil Claude Sonnet untuk generate insight dari data sesi."""
-    prompt = build_toefl_analytics_prompt(sessions_data=sessions)
-
-    client = _get_client()
+def _call_analytics_llm(sessions_data: list) -> dict:
+    prompt   = build_toefl_analytics_prompt(sessions_data)
+    client   = _get_client()
     response = client.messages.create(
-        model      = SONNET_MODEL,
-        max_tokens = 1024,
-        system     = TOEFL_ANALYTICS_SYSTEM_PROMPT,
-        messages   = [{"role": "user", "content": prompt}],
+        model=SONNET_MODEL,
+        max_tokens=1024,
+        system=TOEFL_ANALYTICS_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
     )
-
     return _parse_response(response.content[0].text)
 
 
+# ===================================================
+# Public entry point
+# ===================================================
 def run_analytics() -> dict:
     """
     Jalankan TOEFL Analytics Agent.
 
-    Return empty insight jika data < 3 simulasi completed.
-
     Returns:
-        dict: {
-            "total_simulations"  : int,
-            "avg_estimated_score": float | None,
-            "score_trend"        : list[int],  ← estimated_score tiap sesi
-            "weakest_section"    : "listening"|"structure"|"reading"|None,
-            "section_breakdown"  : {
-                "listening": {"avg_scaled": float|None, "trend": str},
-                "structure": {"avg_scaled": float|None, "trend": str},
-                "reading"  : {"avg_scaled": float|None, "trend": str},
-            },
-            "insight"            : str | None,  ← narasi dalam Bahasa Indonesia
-        }
+        dict insight jika data cukup (>= MIN_SESSIONS_FOR_ANALYTICS),
+        dict kosong (_empty_insight) jika belum cukup data atau LLM gagal.
     """
     logger.info("[toefl_analytics] Starting analytics run...")
 
     sessions = _fetch_toefl_data()
 
-    if len(sessions) < MIN_TOEFL_SESSIONS:
+    if len(sessions) < MIN_SESSIONS_FOR_ANALYTICS:
         logger.info(
-            f"[toefl_analytics] Insufficient data: {len(sessions)} sessions "
-            f"(minimum: {MIN_TOEFL_SESSIONS})"
+            f"[toefl_analytics] Insufficient data: {len(sessions)} completed simulations "
+            f"(minimum: {MIN_SESSIONS_FOR_ANALYTICS})"
         )
         return _empty_insight()
 
@@ -207,19 +211,16 @@ def run_analytics() -> dict:
         result = _call_analytics_llm(sessions)
         _save_snapshot(result)
         logger.info(
-            f"[toefl_analytics] Done — "
-            f"total={result.get('total_simulations')} "
-            f"avg_score={result.get('avg_estimated_score')} "
+            f"[toefl_analytics] Done — trend={result.get('score_trend')}, "
             f"weakest={result.get('weakest_section')}"
         )
         return result
 
     except Exception as e:
         log_error(
-            error_type    = "llm_timeout",
-            agent_name    = "toefl_analytics",
-            context       = {"sessions": len(sessions), "error": str(e)},
-            fallback_used = True,
+            error_type="llm_timeout",
+            agent_name="toefl_analytics",
+            context=str(e),
+            fallback_used="empty_insight",
         )
-        logger.error(f"[toefl_analytics] LLM call failed: {e}")
         return _empty_insight()
