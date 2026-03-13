@@ -1,226 +1,327 @@
 """
-modules/session/manager.py
---------------------------
-Session Manager: jembatan antara Streamlit session state dan database.
+modules/session/toefl_session_manager.py
+-----------------------------------------
+Orchestrator session management khusus TOEFL Simulator.
 
 Masalah yang diselesaikan:
-- Streamlit session_state: cepat, di-memory, HILANG saat refresh/error
-- SQLite DB: persisten, tapi lebih lambat
-- Solution: setiap aksi penting langsung disimpan ke DB (incremental save)
+- TOEFL adalah satu-satunya mode yang mendukung pause/resume lintas sesi
+- Pause hanya valid ANTAR section — tidak boleh di tengah section
+- Resume harus cek expiry 7 hari sebelum lanjut
+- Sesi expired → abandoned → dikecualikan dari analytics
 
-Flow normal:
-    init_session("vocab")
-        → buat record di DB
-        → init st.session_state["current_session"]
-    
-    save_progress(session_id, data)
-        → update st.session_state (untuk UI responsif)
-        → simpan ke DB (untuk persistensi)
-    
-    complete_session(session_id)
-        → update status DB ke "completed"
-        → clear session state
+Kenapa dipisah dari manager.py umum?
+- Logic pause/resume TOEFL terlalu spesifik untuk dicampur ke manager umum
+- pages/toefl.py cukup import modul ini tanpa perlu tahu detail DB
 
-Flow error/abandon:
-    abandon_session(session_id)
-        → update status DB ke "abandoned"
-        → clear session state
+Flow pause:
+    user klik "Pause" setelah selesai Listening
+        → is_section_complete() → True
+        → pause_session() → simpan ke DB, set expires_at
+        → return PauseResult(success=True, expires_at=...)
+
+Flow resume:
+    user buka app, ada sesi paused
+        → resume_session(session_id)
+        → check_and_resume_toefl_session() di repository
+        → expired? → return ResumeResult(success=False, reason='expired')
+        → valid?   → return ResumeResult(success=True, state=...)
+
+Konstanta:
+    PAUSE_EXPIRY_DAYS = 7   — window resume sebelum sesi abandoned
+    SECTION_ORDER     = [1, 2, 3]   — 1=Listening, 2=Structure, 3=Reading
 """
 
-import streamlit as st
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from typing import Optional
 
 from database.repositories.session_repository import (
-    create_session,
-    get_session,
+    check_and_resume_toefl_session,
+    get_abandoned_sessions,
+    pause_toefl_session,
     update_session_status,
-    get_sessions_by_mode,
 )
-from utils.helpers import generate_session_id
-from utils.logger import logger
+from database.repositories.toefl_repository import (
+    get_toefl_session,
+    update_current_section,
+)
+from utils.logger import log_error, logger
+
+# ===================================================
+# Konstanta
+# ===================================================
+PAUSE_EXPIRY_DAYS = 7
+
+# Urutan section: 1=Listening, 2=Structure, 3=Reading
+SECTION_ORDER = [1, 2, 3]
+SECTION_NAMES = {
+    1: "Listening",
+    2: "Structure",
+    3: "Reading",
+}
+
+# Jumlah soal yang diharapkan per section per mode
+# Dipakai is_section_complete() untuk validasi
+SECTION_TOTALS = {
+    "50%"  : {1: 25, 2: 20, 3: 25},
+    "75%"  : {1: 38, 2: 30, 3: 37},
+    "100%" : {1: 50, 2: 40, 3: 50},
+}
 
 
-# Key di Streamlit session_state untuk menyimpan data sesi aktif
-_ST_SESSION_KEY = "current_session"
+# ===================================================
+# Result dataclasses — menghindari return tuple
+# ===================================================
+@dataclass
+class PauseResult:
+    success    : bool
+    expires_at : Optional[str] = None
+    reason     : Optional[str] = None   # diisi jika success=False
 
 
-def init_session(mode: str) -> dict:
+@dataclass
+class ResumeResult:
+    success         : bool
+    state           : Optional[dict] = None   # diisi jika success=True
+    reason          : Optional[str] = None    # diisi jika success=False
+    expires_at      : Optional[str] = None    # untuk tampilkan di UI saat success
+
+
+# ===================================================
+# Helper internal
+# ===================================================
+def _now_str() -> str:
+    """Return timestamp sekarang sebagai string 'YYYY-MM-DD HH:MM:SS'."""
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _expires_str(from_dt: datetime, days: int = PAUSE_EXPIRY_DAYS) -> str:
+    """Hitung expires_at = from_dt + days hari, return sebagai string."""
+    return (from_dt + timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+
+
+# ===================================================
+# Fungsi utama
+# ===================================================
+def is_section_complete(session_id: str, section: int, mode: str) -> bool:
     """
-    Inisialisasi sesi baru: buat di DB + init Streamlit state.
+    Validasi apakah sebuah section sudah benar-benar selesai dikerjakan.
+
+    Cara kerja:
+    - Ambil semua soal section ini dari DB
+    - Hitung yang sudah ada user_answer-nya
+    - Bandingkan dengan total soal yang diharapkan untuk mode ini
 
     Args:
-        mode: Mode sesi — "vocab" | "quiz" | "speaking" | "toefl"
+        session_id: UUID sesi TOEFL
+        section   : Nomor section yang dicek (1=Listening, 2=Structure, 3=Reading)
+        mode      : Mode simulasi ('50%', '75%', '100%')
 
     Returns:
-        dict session yang baru dibuat:
-        {session_id, mode, status, created_at, ...}
-
-    Contoh:
-        session = init_session("vocab")
-        st.session_state["vocab_plan"] = planner_result
+        True jika semua soal section sudah dijawab, False jika belum
     """
-    session_id = generate_session_id()
+    toefl_data = get_toefl_session(session_id)
+    if not toefl_data:
+        return False
+
+    # Hitung soal section ini yang sudah dijawab
+    answered = sum(
+        1 for q in toefl_data.get("questions", [])
+        if q.get("section") == str(section)
+        and q.get("user_answer") is not None
+    )
+
+    expected = SECTION_TOTALS.get(mode, {}).get(section, 0)
+
+    is_complete = answered >= expected
+
+    if not is_complete:
+        logger.warning(
+            f"[toefl_session_manager] Section {section} belum selesai: "
+            f"{answered}/{expected} soal dijawab (session={session_id})"
+        )
+
+    return is_complete
+
+
+def pause_session(session_id: str, completed_section: int,
+                  mode: str) -> PauseResult:
+    """
+    Pause sesi TOEFL setelah selesai mengerjakan satu section.
+
+    Validasi:
+    1. Hanya boleh pause setelah Listening (section 1) atau Structure (section 2)
+       — pause setelah Reading tidak berguna karena itu section terakhir
+    2. Section yang diklaim selesai harus benar-benar selesai (semua soal terjawab)
+
+    Args:
+        session_id        : UUID sesi
+        completed_section : Section yang baru selesai (1 atau 2)
+        mode              : Mode simulasi ('50%', '75%', '100%')
+
+    Returns:
+        PauseResult dengan success=True dan expires_at jika berhasil
+    """
+    # Validasi: pause hanya valid setelah section 1 atau 2
+    if completed_section not in [1, 2]:
+        return PauseResult(
+            success=False,
+            reason=(
+                "Pause hanya bisa dilakukan setelah selesai Listening "
+                "atau Structure section."
+            ),
+        )
+
+    # Validasi: section benar-benar sudah selesai
+    if not is_section_complete(session_id, completed_section, mode):
+        section_name = SECTION_NAMES.get(completed_section, f"Section {completed_section}")
+        return PauseResult(
+            success=False,
+            reason=(
+                f"{section_name} belum selesai. Selesaikan semua soal "
+                f"sebelum melakukan pause."
+            ),
+        )
+
+    now_dt     = datetime.now()
+    paused_at  = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+    expires_at = _expires_str(now_dt)
+
+    # Section berikutnya yang akan dilanjutkan saat resume
+    next_section = completed_section + 1
 
     try:
-        session = create_session(session_id, mode)
-    except Exception as e:
-        logger.error(f"[session_manager] Gagal create session di DB: {e}")
-        raise
+        success = pause_toefl_session(
+            session_id=session_id,
+            current_section=next_section,
+            paused_at=paused_at,
+            expires_at=expires_at,
+        )
 
-    # Simpan ke Streamlit state untuk akses cepat di UI
-    st.session_state[_ST_SESSION_KEY] = {
-        "session_id": session_id,
-        "mode": mode,
-        "status": "active",
-        "data": {},  # Slot untuk data tambahan per mode
+        if success:
+            section_name = SECTION_NAMES.get(completed_section)
+            logger.info(
+                f"[toefl_session_manager] Sesi di-pause setelah {section_name}. "
+                f"Lanjut dari section {next_section} saat resume. "
+                f"Expires: {expires_at} (session={session_id})"
+            )
+            return PauseResult(success=True, expires_at=expires_at)
+
+        return PauseResult(success=False, reason="Gagal menyimpan ke database.")
+
+    except Exception as e:
+        log_error(
+            error_type="pause_failed",
+            agent_name="toefl_session_manager",
+            session_id=session_id,
+            context=str(e),
+        )
+        return PauseResult(success=False, reason="Terjadi error saat pause.")
+
+
+def resume_session(session_id: str) -> ResumeResult:
+    """
+    Resume sesi TOEFL yang di-pause.
+
+    Flow:
+    1. Panggil check_and_resume_toefl_session() — repository yang handle
+       logika expired vs valid, dan update status di DB
+    2. Jika None → sesi expired atau tidak valid
+    3. Jika ada data → return state lengkap untuk di-load ke UI
+
+    Args:
+        session_id: UUID sesi yang ingin di-resume
+
+    Returns:
+        ResumeResult dengan success=True dan state jika masih valid,
+        atau success=False dengan reason jika tidak bisa dilanjutkan
+    """
+    now = _now_str()
+
+    try:
+        state = check_and_resume_toefl_session(session_id=session_id, now=now)
+
+        if state is None:
+            logger.info(
+                f"[toefl_session_manager] Resume gagal — sesi expired "
+                f"atau tidak valid (session={session_id})"
+            )
+            return ResumeResult(
+                success=False,
+                reason=(
+                    "Sesi tidak dapat dilanjutkan. "
+                    "Kemungkinan sudah melewati batas 7 hari atau "
+                    "tidak dalam kondisi pause."
+                ),
+            )
+
+        logger.info(
+            f"[toefl_session_manager] Resume berhasil. "
+            f"Lanjut dari section {state.get('current_section')} "
+            f"(session={session_id})"
+        )
+
+        return ResumeResult(
+            success=True,
+            state=state,
+            expires_at=state.get("expires_at"),
+        )
+
+    except Exception as e:
+        log_error(
+            error_type="resume_failed",
+            agent_name="toefl_session_manager",
+            session_id=session_id,
+            context=str(e),
+        )
+        return ResumeResult(
+            success=False,
+            reason="Terjadi error saat mencoba resume sesi.",
+        )
+
+
+def get_paused_session_info(session_id: str) -> Optional[dict]:
+    """
+    Ambil info ringkas sesi yang di-pause untuk ditampilkan di UI.
+
+    Dipakai pages/toefl.py untuk render banner "Anda punya sesi yang belum selesai"
+    sebelum user memutuskan apakah akan resume atau mulai baru.
+
+    Returns:
+        dict berisi: session_id, mode, current_section, expires_at
+        None jika tidak ditemukan atau sudah tidak paused
+    """
+    toefl_data = get_toefl_session(session_id)
+    if not toefl_data:
+        return None
+
+    from database.repositories.session_repository import get_session
+    session = get_session(session_id)
+
+    if not session or session.get("status") != "paused":
+        return None
+
+    current_section = toefl_data.get("current_section", 1)
+
+    return {
+        "session_id"      : session_id,
+        "mode"            : toefl_data.get("mode"),
+        "current_section" : current_section,
+        "next_section_name": SECTION_NAMES.get(current_section, "Unknown"),
+        "expires_at"      : session.get("expires_at"),
+        # Sections yang sudah selesai
+        "completed_sections": [
+            SECTION_NAMES[s] for s in SECTION_ORDER
+            if s < current_section
+        ],
     }
 
-    logger.info(f"[session_manager] Session dibuat: {session_id} | mode={mode}")
-    return session
 
-
-def save_progress(session_id: str, data: dict) -> None:
+def is_session_abandoned(session_id: str) -> bool:
     """
-    Incremental save: update Streamlit state + simpan ke DB.
-
-    Dipanggil setelah setiap aksi penting (jawab soal, generate konten, dll).
-    Jangan tunggu sampai akhir sesi untuk save pertama kali.
-
-    Args:
-        session_id : ID sesi yang sedang berjalan
-        data       : Dict data yang ingin disimpan ke session state.
-                     Contoh: {"current_question_index": 3, "score": 70}
-
-    Catatan:
-        Fungsi ini hanya update session_state dan flag di DB.
-        Penyimpanan data spesifik (soal, jawaban, skor) dilakukan
-        oleh repository masing-masing agent — bukan di sini.
+    Cek apakah sesi sudah di-mark abandoned.
+    Shortcut utility untuk pages/toefl.py.
     """
-    # Update Streamlit state
-    if _ST_SESSION_KEY in st.session_state:
-        st.session_state[_ST_SESSION_KEY]["data"].update(data)
-    else:
-        # State hilang (misal setelah refresh) — rebuild minimal
-        st.session_state[_ST_SESSION_KEY] = {
-            "session_id": session_id,
-            "data": data,
-        }
-
-    logger.debug(f"[session_manager] Progress saved: {session_id} | keys={list(data.keys())}")
-
-
-def complete_session(session_id: str) -> bool:
-    """
-    Tandai sesi sebagai selesai (completed) di DB + clear state.
-
-    Args:
-        session_id: ID sesi yang selesai
-
-    Returns:
-        True jika berhasil update DB, False jika gagal
-    """
-    try:
-        success = update_session_status(session_id, status="completed")
-    except Exception as e:
-        logger.error(f"[session_manager] Gagal complete session {session_id}: {e}")
-        success = False
-
-    # Clear session state regardless
-    _clear_session_state()
-
-    if success:
-        logger.info(f"[session_manager] Session completed: {session_id}")
-    return success
-
-
-def abandon_session(session_id: str, reason: Optional[str] = None) -> bool:
-    """
-    Tandai sesi sebagai ditinggalkan (abandoned) di DB + clear state.
-
-    Dipanggil saat:
-    - User keluar di tengah sesi
-    - Error fatal yang tidak bisa di-recover
-    - User pilih mode lain sebelum sesi selesai
-
-    Args:
-        session_id : ID sesi yang ditinggalkan
-        reason     : Alasan abandon (opsional, untuk flag di DB)
-
-    Returns:
-        True jika berhasil update DB
-    """
-    try:
-        success = update_session_status(
-            session_id,
-            status="abandoned",
-            is_flagged=bool(reason),
-            flag_reason=reason,
-        )
-    except Exception as e:
-        logger.error(f"[session_manager] Gagal abandon session {session_id}: {e}")
-        success = False
-
-    _clear_session_state()
-
-    if reason:
-        logger.warning(f"[session_manager] Session abandoned: {session_id} | reason={reason}")
-    else:
-        logger.info(f"[session_manager] Session abandoned: {session_id}")
-
-    return success
-
-
-def get_active_session(mode: str) -> Optional[dict]:
-    """
-    Cek apakah ada sesi aktif untuk mode tertentu.
-
-    Cek dua sumber:
-    1. Streamlit session_state (cepat, untuk UI)
-    2. DB (akurat, untuk validasi)
-
-    Args:
-        mode: Mode yang dicek — "vocab" | "quiz" | "speaking" | "toefl"
-
-    Returns:
-        dict session jika ada sesi aktif, None jika tidak ada.
-
-    Penggunaan di halaman Streamlit:
-        active = get_active_session("vocab")
-        if active:
-            st.warning("Kamu masih punya sesi vocab yang belum selesai.")
-            # Tawarkan: lanjutkan atau mulai baru
-    """
-    # Cek session_state dulu (lebih cepat)
-    if _ST_SESSION_KEY in st.session_state:
-        current = st.session_state[_ST_SESSION_KEY]
-        if current.get("mode") == mode and current.get("status") == "active":
-            return current
-
-    # Fallback: cek DB untuk sesi active terbaru di mode ini
-    try:
-        sessions = get_sessions_by_mode(mode, limit=1)
-        for session in sessions:
-            if session.get("status") == "active":
-                return dict(session)
-    except Exception as e:
-        logger.error(f"[session_manager] Gagal cek active session: {e}")
-
-    return None
-
-
-def get_current_session_id() -> Optional[str]:
-    """
-    Shortcut untuk ambil session_id dari Streamlit state.
-
-    Returns:
-        session_id string jika ada sesi aktif, None jika tidak.
-    """
-    if _ST_SESSION_KEY in st.session_state:
-        return st.session_state[_ST_SESSION_KEY].get("session_id")
-    return None
-
-
-def _clear_session_state() -> None:
-    """Hapus data sesi dari Streamlit state."""
-    if _ST_SESSION_KEY in st.session_state:
-        del st.session_state[_ST_SESSION_KEY]
+    from database.repositories.session_repository import get_session
+    session = get_session(session_id)
+    return session is not None and session.get("status") == "abandoned"
