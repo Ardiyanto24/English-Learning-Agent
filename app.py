@@ -9,6 +9,7 @@ Cara menjalankan:
 Navigasi:
     - Sidebar untuk pindah antar mode
     - Setiap mode adalah halaman terpisah di folder pages/
+    - Dashboard adalah halaman default yang juga menangani onboarding
 """
 
 import streamlit as st
@@ -38,30 +39,25 @@ with st.sidebar:
     st.markdown("### Menu")
     page = st.radio(
         "Pilih Mode:",
-        options=["🏠 Dashboard", "📚 Vocab Agent", "📝 Quiz Agent",
-                 "🎤 Speaking Agent", "📊 TOEFL Simulator"],
+        options=[
+            "🏠 Dashboard",
+            "📚 Vocab Agent",
+            "📝 Quiz Agent",
+            "🎤 Speaking Agent",
+            "📊 TOEFL Simulator",
+        ],
         label_visibility="collapsed",
         key="sidebar_nav",
     )
     st.markdown("---")
-    st.caption("Phase 2 — Vocab Agent aktif")
+    st.caption("Phase 6 — Dashboard & Orchestrator aktif")
 
 # ===================================================
 # Routing ke halaman yang dipilih
 # ===================================================
 if page == "🏠 Dashboard":
-    st.title("🎓 English Learning AI Agent")
-    st.markdown(
-        "Selamat datang! Pilih mode latihan dari sidebar untuk memulai."
-    )
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.info("📚 **Vocab Agent**\nLatihan kosakata dengan spaced repetition")
-        st.info("📝 **Quiz Agent**\nLatihan grammar dengan feedback 4 lapisan")
-    with col2:
-        st.info("🗣️ **Speaking Agent**\nPercakapan & presentasi dengan AI")
-        st.warning("📊 **TOEFL Simulator**\n_Coming soon — Phase 5_")
+    from pages.dashboard import main as dashboard_main
+    dashboard_main()
 
 elif page == "📚 Vocab Agent":
     from pages.vocab import main as vocab_main
@@ -71,10 +67,10 @@ elif page == "📝 Quiz Agent":
     from pages.quiz import main as quiz_main
     quiz_main()
 
-elif page == "🗣️ Speaking Agent":
+elif page == "🎤 Speaking Agent":
     from pages.speaking import main as speaking_main
     speaking_main()
 
-elif page in ["📊 TOEFL Simulator"]:
-    st.title(page)
-    st.info("🚧 Fitur ini sedang dalam pengembangan. Coming soon!")
+elif page == "📊 TOEFL Simulator":
+    from pages.toefl import main as toefl_main
+    toefl_main()
