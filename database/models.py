@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     session_id      TEXT UNIQUE NOT NULL,
     mode            TEXT NOT NULL,
     status          TEXT NOT NULL,
+    user_id         INTEGER,
     is_adjusted     BOOLEAN DEFAULT FALSE,
     is_flagged      BOOLEAN DEFAULT FALSE,
     flag_reason     TEXT,
