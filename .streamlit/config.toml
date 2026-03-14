@@ -1,0 +1,4 @@
+[ui]
+# Sembunyikan navigasi multi-page otomatis Streamlit
+# Kita pakai navigasi custom via sidebar radio button
+hideSidebarNav = true
