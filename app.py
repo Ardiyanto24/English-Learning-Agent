@@ -38,6 +38,21 @@ st.set_page_config(
 )
 
 # ===================================================
+# Hide Streamlit auto-generated multi-page nav
+# (muncul karena ada banyak .py di folder yang sama)
+# Streamlit 1.44 sudah deprecated hideSidebarNav di config.toml
+# sehingga solusinya inject CSS langsung
+# ===================================================
+st.markdown(
+    """
+    <style>
+    [data-testid="stSidebarNav"] { display: none; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# ===================================================
 # Init DB — sekali saja saat app start
 # ===================================================
 from database.connection import init_database
