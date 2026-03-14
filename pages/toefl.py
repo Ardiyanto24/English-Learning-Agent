@@ -32,9 +32,9 @@ from typing import Optional
 
 import streamlit as st
 
-from agents.toefl.listening_generator  import run_listening_generator
-from agents.toefl.structure_generator  import run_structure_generator
-from agents.toefl.reading_generator    import run_reading_generator
+from agents.toefl.listening_generator  import run_generator as run_listening_generator
+from agents.toefl.structure_generator  import run_generator as run_structure_generator
+from agents.toefl.reading_generator    import run_generator as run_reading_generator
 from agents.toefl.analytics            import run_analytics
 from modules.scoring.toefl_converter   import process_full_score
 from modules.session.toefl_session_manager import (
