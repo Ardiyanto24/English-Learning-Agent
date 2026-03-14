@@ -26,19 +26,19 @@ from typing import Optional
 import anthropic
 from dotenv import load_dotenv
 
+from config.settings import SONNET_MODEL
+from modules.rag.retriever import format_context_for_prompt, retrieve
 from prompts.quiz.corrector_prompt import (
     QUIZ_CORRECTOR_SYSTEM_PROMPT,
     build_corrector_prompt,
 )
-from modules.rag.retriever import retrieve, format_context_for_prompt
 from utils.logger import log_error, logger
 from utils.retry import retry_llm
-from config.settings import SONNET_MODEL
 
 load_dotenv()
 
 _client: Optional[anthropic.Anthropic] = None
-_rag_cache = dict[str, str] = {} # cache RAG context per topik dalam satu proses
+_rag_cache: dict[str, str] = {}  # cache RAG context per topik dalam satu proses
 
 
 def _get_client() -> anthropic.Anthropic:
@@ -104,9 +104,7 @@ def _parse_corrector_response(raw: str) -> dict:
     # Validasi example adalah list dengan 2 item
     example = feedback.get("example", [])
     if not isinstance(example, list) or len(example) < 2:
-        raise ValueError(
-            f"'example' must be a list with 2 items, got: {example}"
-        )
+        raise ValueError(f"'example' must be a list with 2 items, got: {example}")
 
     return parsed
 
@@ -196,10 +194,7 @@ def run_corrector(
             rag_context=rag_context,
         )
 
-        logger.info(
-            f"[quiz_corrector] Done — "
-            f"is_correct={result.get('is_correct')}"
-        )
+        logger.info(f"[quiz_corrector] Done — is_correct={result.get('is_correct')}")
         return result
 
     except Exception as e:
@@ -208,9 +203,9 @@ def run_corrector(
             agent_name="quiz_corrector",
             session_id=session_id,
             context={
-                "topic":  topic,
+                "topic": topic,
                 "format": format,
-                "error":  str(e),
+                "error": str(e),
             },
             fallback_used=True,
         )
@@ -222,11 +217,11 @@ def run_corrector(
         # Sesi tetap jalan — tandai sebagai ungraded
         return {
             "is_correct": False,
-            "is_graded":  False,
+            "is_graded": False,
             "feedback": {
-                "verdict":     "Maaf, terjadi kendala teknis saat menilai jawabanmu.",
+                "verdict": "Maaf, terjadi kendala teknis saat menilai jawabanmu.",
                 "explanation": "Soal ini ditandai sebagai 'belum dinilai' dan tidak mempengaruhi skor akhirmu.",
-                "concept":     "-",
-                "example":     ["-", "-"],
+                "concept": "-",
+                "example": ["-", "-"],
             },
         }
