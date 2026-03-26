@@ -1,0 +1,23 @@
+# =============================================
+# AUDIO — Install terpisah untuk fitur rekam mic
+# =============================================
+# pyaudio butuh portaudio system library.
+# Install system library dulu sebelum pip install:
+#
+#   Linux / Ubuntu:
+#     sudo apt-get install portaudio19-dev
+#
+#   macOS:
+#     brew install portaudio
+#
+#   Windows:
+#     Download wheel dari https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio
+#     pip install PyAudio‑0.2.14‑cpXX‑cpXX‑win_amd64.whl
+#
+# Setelah system library terinstall, jalankan:
+#   pip install -r requirements-audio.txt
+#
+# Tanpa pyaudio, Speaking Agent tetap bisa digunakan
+# via text input manual (fallback otomatis aktif).
+# =============================================
+pyaudio==0.2.14
