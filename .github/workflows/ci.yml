@@ -69,12 +69,18 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Buat .env dummy untuk test
+      - name: Buat dummy GCP credentials untuk test
         run: |
-          echo "ANTHROPIC_API_KEY=test_key_dummy" >> .env
-          echo "GOOGLE_APPLICATION_CREDENTIALS=./gcp-service-account.json" >> .env
-          echo "DATABASE_PATH=./test.db" >> .env
-          echo "CHROMA_DB_PATH=./vector_store/chroma_db" >> .env
+          echo '{
+            "type": "service_account",
+            "project_id": "test-project",
+            "private_key_id": "dummy",
+            "private_key": "dummy",
+            "client_email": "test@test-project.iam.gserviceaccount.com",
+            "client_id": "123456",
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token"
+          }' > gcp-service-account.json
 
       - name: Buat dummy GCP credentials untuk test
         run: |
