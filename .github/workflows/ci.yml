@@ -1,7 +1,5 @@
 # ================================================
 # GitHub Actions — CI Pipeline
-# Berjalan otomatis setiap kali ada push atau pull request
-# Jobs: lint (flake8 + black) dan test (pytest)
 # ================================================
 name: CI Pipeline
 
@@ -13,12 +11,11 @@ on:
 
 jobs:
   # -----------------------------------------------
-  # JOB 1: Lint — cek code style dan formatting
+  # JOB 1: Lint
   # -----------------------------------------------
   lint:
     name: Lint (flake8 + black)
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout kode
         uses: actions/checkout@v4
@@ -28,7 +25,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Cache pip dependencies
+      - name: Cache pip
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
@@ -44,12 +41,11 @@ jobs:
         run: black --check .
 
   # -----------------------------------------------
-  # JOB 2: Test — jalankan pytest
+  # JOB 2: Test
   # -----------------------------------------------
   test:
     name: Test (pytest)
     runs-on: ubuntu-latest
-    # Test hanya jalan jika lint lolos
     needs: lint
 
     steps:
@@ -61,21 +57,39 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Cache pip dependencies
+      - name: Install system dependencies untuk audio
+        run: sudo apt-get install -y libportaudio2 libportaudio-dev
+
+      - name: Cache pip
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
 
-      - name: Install semua dependencies
+      - name: Install dependencies
         run: pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Buat file .env dummy untuk test
+      - name: Buat .env dummy untuk test
         run: |
-          echo "ANTHROPIC_API_KEY=test_key" >> .env
-          echo "OPENAI_API_KEY=test_key" >> .env
+          echo "ANTHROPIC_API_KEY=test_key_dummy" >> .env
+          echo "GOOGLE_APPLICATION_CREDENTIALS=./gcp-service-account.json" >> .env
           echo "DATABASE_PATH=./test.db" >> .env
           echo "CHROMA_DB_PATH=./vector_store/chroma_db" >> .env
+
+      - name: Buat dummy GCP credentials untuk test
+        run: |
+          echo '{
+            "type": "service_account",
+            "project_id": "test-project",
+            "private_key_id": "test",
+            "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA2a2rwplBQLzHPZe5RJr9vOmSmLFqPUL9HfSjSVJkv2CxvmNa\nAAAA\n-----END RSA PRIVATE KEY-----\n",
+            "client_email": "test@test-project.iam.gserviceaccount.com",
+            "client_id": "123456",
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test"
+          }' > gcp-service-account.json
 
       - name: Jalankan pytest
         run: pytest tests/ -v --tb=short
