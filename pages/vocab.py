@@ -172,16 +172,18 @@ def _start_new_session(topic: str):
         )
 
         # Step 5: Simpan soal ke DB (incremental)
+        # topic diambil dari word_obj jika ada, fallback ke planner_output topic
         question_ids = []
         for word_obj in final_words:
             q_id = save_vocab_question(
                 session_id=session_id,
                 word=word_obj["word"],
                 format=word_obj["format"],
+                topic=word_obj.get("topic", planner_output["topic"]),
                 difficulty=word_obj["difficulty"],
                 question_text=word_obj["question_text"],
                 correct_answer=word_obj["correct_answer"],
-                is_new_word=word_obj["is_new"],
+                is_new_word=word_obj.get("is_new", True),
             )
             question_ids.append(q_id)
 
