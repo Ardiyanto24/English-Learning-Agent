@@ -102,6 +102,9 @@ with st.sidebar:
     # Radio dengan index sinkron ke session_state["sidebar_nav"].
     # Ini memastikan tombol navigasi di Dashboard (yang menulis ke
     # session_state["sidebar_nav"]) langsung berdampak ke radio.
+    # Proses nav request dari Dashboard sebelum widget di-render
+if "_nav_request" in st.session_state:
+    st.session_state["sidebar_nav"] = st.session_state.pop("_nav_request")
     current_nav = st.session_state.get("sidebar_nav", "🏠 Dashboard")
     current_idx = PAGES.index(current_nav) if current_nav in PAGES else 0
 

@@ -826,7 +826,7 @@ def _render_home(ctx: RoutingContext):
     for mode_key, col in nav_map.items():
         with col:
             if st.button(mode_key, use_container_width=True):
-                st.session_state["sidebar_nav"] = mode_key
+                st.session_state["_nav_request"] = mode_key
                 st.rerun()
 
 
