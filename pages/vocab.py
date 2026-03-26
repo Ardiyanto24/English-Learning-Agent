@@ -181,7 +181,7 @@ def _start_new_session(topic: str):
                 difficulty=word_obj["difficulty"],
                 question_text=word_obj["question_text"],
                 correct_answer=word_obj["correct_answer"],
-                is_new=word_obj["is_new"],
+                is_new_word=word_obj["is_new"],
             )
             question_ids.append(q_id)
 
