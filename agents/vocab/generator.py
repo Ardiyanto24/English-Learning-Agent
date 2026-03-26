@@ -19,6 +19,11 @@ from typing import Optional
 
 import anthropic
 from dotenv import load_dotenv
+from database.repositories.vocab_repository import (
+    get_weak_words,
+    get_word_tracking,
+    get_spaced_repetition_words,
+)
 
 from prompts.vocab.generator_prompt import (
     GENERATOR_SYSTEM_PROMPT,
