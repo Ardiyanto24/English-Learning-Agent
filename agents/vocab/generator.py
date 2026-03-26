@@ -86,16 +86,17 @@ def _parse_generator_response(raw: str) -> dict:
 
 
 @retry_llm
-def _call_generator_llm(planner_output: dict, new_words_count: int) -> dict:
-    """
-    Panggil Claude Haiku untuk generate vocab questions.
-    Di-wrap @retry_llm: max 3x retry, exponential backoff 2s→4s→8s.
-    """
+def _call_generator_llm(
+    planner_output: dict,
+    new_words_count: int,
+    review_words_count: int = 0,
+) -> dict:
     user_prompt = build_generator_prompt(
         topic=planner_output["topic"],
         difficulty_target=planner_output["difficulty_target"],
         format_distribution=planner_output["format_distribution"],
         new_words=new_words_count,
+        review_words=review_words_count,
     )
 
     client = _get_client()
@@ -163,7 +164,11 @@ def run_generator(planner_output: dict) -> dict:
 
     # ── Step 2: LLM generate new words saja ──────────────────────────────
     try:
-        result = _call_generator_llm(planner_output, new_words_count=new_count)
+        result = _call_generator_llm(
+            planner_output,
+            new_words_count=new_count,
+            review_words_count=review_count,
+        )
 
         # Gabung: new words dari LLM + review words dari DB
         result["words"] = result["words"] + review_words
