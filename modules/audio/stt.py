@@ -1,16 +1,14 @@
 """
 modules/audio/stt.py
 --------------------
-Speech-to-Text menggunakan OpenAI Whisper API.
+Speech-to-Text menggunakan Google Cloud Speech-to-Text API.
 
-Digunakan oleh:
-- Speaking Agent : untuk transkrip jawaban user
+Menggantikan OpenAI Whisper. Interface publik tetap sama —
+transcribe_audio() dan transcribe_audio_bytes() — sehingga
+pages/speaking.py dan pages/toefl.py tidak perlu diubah.
 
 Retry policy: max 3x dengan exponential backoff (1s → 2s → 4s).
-Audio upload lebih rentan gagal di tengah jalan karena ukuran file,
-sehingga retry lebih banyak dari TTS.
-
-Fallback: return None setelah 3x gagal → UI tampilkan text input manual.
+Fallback: return None → UI tampilkan text input manual.
 """
 
 import os
@@ -18,24 +16,21 @@ import time
 from pathlib import Path
 from typing import Optional, Union
 
-from openai import OpenAI
+from google.cloud import speech
 from dotenv import load_dotenv
 
 load_dotenv()
 
-WHISPER_MODEL = "whisper-1"
+LANGUAGE_CODE  = "en-US"
+SAMPLE_RATE_HZ = 16000
 
-# Format audio yang didukung Whisper API
-SUPPORTED_FORMATS = {".wav", ".mp3", ".mp4", ".m4a", ".webm", ".ogg", ".flac"}
-
-_client: Optional[OpenAI] = None
+_client: Optional[speech.SpeechClient] = None
 
 
-def _get_client() -> OpenAI:
-    """Lazy-load OpenAI client (singleton)."""
+def _get_client() -> speech.SpeechClient:
     global _client
     if _client is None:
-        _client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        _client = speech.SpeechClient()
     return _client
 
 
@@ -44,77 +39,20 @@ def transcribe_audio(
     language: str = "en",
     prompt: Optional[str] = None,
 ) -> Optional[str]:
-    """
-    Transkrip file audio menjadi teks menggunakan Whisper.
-
-    Args:
-        audio_file : Path ke file audio (WAV, MP3, dll)
-        language   : Kode bahasa ISO 639-1 (default: "en" untuk English)
-        prompt     : Hint untuk Whisper agar hasil lebih akurat.
-                     Contoh: "TOEFL speaking response about campus life"
-
-    Returns:
-        String transkrip jika berhasil, None jika gagal setelah 3x retry.
-
-    Penggunaan:
-        transcript = transcribe_audio("temp_audio/response.wav")
-        if transcript:
-            # proses transcript
-        else:
-            # tampilkan text input manual di UI
-    """
     audio_path = Path(audio_file)
 
-    # Validasi file ada
     if not audio_path.exists():
         print(f"[STT] File tidak ditemukan: {audio_path}")
         return None
 
-    # Validasi format
-    if audio_path.suffix.lower() not in SUPPORTED_FORMATS:
-        print(f"[STT] Format tidak didukung: {audio_path.suffix}")
-        return None
+    with open(audio_path, "rb") as f:
+        audio_bytes = f.read()
 
-    # Validasi ukuran file (Whisper max 25MB)
-    file_size_mb = audio_path.stat().st_size / (1024 * 1024)
-    if file_size_mb > 25:
-        print(f"[STT] File terlalu besar: {file_size_mb:.1f}MB (max 25MB)")
-        return None
-
-    client = _get_client()
-    last_error = None
-
-    # Retry max 3x dengan exponential backoff: 1s → 2s → 4s
-    for attempt in range(3):
-        try:
-            with open(audio_path, "rb") as f:
-                response = client.audio.transcriptions.create(
-                    model=WHISPER_MODEL,
-                    file=f,
-                    language=language,
-                    prompt=prompt,
-                )
-            transcript = response.text.strip()
-
-            # Validasi hasil tidak kosong
-            if not transcript:
-                print(f"[STT] Attempt {attempt+1}: transkrip kosong")
-                last_error = "empty_transcript"
-                time.sleep(2 ** attempt)
-                continue
-
-            return transcript
-
-        except Exception as e:
-            last_error = e
-            wait_time = 2 ** attempt  # 1s, 2s, 4s
-            print(f"[STT] Attempt {attempt+1} gagal: {e}. "
-                  f"Retry dalam {wait_time}s...")
-            if attempt < 2:
-                time.sleep(wait_time)
-
-    print(f"[STT] Gagal setelah 3 attempt. Error terakhir: {last_error}")
-    return None
+    return transcribe_audio_bytes(
+        audio_bytes,
+        filename=audio_path.name,
+        language=language,
+    )
 
 
 def transcribe_audio_bytes(
@@ -122,31 +60,39 @@ def transcribe_audio_bytes(
     filename: str = "audio.wav",
     language: str = "en",
 ) -> Optional[str]:
-    """
-    Transkrip audio dari bytes langsung (tanpa file di disk).
-    Berguna untuk Streamlit file_uploader atau audio bytes dari recorder.
+    lang_code = f"{language}-US" if len(language) == 2 else language
 
-    Args:
-        audio_bytes : Raw audio bytes
-        filename    : Nama file virtual (menentukan format yang diparse Whisper)
-        language    : Kode bahasa ISO 639-1
-    """
-    import io
+    ext = Path(filename).suffix.lower()
+    encoding_map = {
+        ".wav":  speech.RecognitionConfig.AudioEncoding.LINEAR16,
+        ".flac": speech.RecognitionConfig.AudioEncoding.FLAC,
+        ".mp3":  speech.RecognitionConfig.AudioEncoding.MP3,
+        ".ogg":  speech.RecognitionConfig.AudioEncoding.OGG_OPUS,
+        ".webm": speech.RecognitionConfig.AudioEncoding.WEBM_OPUS,
+    }
+    encoding = encoding_map.get(
+        ext,
+        speech.RecognitionConfig.AudioEncoding.LINEAR16,
+    )
 
+    config = speech.RecognitionConfig(
+        encoding=encoding,
+        sample_rate_hertz=SAMPLE_RATE_HZ,
+        language_code=lang_code,
+        enable_automatic_punctuation=True,
+    )
+    audio  = speech.RecognitionAudio(content=audio_bytes)
     client = _get_client()
     last_error = None
 
     for attempt in range(3):
         try:
-            audio_io = io.BytesIO(audio_bytes)
-            audio_io.name = filename  # Whisper butuh nama file untuk deteksi format
-
-            response = client.audio.transcriptions.create(
-                model=WHISPER_MODEL,
-                file=audio_io,
-                language=language,
-            )
-            transcript = response.text.strip()
+            response   = client.recognize(config=config, audio=audio)
+            transcript = " ".join(
+                result.alternatives[0].transcript
+                for result in response.results
+                if result.alternatives
+            ).strip()
 
             if not transcript:
                 last_error = "empty_transcript"
@@ -157,11 +103,11 @@ def transcribe_audio_bytes(
 
         except Exception as e:
             last_error = e
-            wait_time = 2 ** attempt
-            print(f"[STT] Bytes attempt {attempt+1} gagal: {e}. "
-                  f"Retry dalam {wait_time}s...")
+            wait = 2 ** attempt
+            print(f"[STT] Attempt {attempt+1} gagal: {e}. "
+                  f"Retry dalam {wait}s...")
             if attempt < 2:
-                time.sleep(wait_time)
+                time.sleep(wait)
 
     print(f"[STT] Gagal setelah 3 attempt: {last_error}")
     return None
