@@ -24,9 +24,6 @@ from prompts.analytics.vocab_analytics_prompt import (
     build_vocab_analytics_prompt,
 )
 from database.connection import get_db
-from database.repositories.vocab_repository import (
-    get_weak_words,
-)
 from utils.logger import log_error, logger
 from utils.retry import retry_llm
 from config.settings import (

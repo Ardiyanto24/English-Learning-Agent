@@ -20,8 +20,6 @@ from typing import Optional
 import anthropic
 from dotenv import load_dotenv
 from database.repositories.vocab_repository import (
-    get_weak_words,
-    get_word_tracking,
     get_spaced_repetition_words,
 )
 
@@ -126,8 +124,8 @@ def run_generator(planner_output: dict) -> dict:
     Raises:
         RuntimeError jika LLM gagal setelah semua retry habis
     """
-    topic        = planner_output.get("topic")
-    new_count    = planner_output.get("new_words", 5)
+    topic = planner_output.get("topic")
+    new_count = planner_output.get("new_words", 5)
     review_count = planner_output.get("review_words", 0)
 
     logger.info(
@@ -143,18 +141,18 @@ def run_generator(planner_output: dict) -> dict:
     review_words = []
     if review_count > 0:
         db_words = get_spaced_repetition_words(
-            topic     = topic,
-            threshold = 60.0,
-            limit     = review_count,
+            topic=topic,
+            threshold=60.0,
+            limit=review_count,
         )
         for w in db_words:
             review_words.append({
-                "word":           w["word"],
-                "difficulty":     w["difficulty"],
-                "format":         None,   # ⏳ pending decision — diisi nanti
-                "question_text":  None,   # ⏳ pending decision — diisi nanti
+                "word": w["word"],
+                "difficulty": w["difficulty"],
+                "format": None,   # ⏳ pending decision — diisi nanti
+                "question_text": None,   # ⏳ pending decision — diisi nanti
                 "correct_answer": None,   # ⏳ pending decision — diisi nanti
-                "is_new":         False,
+                "is_new": False,
             })
 
         logger.info(
@@ -186,9 +184,9 @@ def run_generator(planner_output: dict) -> dict:
             error_type="llm_timeout",
             agent_name="vocab_generator",
             context={
-                "topic":       topic,
+                "topic": topic,
                 "total_words": planner_output.get("total_words"),
-                "error":       str(e),
+                "error": str(e),
             },
             fallback_used=False,
         )

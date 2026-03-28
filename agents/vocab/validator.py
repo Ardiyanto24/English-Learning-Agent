@@ -107,12 +107,12 @@ def _apply_adjustments(
         current_dist.setdefault(fmt, []).append(i)
 
     # Ganti kata yang formatnya berlebih dengan adjusted_words
-    applied  = 0
-    skipped  = 0
+    applied = 0
+    skipped = 0
 
     for adj_word in adjusted_words:
         adj_fmt = adj_word.get("format", "")
-        target_count  = target_dist.get(adj_fmt, 0)
+        target_count = target_dist.get(adj_fmt, 0)
         current_count = len(current_dist.get(adj_fmt, []))
 
         if current_count < target_count:
@@ -246,10 +246,10 @@ def run_validator(
     )
 
     return {
-        "is_valid":             False,
-        "match_score":          last_validation.get("match_score", 0) if last_validation else 0,
-        "issues":               last_validation.get("issues", []) if last_validation else [],
-        "final_words":          final_output.get("words", []),
-        "is_adjusted":          not validator_unavailable,  # True hanya jika adjustment benar-benar dijalankan
+        "is_valid": False,
+        "match_score": last_validation.get("match_score", 0) if last_validation else 0,
+        "issues": last_validation.get("issues", []) if last_validation else [],
+        "final_words": final_output.get("words", []),
+        "is_adjusted": not validator_unavailable,  # True hanya jika adjustment benar-benar dijalankan
         "is_validator_unavailable": validator_unavailable,  # True jika LLM error total
     }

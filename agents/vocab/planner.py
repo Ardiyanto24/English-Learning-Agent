@@ -29,7 +29,7 @@ from database.repositories.vocab_repository import (
     get_word_tracking,
 )
 from database.repositories.session_repository import get_sessions_by_mode
-from utils.helpers import is_cold_start, calculate_score_pct
+from utils.helpers import is_cold_start
 from utils.logger import log_error, logger
 from utils.retry import retry_llm
 
@@ -103,14 +103,14 @@ def _build_history_summary(topic: str) -> dict:
 
 def _determine_current_difficulty(avg_mastery: dict) -> str:
     """Tentukan difficulty level saat ini berdasarkan mastery scores.
-    
+
     Upgrade : avg mastery level saat ini >= 80%
     Downgrade: avg mastery level saat ini < 40%
     Stay    : di antara 40%-80%
     """
-    easy   = avg_mastery.get("easy",   -1)
+    easy = avg_mastery.get("easy", -1)
     medium = avg_mastery.get("medium", -1)
-    hard   = avg_mastery.get("hard",   -1)
+    hard = avg_mastery.get("hard", -1)
 
     # Tentukan level tertinggi yang punya data
     if hard >= 0:
