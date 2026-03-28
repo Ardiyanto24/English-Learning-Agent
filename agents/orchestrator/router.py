@@ -45,17 +45,17 @@ class RoutingContext:
     Jika needs_onboarding=True, semua field lain None/0.
     Dashboard wajib cek needs_onboarding sebelum mengakses field lain.
     """
-    needs_onboarding : bool  = True
+    needs_onboarding: bool = True
 
     # Data dari tabel users
-    user_id          : Optional[int] = None
-    target_toefl     : Optional[int] = None
-    grammar_level    : Optional[str] = None
+    user_id: Optional[int] = None
+    target_toefl: Optional[int] = None
+    grammar_level: Optional[str] = None
     first_vocab_topic: Optional[str] = None
 
     # Quick stats per mode — untuk Dashboard quick snapshot
     # Format: {"vocab": {"total_sessions": 5, "last_score": 78.0}, ...}
-    mode_stats       : dict = field(default_factory=dict)
+    mode_stats: dict = field(default_factory=dict)
 
 
 # ===================================================
@@ -100,10 +100,10 @@ def _get_mode_stats() -> dict:
         }
     """
     stats = {
-        "vocab"   : {"total_sessions": 0, "last_score": None},
-        "quiz"    : {"total_sessions": 0, "last_score": None},
+        "vocab": {"total_sessions": 0, "last_score": None},
+        "quiz": {"total_sessions": 0, "last_score": None},
         "speaking": {"total_sessions": 0, "last_score": None},
-        "toefl"   : {"total_sessions": 0, "best_score": None},
+        "toefl": {"total_sessions": 0, "best_score": None},
     }
 
     try:
@@ -120,7 +120,7 @@ def _get_mode_stats() -> dict:
             ).fetchone()
             if row:
                 stats["vocab"]["total_sessions"] = row["total"] or 0
-                stats["vocab"]["last_score"]     = row["last_score"]
+                stats["vocab"]["last_score"] = row["last_score"]
 
             # Quiz stats — ambil skor sesi terakhir (bukan max)
             row = conn.execute(
@@ -183,7 +183,7 @@ def _get_mode_stats() -> dict:
             ).fetchone()
             if row:
                 stats["toefl"]["total_sessions"] = row["total"] or 0
-                stats["toefl"]["best_score"]     = row["best_score"]
+                stats["toefl"]["best_score"] = row["best_score"]
 
     except Exception as e:
         log_error(
@@ -226,18 +226,18 @@ def get_routing_context() -> RoutingContext:
     )
 
     return RoutingContext(
-        needs_onboarding  = False,
-        user_id           = user.get("id"),
-        target_toefl      = user.get("target_toefl"),
-        grammar_level     = user.get("grammar_level"),
-        first_vocab_topic = user.get("first_vocab_topic"),
-        mode_stats        = mode_stats,
+        needs_onboarding=False,
+        user_id=user.get("id"),
+        target_toefl=user.get("target_toefl"),
+        grammar_level=user.get("grammar_level"),
+        first_vocab_topic=user.get("first_vocab_topic"),
+        mode_stats=mode_stats,
     )
 
 
 def save_onboarding_data(
-    target_toefl     : int,
-    grammar_level    : str,
+    target_toefl: int,
+    grammar_level: str,
     first_vocab_topic: str,
 ) -> bool:
     """
@@ -289,8 +289,8 @@ def save_onboarding_data(
 
 
 def update_user_profile(
-    target_toefl     : Optional[int] = None,
-    grammar_level    : Optional[str] = None,
+    target_toefl: Optional[int] = None,
+    grammar_level: Optional[str] = None,
     first_vocab_topic: Optional[str] = None,
 ) -> bool:
     """
@@ -304,9 +304,9 @@ def update_user_profile(
         logger.warning("[router] update_user_profile called but no user exists")
         return False
 
-    new_target = target_toefl      if target_toefl      is not None else user["target_toefl"]
-    new_level  = grammar_level     if grammar_level      is not None else user["grammar_level"]
-    new_topic  = first_vocab_topic if first_vocab_topic  is not None else user["first_vocab_topic"]
+    new_target = target_toefl if target_toefl is not None else user["target_toefl"]
+    new_level = grammar_level if grammar_level is not None else user["grammar_level"]
+    new_topic = first_vocab_topic if first_vocab_topic is not None else user["first_vocab_topic"]
 
     try:
         with get_db() as conn:

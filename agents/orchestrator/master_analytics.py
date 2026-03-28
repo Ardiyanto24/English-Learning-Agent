@@ -43,10 +43,10 @@ _client: Optional[anthropic.Anthropic] = None
 
 # Mapping nama snapshot_type ke key yang dipakai di prompt
 _SNAPSHOT_TYPES = {
-    "vocab"   : "vocab_analytics",
-    "quiz"    : "quiz_analytics",
+    "vocab": "vocab_analytics",
+    "quiz": "quiz_analytics",
     "speaking": "speaking_analytics",
-    "toefl"   : "toefl_analytics",
+    "toefl": "toefl_analytics",
 }
 
 
@@ -96,7 +96,8 @@ def _load_latest_snapshots() -> dict:
                         )
                     except json.JSONDecodeError as e:
                         logger.warning(
-                            f"[master_analytics] Failed to parse {mode} snapshot: {e}"
+                            f"[master_analytics] Failed to parse "
+                            f"{mode} snapshot: {e}"
                         )
 
     except Exception as e:
@@ -119,9 +120,9 @@ def _save_snapshot(result: dict) -> None:
         with get_db() as conn:
             conn.execute(
                 """
-                INSERT INTO analytics_snapshots (snapshot_type, content, generated_at)
-                VALUES (?, ?, ?)
-                """,
+                INSERT INTO analytics_snapshots
+                (snapshot_type, content, generated_at)
+                VALUES (?, ?, ?)                """,
                 (
                     "master_analytics",
                     json.dumps(result, ensure_ascii=False),
@@ -145,24 +146,24 @@ def _empty_insight(reason: str = "insufficient_data") -> dict:
     Dipanggil saat tidak ada snapshot sama sekali atau LLM gagal.
     """
     return {
-        "modes_with_data"       : [],
-        "modes_without_data"    : ["vocab", "quiz", "speaking", "toefl"],
-        "overall_trend"         : "insufficient_data",
+        "modes_with_data": [],
+        "modes_without_data": ["vocab", "quiz", "speaking", "toefl"],
+        "overall_trend": "insufficient_data",
         "cross_mode_correlations": [],
-        "toefl_readiness"       : {
-            "target_score"            : None,
-            "best_estimated_score"    : None,
-            "gap"                     : None,
-            "avg_improvement_per_sim" : None,
-            "estimated_weeks"         : None,
-            "readiness_level"         : "no_data",
-            "recommendation"          : (
+        "toefl_readiness": {
+            "target_score": None,
+            "best_estimated_score": None,
+            "gap": None,
+            "avg_improvement_per_sim": None,
+            "estimated_weeks": None,
+            "readiness_level": "no_data",
+            "recommendation": (
                 "Mulai latihan di semua mode untuk mendapatkan analisis lengkap."
             ),
         },
         "top_priority": None,
-        "insight"     : None,
-        "_reason"     : reason,
+        "insight": None,
+        "_reason": reason,
     }
 
 
@@ -173,13 +174,13 @@ def _parse_response(raw: str) -> dict:
     text = raw.strip()
     if text.startswith("```"):
         parts = text.split("```")
-        text  = parts[1] if len(parts) > 1 else text
+        text = parts[1] if len(parts) > 1 else text
         if text.startswith("json"):
             text = text[4:]
     parsed = json.loads(text.strip())
 
     required = {"overall_trend", "cross_mode_correlations", "toefl_readiness", "insight"}
-    missing  = required - set(parsed.keys())
+    missing = required - set(parsed.keys())
     if missing:
         raise ValueError(f"Master analytics response missing fields: {missing}")
 
@@ -191,22 +192,22 @@ def _parse_response(raw: str) -> dict:
 # ===================================================
 @retry_llm
 def _call_master_llm(
-    snapshots   : dict,
+    snapshots: dict,
     target_score: int,
 ) -> dict:
     prompt = build_master_analytics_prompt(
-        vocab_analytics    = snapshots.get("vocab"),
-        quiz_analytics     = snapshots.get("quiz"),
-        speaking_analytics = snapshots.get("speaking"),
-        toefl_analytics    = snapshots.get("toefl"),
-        target_score       = target_score,
+        vocab_analytics=snapshots.get("vocab"),
+        quiz_analytics=snapshots.get("quiz"),
+        speaking_analytics=snapshots.get("speaking"),
+        toefl_analytics=snapshots.get("toefl"),
+        target_score=target_score,
     )
-    client   = _get_client()
+    client = _get_client()
     response = client.messages.create(
-        model     = SONNET_MODEL,
-        max_tokens= 1500,
-        system    = MASTER_ANALYTICS_SYSTEM_PROMPT,
-        messages  = [{"role": "user", "content": prompt}],
+        model=SONNET_MODEL,
+        max_tokens=1500,
+        system=MASTER_ANALYTICS_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
     )
     return _parse_response(response.content[0].text)
 
@@ -242,7 +243,7 @@ def run_master_analytics(target_toefl: int) -> dict:
 
     if not modes_with_data:
         logger.info(
-            "[master_analytics] No snapshots available — user has not completed "
+            "[master_analytics] No snapshots available — user has not completed"
             "enough sessions in any mode."
         )
         result = _empty_insight("no_snapshots_available")
