@@ -65,8 +65,7 @@ def _parse_evaluator_response(raw: str, sub_mode: str) -> dict:
     parsed = json.loads(text)
 
     # Field wajib untuk semua sub-mode
-    required = {"grammar_score", "relevance_score", "final_score",
-                "is_graded", "feedback"}
+    required = {"grammar_score", "relevance_score", "final_score", "is_graded", "feedback"}
     missing = required - set(parsed.keys())
     if missing:
         raise ValueError(f"Evaluator response missing fields: {missing}")
@@ -76,9 +75,7 @@ def _parse_evaluator_response(raw: str, sub_mode: str) -> dict:
         extra = {"vocabulary_score", "structure_score"}
         missing_extra = extra - set(parsed.keys())
         if missing_extra:
-            raise ValueError(
-                f"oral_presentation response missing fields: {missing_extra}"
-            )
+            raise ValueError(f"oral_presentation response missing fields: {missing_extra}")
 
     # Validasi skor dalam range 1-10
     score_fields = ["grammar_score", "relevance_score", "final_score"]
@@ -88,9 +85,7 @@ def _parse_evaluator_response(raw: str, sub_mode: str) -> dict:
     for field in score_fields:
         val = parsed.get(field, 0)
         if not isinstance(val, (int, float)) or not (1 <= val <= 10):
-            raise ValueError(
-                f"Score '{field}' must be between 1-10, got: {val}"
-            )
+            raise ValueError(f"Score '{field}' must be between 1-10, got: {val}")
 
     # Validasi feedback punya field yang benar
     feedback = parsed.get("feedback", {})
@@ -112,21 +107,18 @@ def _calculate_final_score(parsed: dict, sub_mode: str) -> float:
     """
     if sub_mode == "oral_presentation":
         weights = {
-            "grammar_score":    0.25,
-            "relevance_score":  0.25,
+            "grammar_score": 0.25,
+            "relevance_score": 0.25,
             "vocabulary_score": 0.25,
-            "structure_score":  0.25,
+            "structure_score": 0.25,
         }
     else:
         weights = {
-            "grammar_score":   0.50,
+            "grammar_score": 0.50,
             "relevance_score": 0.50,
         }
 
-    total = sum(
-        parsed.get(field, 0) * weight
-        for field, weight in weights.items()
-    )
+    total = sum(parsed.get(field, 0) * weight for field, weight in weights.items())
     return round(max(1.0, min(total, 10.0)), 2)
 
 
@@ -139,21 +131,21 @@ def _call_evaluator_llm(
 ) -> dict:
     """Panggil Claude Sonnet untuk evaluate full transcript."""
     user_prompt = build_evaluator_prompt(
-        sub_mode        = sub_mode,
-        main_topic      = main_topic,
-        prompt_text     = prompt_text,
-        full_transcript = full_transcript,
+        sub_mode=sub_mode,
+        main_topic=main_topic,
+        prompt_text=prompt_text,
+        full_transcript=full_transcript,
     )
 
     client = _get_client()
     response = client.messages.create(
-        model     = SONNET_MODEL,
-        max_tokens= 1024,
-        system    = SPEAKING_EVALUATOR_SYSTEM_PROMPT,
-        messages  = [{"role": "user", "content": user_prompt}],
+        model=SONNET_MODEL,
+        max_tokens=1024,
+        system=SPEAKING_EVALUATOR_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_prompt}],
     )
 
-    raw    = response.content[0].text
+    raw = response.content[0].text
     parsed = _parse_evaluator_response(raw, sub_mode)
 
     # Override final_score dengan perhitungan kita sendiri
@@ -169,21 +161,21 @@ def _ungraded_result(sub_mode: str) -> dict:
     Sesi tetap tersimpan, hanya ditandai ungraded.
     """
     base = {
-        "grammar_score":  None,
+        "grammar_score": None,
         "relevance_score": None,
-        "final_score":    None,
-        "is_graded":      False,
+        "final_score": None,
+        "is_graded": False,
         "feedback": {
-            "grammar":  "-",
+            "grammar": "-",
             "relevance": "-",
-            "overall":  "Maaf, terjadi kendala teknis saat menilai sesi ini. Sesi tetap tersimpan.",
+            "overall": "Maaf, terjadi kendala teknis saat menilai sesi ini. Sesi tetap tersimpan.",
         },
     }
     if sub_mode == "oral_presentation":
         base["vocabulary_score"] = None
-        base["structure_score"]  = None
+        base["structure_score"] = None
         base["feedback"]["vocabulary"] = "-"
-        base["feedback"]["structure"]  = "-"
+        base["feedback"]["structure"] = "-"
     return base
 
 
@@ -241,10 +233,10 @@ def run_evaluator(
 
     try:
         result = _call_evaluator_llm(
-            sub_mode        = sub_mode,
-            main_topic      = main_topic,
-            prompt_text     = prompt_text,
-            full_transcript = full_transcript,
+            sub_mode=sub_mode,
+            main_topic=main_topic,
+            prompt_text=prompt_text,
+            full_transcript=full_transcript,
         )
 
         logger.info(
@@ -257,18 +249,17 @@ def run_evaluator(
 
     except Exception as e:
         log_error(
-            error_type   = "llm_timeout",
-            agent_name   = "speaking_evaluator",
-            session_id   = session_id,
-            context      = {
-                "sub_mode":       sub_mode,
+            error_type="llm_timeout",
+            agent_name="speaking_evaluator",
+            session_id=session_id,
+            context={
+                "sub_mode": sub_mode,
                 "exchange_count": exchange_count,
-                "error":          str(e),
+                "error": str(e),
             },
-            fallback_used = True,
+            fallback_used=True,
         )
         logger.warning(
-            f"[speaking_evaluator] Failed after 3 retries — "
-            f"marking session as ungraded"
+            "[speaking_evaluator] Failed after 3 retries — marking session as ungraded"
         )
         return _ungraded_result(sub_mode)

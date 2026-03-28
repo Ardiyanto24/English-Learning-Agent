@@ -59,11 +59,11 @@ def _pick_random_topic(category: Optional[str] = None) -> tuple[str, str]:
     categories = _METADATA.get("categories", {})
     if not categories:
         _FALLBACK_TOPICS = [
-            ("Everyday Situations",     "Daily routines and habits"),
-            ("Campus Life",             "Study habits and time management"),
+            ("Everyday Situations", "Daily routines and habits"),
+            ("Campus Life", "Study habits and time management"),
             ("Technology & Innovation", "Social media and communication"),
-            ("Health & Medicine",       "Healthy lifestyle choices"),
-            ("Environment & Nature",    "Environmental awareness"),
+            ("Health & Medicine", "Healthy lifestyle choices"),
+            ("Environment & Nature", "Environmental awareness"),
         ]
         return random.choice(_FALLBACK_TOPICS)
 
@@ -163,7 +163,7 @@ def run_generator(
     # Oral presentation: generate topik bebas
     if sub_mode == "oral_presentation":
         final_category = "Open Topic"
-        final_topic    = "Any academic or social topic"
+        final_topic = "Any academic or social topic"
     else:
         # Pilih category & topic (random jika tidak disediakan)
         if category and topic:
@@ -180,19 +180,19 @@ def run_generator(
 
     try:
         result = _call_generator_llm(
-            sub_mode     = sub_mode,
-            category     = final_category,
-            topic        = final_topic,
-            difficulty   = difficulty,
-            used_prompts = used_prompts or [],
+            sub_mode=sub_mode,
+            category=final_category,
+            topic=final_topic,
+            difficulty=difficulty,
+            used_prompts=used_prompts or [],
         )
 
         # Pastikan suggested_duration_seconds ada
         if "suggested_duration_seconds" not in result:
             defaults = {
-                "prompted_response":    90,
+                "prompted_response": 90,
                 "conversation_practice": 60,
-                "oral_presentation":    180,
+                "oral_presentation": 180,
             }
             result["suggested_duration_seconds"] = defaults.get(sub_mode, 90)
             logger.warning(
@@ -202,18 +202,15 @@ def run_generator(
             )
 
         logger.info(
-            f"[speaking_generator] Done — "
-            f"prompt='{result.get('prompt_text', '')[:60]}...'"
+            f"[speaking_generator] Done — " f"prompt='{result.get('prompt_text', '')[:60]}...'"
         )
         return result
 
     except Exception as e:
         log_error(
-            error_type   = "llm_timeout",
-            agent_name   = "speaking_generator",
-            context      = {"sub_mode": sub_mode, "error": str(e)},
-            fallback_used = False,
+            error_type="llm_timeout",
+            agent_name="speaking_generator",
+            context={"sub_mode": sub_mode, "error": str(e)},
+            fallback_used=False,
         )
-        raise RuntimeError(
-            f"Speaking Generator gagal setelah 3x retry: {e}"
-        ) from e
+        raise RuntimeError(f"Speaking Generator gagal setelah 3x retry: {e}") from e

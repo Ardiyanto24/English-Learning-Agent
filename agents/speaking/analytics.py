@@ -46,18 +46,15 @@ def _fetch_speaking_data() -> tuple[list, list]:
     """
     try:
         with get_db() as conn:
-            sessions = conn.execute(
-                """SELECT ss.*, s.created_at, s.completed_at
+            sessions = conn.execute("""SELECT ss.*, s.created_at, s.completed_at
                    FROM speaking_sessions ss
                    JOIN sessions s ON ss.session_id = s.session_id
                    WHERE s.status = 'completed'
-                   ORDER BY s.created_at ASC"""
-            ).fetchall()
+                   ORDER BY s.created_at ASC""").fetchall()
 
             # Agregasi per sub_mode — LLM menerima data terstruktur
             # bukan raw exchanges yang bias per jumlah exchange
-            submode_stats = conn.execute(
-                """SELECT
+            submode_stats = conn.execute("""SELECT
                        sub_mode,
                        COUNT(*)                    AS total_sessions,
                        AVG(grammar_score)          AS avg_grammar,
@@ -70,16 +67,14 @@ def _fetch_speaking_data() -> tuple[list, list]:
                    JOIN sessions s ON ss.session_id = s.session_id
                    WHERE s.status = 'completed'
                      AND ss.is_graded = 1
-                   GROUP BY sub_mode"""
-            ).fetchall()
+                   GROUP BY sub_mode""").fetchall()
 
         return (
             [dict(r) for r in sessions],
             [dict(r) for r in submode_stats],
         )
     except Exception as e:
-        log_error("db_error", "speaking_analytics",
-                  context={"error": str(e)}, fallback_used=True)
+        log_error("db_error", "speaking_analytics", context={"error": str(e)}, fallback_used=True)
         return [], []
 
 
@@ -90,24 +85,27 @@ def _save_snapshot(result: dict) -> None:
                 """INSERT INTO analytics_snapshots
                    (agent_type, snapshot_data, created_at)
                    VALUES (?, ?, ?)""",
-                ("speaking_analytics",
-                 json.dumps(result, ensure_ascii=False),
-                 datetime.now().isoformat()),
+                (
+                    "speaking_analytics",
+                    json.dumps(result, ensure_ascii=False),
+                    datetime.now().isoformat(),
+                ),
             )
     except Exception as e:
-        log_error("db_error", "speaking_analytics",
-                  context={"error": str(e), "action": "save_snapshot"})
+        log_error(
+            "db_error", "speaking_analytics", context={"error": str(e), "action": "save_snapshot"}
+        )
 
 
 def _empty_insight() -> dict:
     return {
-        "total_sessions":     0,
+        "total_sessions": 0,
         "avg_scores_by_mode": {},
         "strongest_criterion": None,
-        "weakest_criterion":   None,
-        "trend":               "insufficient_data",
-        "pattern_insight":     None,
-        "insight":             None,
+        "weakest_criterion": None,
+        "trend": "insufficient_data",
+        "pattern_insight": None,
+        "insight": None,
     }
 
 
@@ -129,15 +127,15 @@ def _parse_response(raw: str) -> dict:
 @retry_llm
 def _call_analytics_llm(sessions: list, submode_stats: list) -> dict:
     prompt = build_speaking_analytics_prompt(
-        sessions_data      = sessions,
-        submode_stats_data = submode_stats,
+        sessions_data=sessions,
+        submode_stats_data=submode_stats,
     )
     client = _get_client()
     response = client.messages.create(
-        model     = SONNET_MODEL,
-        max_tokens= 1024,
-        system    = SPEAKING_ANALYTICS_SYSTEM_PROMPT,
-        messages  = [{"role": "user", "content": prompt}],
+        model=SONNET_MODEL,
+        max_tokens=1024,
+        system=SPEAKING_ANALYTICS_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
     )
     return _parse_response(response.content[0].text)
 
@@ -149,7 +147,7 @@ def run_analytics() -> dict:
     """
     logger.info("[speaking_analytics] Starting analytics run...")
 
-    sessions, exchanges = _fetch_speaking_data()
+    sessions, submode_stats = _fetch_speaking_data()
 
     if len(sessions) < MIN_SESSIONS_FOR_ANALYTICS:
         logger.info(
@@ -167,7 +165,10 @@ def run_analytics() -> dict:
         )
         return result
     except Exception as e:
-        log_error("llm_timeout", "speaking_analytics",
-                  context={"sessions": len(sessions), "error": str(e)},
-                  fallback_used=True)
+        log_error(
+            "llm_timeout",
+            "speaking_analytics",
+            context={"sessions": len(sessions), "error": str(e)},
+            fallback_used=True,
+        )
         return _empty_insight()

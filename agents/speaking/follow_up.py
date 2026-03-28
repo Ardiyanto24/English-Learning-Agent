@@ -148,9 +148,7 @@ def run_follow_up(
     """
     # Gunakan saran Assessor jika tersedia (hemat API call)
     if assessor_suggestion and len(assessor_suggestion.strip()) > 10:
-        logger.info(
-            "[speaking_follow_up] Using assessor suggestion (skipping LLM call)"
-        )
+        logger.info("[speaking_follow_up] Using assessor suggestion (skipping LLM call)")
         return {
             "follow_up_prompt": assessor_suggestion,
             "new_angle": "suggested by assessor",
@@ -168,8 +166,7 @@ def run_follow_up(
 
         result["source"] = "llm"
         logger.info(
-            f"[speaking_follow_up] Done — "
-            f"'{result.get('follow_up_prompt', '')[:60]}...'"
+            f"[speaking_follow_up] Done — " f"'{result.get('follow_up_prompt', '')[:60]}...'"
         )
         return result
 
@@ -181,9 +178,7 @@ def run_follow_up(
             context={"main_topic": main_topic, "error": str(e)},
             fallback_used=True,
         )
-        logger.warning(
-            "[speaking_follow_up] Failed after 3 retries — using generic fallback"
-        )
+        logger.warning("[speaking_follow_up] Failed after 3 retries — using generic fallback")
 
         # Fallback generik — conversation tetap jalan
         return {

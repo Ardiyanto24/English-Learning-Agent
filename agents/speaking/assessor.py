@@ -29,9 +29,9 @@ from config.settings import HAIKU_MODEL
 load_dotenv()
 
 # Batas exchange per sub-mode
-PROMPTED_RESPONSE_MAX    = 3
-CONVERSATION_PHASE2_MIN  = 10
-CONVERSATION_HARD_STOP   = 15
+PROMPTED_RESPONSE_MAX = 3
+CONVERSATION_PHASE2_MIN = 10
+CONVERSATION_HARD_STOP = 15
 
 # Window size untuk sliding window
 WINDOW_SIZE = 5
@@ -60,7 +60,7 @@ def _build_sliding_window(
         return full_history
 
     # Ambil WINDOW_SIZE + 1 agar ada cadangan jika entry pertama di-trim
-    window = full_history[-(WINDOW_SIZE + 1):]
+    window = full_history[-(WINDOW_SIZE + 1) :]
 
     # Pastikan window mulai dari giliran AI (bukan user)
     if window and window[0].get("role") == "user":
@@ -86,8 +86,8 @@ def _check_hard_limits(
             f"reached {exchange_count} exchanges"
         )
         return {
-            "decision":          "stop",
-            "reason":            f"Batas maksimum {PROMPTED_RESPONSE_MAX}x exchange untuk Prompted Response telah tercapai.",
+            "decision": "stop",
+            "reason": f"Batas maksimum {PROMPTED_RESPONSE_MAX}x exchange untuk Prompted Response telah tercapai.",
             "suggested_followup": None,
         }
 
@@ -97,8 +97,8 @@ def _check_hard_limits(
             f"reached {exchange_count} exchanges"
         )
         return {
-            "decision":          "stop",
-            "reason":            f"Batas maksimum {CONVERSATION_HARD_STOP}x exchange untuk Conversation Practice telah tercapai.",
+            "decision": "stop",
+            "reason": f"Batas maksimum {CONVERSATION_HARD_STOP}x exchange untuk Conversation Practice telah tercapai.",
             "suggested_followup": None,
         }
 
@@ -143,11 +143,11 @@ def _call_assessor_llm(
 ) -> dict:
     """Panggil Claude Haiku untuk assess conversation."""
     user_prompt = build_assessor_prompt(
-        sub_mode            = sub_mode,
-        exchange_count      = exchange_count,
-        conversation_window = conversation_window,
-        main_topic          = main_topic,
-        latest_transcript   = latest_transcript,
+        sub_mode=sub_mode,
+        exchange_count=exchange_count,
+        conversation_window=conversation_window,
+        main_topic=main_topic,
+        latest_transcript=latest_transcript,
     )
 
     client = _get_client()
@@ -189,8 +189,7 @@ def run_assessor(
         }
     """
     logger.info(
-        f"[speaking_assessor] Assessing — "
-        f"sub_mode={sub_mode} exchange={exchange_count}"
+        f"[speaking_assessor] Assessing — " f"sub_mode={sub_mode} exchange={exchange_count}"
     )
 
     # 1. Cek hard limit dulu (tanpa memanggil LLM)
@@ -201,18 +200,17 @@ def run_assessor(
     # 2. Bangun sliding window
     window = _build_sliding_window(full_history)
     logger.debug(
-        f"[speaking_assessor] Sliding window: "
-        f"{len(full_history)} total → {len(window)} sent"
+        f"[speaking_assessor] Sliding window: " f"{len(full_history)} total → {len(window)} sent"
     )
 
     # 3. Panggil LLM
     try:
         result = _call_assessor_llm(
-            sub_mode            = sub_mode,
-            exchange_count      = exchange_count,
-            conversation_window = window,
-            main_topic          = main_topic,
-            latest_transcript   = latest_transcript,
+            sub_mode=sub_mode,
+            exchange_count=exchange_count,
+            conversation_window=window,
+            main_topic=main_topic,
+            latest_transcript=latest_transcript,
         )
 
         logger.info(
@@ -227,11 +225,10 @@ def run_assessor(
             and result.get("decision") == "stop"
         ):
             logger.warning(
-                "[speaking_assessor] Overriding 'stop' in Phase 1 "
-                "→ changing to 'new_subtopic'"
+                "[speaking_assessor] Overriding 'stop' in Phase 1 " "→ changing to 'new_subtopic'"
             )
-            result["decision"]          = "new_subtopic"
-            result["reason"]           += " [Override: Phase 1 belum selesai]"
+            result["decision"] = "new_subtopic"
+            result["reason"] += " [Override: Phase 1 belum selesai]"
             result["suggested_followup"] = result.get("suggested_followup") or (
                 "That's a great point! Let me ask you something related — "
                 "what do you think would be the most important factor in this situation?"
@@ -241,39 +238,37 @@ def run_assessor(
 
     except Exception as e:
         log_error(
-            error_type   = "llm_timeout",
-            agent_name   = "speaking_assessor",
-            context      = {
-                "sub_mode":       sub_mode,
+            error_type="llm_timeout",
+            agent_name="speaking_assessor",
+            context={
+                "sub_mode": sub_mode,
                 "exchange_count": exchange_count,
-                "error":          str(e),
+                "error": str(e),
             },
-            fallback_used = True,
+            fallback_used=True,
         )
-        logger.warning(
-            "[speaking_assessor] Failed — using fallback decision"
-        )
+        logger.warning("[speaking_assessor] Failed — using fallback decision")
 
         # Fallback: Fase 1 → new_subtopic, Fase 2 → stop, prompted_response → continue
         if sub_mode == "conversation_practice":
             if exchange_count < CONVERSATION_PHASE2_MIN:
                 # Fase 1 — belum boleh stop
                 return {
-                    "decision":          "new_subtopic",
-                    "reason":            "Assessor tidak tersedia — lanjut dengan sub-topik baru.",
+                    "decision": "new_subtopic",
+                    "reason": "Assessor tidak tersedia — lanjut dengan sub-topik baru.",
                     "suggested_followup": "That's interesting! What about approaching this from a different angle — how do you think this topic affects people in everyday life?",
                 }
             else:
                 # Fase 2 — aman untuk stop
                 return {
-                    "decision":          "stop",
-                    "reason":            "Assessor tidak tersedia — sesi dihentikan.",
+                    "decision": "stop",
+                    "reason": "Assessor tidak tersedia — sesi dihentikan.",
                     "suggested_followup": None,
                 }
         else:
             # prompted_response — exchange belum mencapai hard limit, lanjut
             return {
-                "decision":          "continue",
-                "reason":            "Assessor tidak tersedia — lanjut conversation.",
+                "decision": "continue",
+                "reason": "Assessor tidak tersedia — lanjut conversation.",
                 "suggested_followup": None,
             }
