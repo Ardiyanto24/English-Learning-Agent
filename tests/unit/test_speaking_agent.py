@@ -36,7 +36,7 @@ def _history(n_exchanges: int) -> list[dict]:
     """Buat n pasang AI-user exchange."""
     h = []
     for i in range(n_exchanges):
-        h.append({"role": "ai",   "text": f"AI turn {i+1}"})
+        h.append({"role": "ai", "text": f"AI turn {i+1}"})
         h.append({"role": "user", "text": f"User response {i+1}"})
     return h
 
@@ -54,7 +54,7 @@ class TestSpeakingAssessor:
         """
         from agents.speaking.assessor import WINDOW_SIZE, _build_sliding_window
 
-        short = _history(2)   # 4 entries < WINDOW_SIZE (5)
+        short = _history(2)  # 4 entries < WINDOW_SIZE (5)
         result = _build_sliding_window(short)
 
         assert len(result) == len(short)
@@ -66,7 +66,7 @@ class TestSpeakingAssessor:
         """
         from agents.speaking.assessor import WINDOW_SIZE, _build_sliding_window
 
-        long = _history(10)   # 20 entries >> WINDOW_SIZE
+        long = _history(10)  # 20 entries >> WINDOW_SIZE
         result = _build_sliding_window(long)
 
         # Maksimal WINDOW_SIZE + 1 (buffer jika entry pertama di-trim)
@@ -81,8 +81,8 @@ class TestSpeakingAssessor:
         from agents.speaking.assessor import _build_sliding_window
 
         # Buat history yang panjang agar pasti di-trim
-        history = _history(8)   # 16 entries
-        result  = _build_sliding_window(history)
+        history = _history(8)  # 16 entries
+        result = _build_sliding_window(history)
 
         # Entry pertama harus role 'ai', bukan 'user'
         if len(result) > 0:
@@ -95,8 +95,8 @@ class TestSpeakingAssessor:
         """
         from agents.speaking.assessor import _build_sliding_window
 
-        history = _history(10)   # 20 entries
-        result  = _build_sliding_window(history)
+        history = _history(10)  # 20 entries
+        result = _build_sliding_window(history)
 
         # Entry terakhir window harus sama dengan entry terakhir history
         assert result[-1] == history[-1]
@@ -140,11 +140,11 @@ class TestSpeakingAssessor:
         from agents.speaking.assessor import _check_hard_limits
 
         # prompted_response belum di batas
-        assert _check_hard_limits("prompted_response", 1)     is None
-        assert _check_hard_limits("prompted_response", 2)     is None
+        assert _check_hard_limits("prompted_response", 1) is None
+        assert _check_hard_limits("prompted_response", 2) is None
 
         # conversation_practice belum di batas
-        assert _check_hard_limits("conversation_practice", 5)  is None
+        assert _check_hard_limits("conversation_practice", 5) is None
         assert _check_hard_limits("conversation_practice", 14) is None
 
     def test_hard_stop_skips_llm_call(self):
@@ -156,12 +156,13 @@ class TestSpeakingAssessor:
 
         with patch("agents.speaking.assessor._call_assessor_llm") as mock_llm:
             from agents.speaking.assessor import run_assessor
+
             result = run_assessor(
-                sub_mode          = "prompted_response",
-                exchange_count    = PROMPTED_RESPONSE_MAX,   # tepat di batas
-                full_history      = _history(3),
-                main_topic        = "Daily routines",
-                latest_transcript = "I wake up at 7 AM.",
+                sub_mode="prompted_response",
+                exchange_count=PROMPTED_RESPONSE_MAX,  # tepat di batas
+                full_history=_history(3),
+                main_topic="Daily routines",
+                latest_transcript="I wake up at 7 AM.",
             )
 
         # LLM tidak boleh dipanggil
@@ -178,8 +179,8 @@ class TestSpeakingAssessor:
         10 exchange minimum terpenuhi.
         """
         stop_resp = {
-            "decision":           "stop",
-            "reason":             "Conversation closed naturally.",
+            "decision": "stop",
+            "reason": "Conversation closed naturally.",
             "suggested_followup": None,
         }
 
@@ -190,12 +191,13 @@ class TestSpeakingAssessor:
                 CONVERSATION_PHASE2_MIN,
                 run_assessor,
             )
+
             result = run_assessor(
-                sub_mode          = "conversation_practice",
-                exchange_count    = CONVERSATION_PHASE2_MIN - 1,   # masih Fase 1
-                full_history      = _history(CONVERSATION_PHASE2_MIN - 1),
-                main_topic        = "Technology",
-                latest_transcript = "I love smartphones.",
+                sub_mode="conversation_practice",
+                exchange_count=CONVERSATION_PHASE2_MIN - 1,  # masih Fase 1
+                full_history=_history(CONVERSATION_PHASE2_MIN - 1),
+                main_topic="Technology",
+                latest_transcript="I love smartphones.",
             )
 
         # Harus di-override, bukan stop
@@ -207,8 +209,8 @@ class TestSpeakingAssessor:
         Keputusan 'stop' dari LLM boleh diteruskan apa adanya.
         """
         stop_resp = {
-            "decision":           "stop",
-            "reason":             "Conversation naturally concluded.",
+            "decision": "stop",
+            "reason": "Conversation naturally concluded.",
             "suggested_followup": None,
         }
 
@@ -219,12 +221,13 @@ class TestSpeakingAssessor:
                 CONVERSATION_PHASE2_MIN,
                 run_assessor,
             )
+
             result = run_assessor(
-                sub_mode          = "conversation_practice",
-                exchange_count    = CONVERSATION_PHASE2_MIN,   # tepat di Fase 2
-                full_history      = _history(CONVERSATION_PHASE2_MIN),
-                main_topic        = "Technology",
-                latest_transcript = "That concludes my thoughts.",
+                sub_mode="conversation_practice",
+                exchange_count=CONVERSATION_PHASE2_MIN,  # tepat di Fase 2
+                full_history=_history(CONVERSATION_PHASE2_MIN),
+                main_topic="Technology",
+                latest_transcript="That concludes my thoughts.",
             )
 
         # Stop boleh diteruskan di Fase 2
@@ -240,12 +243,13 @@ class TestSpeakingAssessor:
             mock_llm.side_effect = Exception("Network error")
 
             from agents.speaking.assessor import run_assessor
+
             result = run_assessor(
-                sub_mode          = "prompted_response",
-                exchange_count    = 1,
-                full_history      = _history(1),
-                main_topic        = "Health",
-                latest_transcript = "Exercise is important.",
+                sub_mode="prompted_response",
+                exchange_count=1,
+                full_history=_history(1),
+                main_topic="Health",
+                latest_transcript="Exercise is important.",
             )
 
         assert result["decision"] == "continue"
@@ -262,12 +266,13 @@ class TestSpeakingAssessor:
                 CONVERSATION_PHASE2_MIN,
                 run_assessor,
             )
+
             result = run_assessor(
-                sub_mode          = "conversation_practice",
-                exchange_count    = 5,   # Fase 1
-                full_history      = _history(5),
-                main_topic        = "Environment",
-                latest_transcript = "We should recycle more.",
+                sub_mode="conversation_practice",
+                exchange_count=5,  # Fase 1
+                full_history=_history(5),
+                main_topic="Environment",
+                latest_transcript="We should recycle more.",
             )
 
         assert result["decision"] == "new_subtopic"
@@ -284,12 +289,13 @@ class TestSpeakingAssessor:
                 CONVERSATION_PHASE2_MIN,
                 run_assessor,
             )
+
             result = run_assessor(
-                sub_mode          = "conversation_practice",
-                exchange_count    = CONVERSATION_PHASE2_MIN + 1,   # Fase 2
-                full_history      = _history(CONVERSATION_PHASE2_MIN + 1),
-                main_topic        = "Environment",
-                latest_transcript = "That's my final point.",
+                sub_mode="conversation_practice",
+                exchange_count=CONVERSATION_PHASE2_MIN + 1,  # Fase 2
+                full_history=_history(CONVERSATION_PHASE2_MIN + 1),
+                main_topic="Environment",
+                latest_transcript="That's my final point.",
             )
 
         assert result["decision"] == "stop"
@@ -302,22 +308,23 @@ class TestSpeakingAssessor:
         """
         with patch("agents.speaking.assessor._call_assessor_llm") as mock_llm:
             mock_llm.return_value = {
-                "decision":           "continue",
-                "reason":             "Answer needs elaboration.",
+                "decision": "continue",
+                "reason": "Answer needs elaboration.",
                 "suggested_followup": "Can you tell me more?",
             }
 
             from agents.speaking.assessor import run_assessor
+
             result = run_assessor(
-                sub_mode          = "prompted_response",
-                exchange_count    = 1,
-                full_history      = _history(1),
-                main_topic        = "Daily life",
-                latest_transcript = "I usually cook at home.",
+                sub_mode="prompted_response",
+                exchange_count=1,
+                full_history=_history(1),
+                main_topic="Daily life",
+                latest_transcript="I usually cook at home.",
             )
 
-        assert "decision"           in result
-        assert "reason"             in result
+        assert "decision" in result
+        assert "reason" in result
         assert "suggested_followup" in result
 
     def test_valid_decisions_only(self):
@@ -327,18 +334,19 @@ class TestSpeakingAssessor:
         """
         with patch("agents.speaking.assessor._call_assessor_llm") as mock_llm:
             mock_llm.return_value = {
-                "decision":           "continue",
-                "reason":             "Keep going.",
+                "decision": "continue",
+                "reason": "Keep going.",
                 "suggested_followup": None,
             }
 
             from agents.speaking.assessor import run_assessor
+
             result = run_assessor(
-                sub_mode          = "prompted_response",
-                exchange_count    = 1,
-                full_history      = _history(1),
-                main_topic        = "Sports",
-                latest_transcript = "I play badminton.",
+                sub_mode="prompted_response",
+                exchange_count=1,
+                full_history=_history(1),
+                main_topic="Sports",
+                latest_transcript="I play badminton.",
             )
 
         valid = {"continue", "stop", "new_subtopic"}
@@ -352,7 +360,7 @@ class TestSpeakingEvaluator:
 
     # Transcript minimal yang valid
     TRANSCRIPT = [
-        {"role": "ai",   "text": "Tell me about your daily routine."},
+        {"role": "ai", "text": "Tell me about your daily routine."},
         {"role": "user", "text": "I wake up at 7 AM and exercise."},
     ]
 
@@ -365,7 +373,7 @@ class TestSpeakingEvaluator:
         from agents.speaking.evaluator import _calculate_final_score
 
         parsed = {"grammar_score": 8.0, "relevance_score": 6.0}
-        score  = _calculate_final_score(parsed, "prompted_response")
+        score = _calculate_final_score(parsed, "prompted_response")
 
         assert score == pytest.approx(7.0, abs=0.01)
 
@@ -376,7 +384,7 @@ class TestSpeakingEvaluator:
         from agents.speaking.evaluator import _calculate_final_score
 
         parsed = {"grammar_score": 5.0, "relevance_score": 9.0}
-        score  = _calculate_final_score(parsed, "conversation_practice")
+        score = _calculate_final_score(parsed, "conversation_practice")
 
         assert score == pytest.approx(7.0, abs=0.01)
 
@@ -388,13 +396,13 @@ class TestSpeakingEvaluator:
         from agents.speaking.evaluator import _calculate_final_score
 
         parsed = {
-            "grammar_score":    8.0,
-            "relevance_score":  6.0,
+            "grammar_score": 8.0,
+            "relevance_score": 6.0,
             "vocabulary_score": 7.0,
-            "structure_score":  9.0,
+            "structure_score": 9.0,
         }
-        score    = _calculate_final_score(parsed, "oral_presentation")
-        expected = (8.0 + 6.0 + 7.0 + 9.0) / 4   # = 7.5
+        score = _calculate_final_score(parsed, "oral_presentation")
+        expected = (8.0 + 6.0 + 7.0 + 9.0) / 4  # = 7.5
 
         assert score == pytest.approx(expected, abs=0.01)
 
@@ -407,12 +415,12 @@ class TestSpeakingEvaluator:
 
         # Skor sangat rendah
         parsed_low = {"grammar_score": 1.0, "relevance_score": 1.0}
-        score_low  = _calculate_final_score(parsed_low, "prompted_response")
+        score_low = _calculate_final_score(parsed_low, "prompted_response")
         assert score_low >= 1.0
 
         # Skor sangat tinggi
         parsed_high = {"grammar_score": 10.0, "relevance_score": 10.0}
-        score_high  = _calculate_final_score(parsed_high, "prompted_response")
+        score_high = _calculate_final_score(parsed_high, "prompted_response")
         assert score_high <= 10.0
 
     def test_calculate_overrides_llm_final_score(self):
@@ -428,9 +436,9 @@ class TestSpeakingEvaluator:
 
         # LLM "bilang" final_score=9.0, tapi komponennya 8+6=14/2=7.0
         parsed = {
-            "grammar_score":   8.0,
+            "grammar_score": 8.0,
             "relevance_score": 6.0,
-            "final_score":     9.0,   # nilai dari LLM yang "salah"
+            "final_score": 9.0,  # nilai dari LLM yang "salah"
         }
         corrected = _calculate_final_score(parsed, "prompted_response")
 
@@ -441,14 +449,14 @@ class TestSpeakingEvaluator:
     def test_successful_evaluation_is_graded_true(self):
         """LLM sukses → is_graded=True dan final_score ada."""
         mock_result = {
-            "grammar_score":   8.0,
+            "grammar_score": 8.0,
             "relevance_score": 7.0,
-            "final_score":     7.5,
-            "is_graded":       True,
+            "final_score": 7.5,
+            "is_graded": True,
             "feedback": {
-                "grammar":   "Good grammar.",
+                "grammar": "Good grammar.",
                 "relevance": "Stayed on topic.",
-                "overall":   "Well done!",
+                "overall": "Well done!",
             },
         }
 
@@ -456,14 +464,15 @@ class TestSpeakingEvaluator:
             mock_llm.return_value = mock_result
 
             from agents.speaking.evaluator import run_evaluator
+
             result = run_evaluator(
-                sub_mode        = "prompted_response",
-                main_topic      = "Daily routines",
-                prompt_text     = "Tell me about your morning routine.",
-                full_transcript = self.TRANSCRIPT,
+                sub_mode="prompted_response",
+                main_topic="Daily routines",
+                prompt_text="Tell me about your morning routine.",
+                full_transcript=self.TRANSCRIPT,
             )
 
-        assert result["is_graded"]  is True
+        assert result["is_graded"] is True
         assert result["final_score"] is not None
 
     def test_llm_failure_returns_is_graded_false(self):
@@ -475,14 +484,15 @@ class TestSpeakingEvaluator:
             mock_llm.side_effect = Exception("API unavailable")
 
             from agents.speaking.evaluator import run_evaluator
+
             result = run_evaluator(
-                sub_mode        = "prompted_response",
-                main_topic      = "Health",
-                prompt_text     = "What do you do to stay healthy?",
-                full_transcript = self.TRANSCRIPT,
+                sub_mode="prompted_response",
+                main_topic="Health",
+                prompt_text="What do you do to stay healthy?",
+                full_transcript=self.TRANSCRIPT,
             )
 
-        assert result["is_graded"]   is False
+        assert result["is_graded"] is False
         assert result["final_score"] is None
 
     def test_empty_transcript_returns_ungraded(self):
@@ -492,11 +502,12 @@ class TestSpeakingEvaluator:
         """
         with patch("agents.speaking.evaluator._call_evaluator_llm") as mock_llm:
             from agents.speaking.evaluator import run_evaluator
+
             result = run_evaluator(
-                sub_mode        = "prompted_response",
-                main_topic      = "Travel",
-                prompt_text     = "Tell me about your dream destination.",
-                full_transcript = [],   # kosong
+                sub_mode="prompted_response",
+                main_topic="Travel",
+                prompt_text="Tell me about your dream destination.",
+                full_transcript=[],  # kosong
             )
 
         # LLM tidak boleh dipanggil untuk transcript kosong
@@ -509,18 +520,18 @@ class TestSpeakingEvaluator:
         sebagai tambahan dari grammar dan relevance.
         """
         mock_result = {
-            "grammar_score":    7.0,
-            "relevance_score":  8.0,
+            "grammar_score": 7.0,
+            "relevance_score": 8.0,
             "vocabulary_score": 6.0,
-            "structure_score":  9.0,
-            "final_score":      7.5,
-            "is_graded":        True,
+            "structure_score": 9.0,
+            "final_score": 7.5,
+            "is_graded": True,
             "feedback": {
-                "grammar":    "Good grammar.",
-                "relevance":  "On topic.",
+                "grammar": "Good grammar.",
+                "relevance": "On topic.",
                 "vocabulary": "Rich vocabulary.",
-                "structure":  "Well structured.",
-                "overall":    "Excellent presentation!",
+                "structure": "Well structured.",
+                "overall": "Excellent presentation!",
             },
         }
 
@@ -528,15 +539,16 @@ class TestSpeakingEvaluator:
             mock_llm.return_value = mock_result
 
             from agents.speaking.evaluator import run_evaluator
+
             result = run_evaluator(
-                sub_mode        = "oral_presentation",
-                main_topic      = "Climate change",
-                prompt_text     = "Give a 3-minute presentation.",
-                full_transcript = self.TRANSCRIPT,
+                sub_mode="oral_presentation",
+                main_topic="Climate change",
+                prompt_text="Give a 3-minute presentation.",
+                full_transcript=self.TRANSCRIPT,
             )
 
         assert "vocabulary_score" in result
-        assert "structure_score"  in result
+        assert "structure_score" in result
 
     def test_oral_presentation_ungraded_has_extra_none_fields(self):
         """
@@ -548,16 +560,17 @@ class TestSpeakingEvaluator:
             mock_llm.side_effect = Exception("LLM down")
 
             from agents.speaking.evaluator import run_evaluator
+
             result = run_evaluator(
-                sub_mode        = "oral_presentation",
-                main_topic      = "Education",
-                prompt_text     = "Discuss the importance of education.",
-                full_transcript = self.TRANSCRIPT,
+                sub_mode="oral_presentation",
+                main_topic="Education",
+                prompt_text="Discuss the importance of education.",
+                full_transcript=self.TRANSCRIPT,
             )
 
-        assert result["is_graded"]        is False
+        assert result["is_graded"] is False
         assert result["vocabulary_score"] is None
-        assert result["structure_score"]  is None
+        assert result["structure_score"] is None
 
     def test_feedback_fields_match_sub_mode(self):
         """
@@ -566,14 +579,14 @@ class TestSpeakingEvaluator:
         """
         # Prompted response
         mock_prompted = {
-            "grammar_score":   7.0,
+            "grammar_score": 7.0,
             "relevance_score": 8.0,
-            "final_score":     7.5,
-            "is_graded":       True,
+            "final_score": 7.5,
+            "is_graded": True,
             "feedback": {
-                "grammar":   "Good.",
+                "grammar": "Good.",
                 "relevance": "On topic.",
-                "overall":   "Well done.",
+                "overall": "Well done.",
             },
         }
 
@@ -581,17 +594,18 @@ class TestSpeakingEvaluator:
             mock_llm.return_value = mock_prompted
 
             from agents.speaking.evaluator import run_evaluator
+
             result = run_evaluator(
-                sub_mode        = "prompted_response",
-                main_topic      = "Food",
-                prompt_text     = "Describe your favorite meal.",
-                full_transcript = self.TRANSCRIPT,
+                sub_mode="prompted_response",
+                main_topic="Food",
+                prompt_text="Describe your favorite meal.",
+                full_transcript=self.TRANSCRIPT,
             )
 
         fb = result["feedback"]
-        assert "grammar"   in fb
+        assert "grammar" in fb
         assert "relevance" in fb
-        assert "overall"   in fb
+        assert "overall" in fb
         # oral_presentation fields tidak boleh ada di prompted_response
         assert "vocabulary" not in fb
-        assert "structure"  not in fb
+        assert "structure" not in fb

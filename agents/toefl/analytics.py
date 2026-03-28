@@ -57,13 +57,10 @@ def _fetch_toefl_data() -> list:
     """
     try:
         # Ambil session_id yang abandoned untuk di-exclude
-        abandoned_ids = {
-            s["session_id"] for s in get_abandoned_sessions(mode="toefl")
-        }
+        abandoned_ids = {s["session_id"] for s in get_abandoned_sessions(mode="toefl")}
 
         with get_db() as conn:
-            rows = conn.execute(
-                """
+            rows = conn.execute("""
                 SELECT
                     ts.session_id,
                     ts.mode,
@@ -80,8 +77,7 @@ def _fetch_toefl_data() -> list:
                 WHERE ts.score_status = 'completed'
                   AND s.status = 'completed'
                 ORDER BY s.completed_at ASC
-                """
-            ).fetchall()
+                """).fetchall()
 
         sessions = [dict(r) for r in rows]
 
@@ -131,20 +127,20 @@ def _save_snapshot(result: dict) -> None:
 # ===================================================
 def _empty_insight() -> dict:
     return {
-        "total_simulations"     : 0,
-        "avg_estimated_score"   : None,
-        "best_estimated_score"  : None,
+        "total_simulations": 0,
+        "avg_estimated_score": None,
+        "best_estimated_score": None,
         "latest_estimated_score": None,
-        "section_averages"      : {
+        "section_averages": {
             "listening_scaled": None,
             "structure_scaled": None,
-            "reading_scaled"  : None,
+            "reading_scaled": None,
         },
-        "weakest_section"       : None,
-        "most_improved_section" : None,
-        "score_trend"           : "insufficient_data",
-        "mode_recommendation"   : None,
-        "insight"               : None,
+        "weakest_section": None,
+        "most_improved_section": None,
+        "score_trend": "insufficient_data",
+        "mode_recommendation": None,
+        "insight": None,
     }
 
 
@@ -155,14 +151,14 @@ def _parse_response(raw: str) -> dict:
     text = raw.strip()
     if text.startswith("```"):
         parts = text.split("```")
-        text  = parts[1] if len(parts) > 1 else text
+        text = parts[1] if len(parts) > 1 else text
         if text.startswith("json"):
             text = text[4:]
     parsed = json.loads(text.strip())
 
     # Validasi field wajib
     required = {"total_simulations", "weakest_section", "score_trend", "insight"}
-    missing  = required - set(parsed.keys())
+    missing = required - set(parsed.keys())
     if missing:
         raise ValueError(f"TOEFL analytics response missing fields: {missing}")
 
@@ -174,8 +170,8 @@ def _parse_response(raw: str) -> dict:
 # ===================================================
 @retry_llm
 def _call_analytics_llm(sessions_data: list) -> dict:
-    prompt   = build_toefl_analytics_prompt(sessions_data)
-    client   = _get_client()
+    prompt = build_toefl_analytics_prompt(sessions_data)
+    client = _get_client()
     response = client.messages.create(
         model=SONNET_MODEL,
         max_tokens=1024,
@@ -201,19 +197,13 @@ def run_analytics() -> dict:
     sessions = _fetch_toefl_data()
 
     if len(sessions) < MIN_SESSIONS_FOR_ANALYTICS:
-        logger.info(
-            f"[toefl_analytics] Insufficient data: {len(sessions)} completed simulations "
-            f"(minimum: {MIN_SESSIONS_FOR_ANALYTICS})"
-        )
+        logger.info(f"[toefl_analytics] Insufficient data: {len(sessions)} completed simulations " f"(minimum: {MIN_SESSIONS_FOR_ANALYTICS})")
         return _empty_insight()
 
     try:
         result = _call_analytics_llm(sessions)
         _save_snapshot(result)
-        logger.info(
-            f"[toefl_analytics] Done — trend={result.get('score_trend')}, "
-            f"weakest={result.get('weakest_section')}"
-        )
+        logger.info(f"[toefl_analytics] Done — trend={result.get('score_trend')}, " f"weakest={result.get('weakest_section')}")
         return result
 
     except Exception as e:

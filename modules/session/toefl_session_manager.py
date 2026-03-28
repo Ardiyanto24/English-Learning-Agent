@@ -63,9 +63,9 @@ SECTION_NAMES = {
 # Jumlah soal yang diharapkan per section per mode
 # Dipakai is_section_complete() untuk validasi
 SECTION_TOTALS = {
-    "50%"  : {1: 25, 2: 20, 3: 25},
-    "75%"  : {1: 38, 2: 30, 3: 37},
-    "100%" : {1: 50, 2: 40, 3: 50},
+    "50%": {1: 25, 2: 20, 3: 25},
+    "75%": {1: 38, 2: 30, 3: 37},
+    "100%": {1: 50, 2: 40, 3: 50},
 }
 
 
@@ -74,17 +74,17 @@ SECTION_TOTALS = {
 # ===================================================
 @dataclass
 class PauseResult:
-    success    : bool
-    expires_at : Optional[str] = None
-    reason     : Optional[str] = None   # diisi jika success=False
+    success: bool
+    expires_at: Optional[str] = None
+    reason: Optional[str] = None  # diisi jika success=False
 
 
 @dataclass
 class ResumeResult:
-    success         : bool
-    state           : Optional[dict] = None   # diisi jika success=True
-    reason          : Optional[str] = None    # diisi jika success=False
-    expires_at      : Optional[str] = None    # untuk tampilkan di UI saat success
+    success: bool
+    state: Optional[dict] = None  # diisi jika success=True
+    reason: Optional[str] = None  # diisi jika success=False
+    expires_at: Optional[str] = None  # untuk tampilkan di UI saat success
 
 
 # ===================================================
@@ -125,27 +125,19 @@ def is_section_complete(session_id: str, section: int, mode: str) -> bool:
         return False
 
     # Hitung soal section ini yang sudah dijawab
-    answered = sum(
-        1 for q in toefl_data.get("questions", [])
-        if q.get("section") == str(section)
-        and q.get("user_answer") is not None
-    )
+    answered = sum(1 for q in toefl_data.get("questions", []) if q.get("section") == str(section) and q.get("user_answer") is not None)
 
     expected = SECTION_TOTALS.get(mode, {}).get(section, 0)
 
     is_complete = answered >= expected
 
     if not is_complete:
-        logger.warning(
-            f"[toefl_session_manager] Section {section} belum selesai: "
-            f"{answered}/{expected} soal dijawab (session={session_id})"
-        )
+        logger.warning(f"[toefl_session_manager] Section {section} belum selesai: " f"{answered}/{expected} soal dijawab (session={session_id})")
 
     return is_complete
 
 
-def pause_session(session_id: str, completed_section: int,
-                  mode: str) -> PauseResult:
+def pause_session(session_id: str, completed_section: int, mode: str) -> PauseResult:
     """
     Pause sesi TOEFL setelah selesai mengerjakan satu section.
 
@@ -166,10 +158,7 @@ def pause_session(session_id: str, completed_section: int,
     if completed_section not in [1, 2]:
         return PauseResult(
             success=False,
-            reason=(
-                "Pause hanya bisa dilakukan setelah selesai Listening "
-                "atau Structure section."
-            ),
+            reason=("Pause hanya bisa dilakukan setelah selesai Listening " "atau Structure section."),
         )
 
     # Validasi: section benar-benar sudah selesai
@@ -177,14 +166,11 @@ def pause_session(session_id: str, completed_section: int,
         section_name = SECTION_NAMES.get(completed_section, f"Section {completed_section}")
         return PauseResult(
             success=False,
-            reason=(
-                f"{section_name} belum selesai. Selesaikan semua soal "
-                f"sebelum melakukan pause."
-            ),
+            reason=(f"{section_name} belum selesai. Selesaikan semua soal " f"sebelum melakukan pause."),
         )
 
-    now_dt     = datetime.now()
-    paused_at  = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+    now_dt = datetime.now()
+    paused_at = now_dt.strftime("%Y-%m-%d %H:%M:%S")
     expires_at = _expires_str(now_dt)
 
     # Section berikutnya yang akan dilanjutkan saat resume
@@ -200,11 +186,7 @@ def pause_session(session_id: str, completed_section: int,
 
         if success:
             section_name = SECTION_NAMES.get(completed_section)
-            logger.info(
-                f"[toefl_session_manager] Sesi di-pause setelah {section_name}. "
-                f"Lanjut dari section {next_section} saat resume. "
-                f"Expires: {expires_at} (session={session_id})"
-            )
+            logger.info(f"[toefl_session_manager] Sesi di-pause setelah {section_name}. " f"Lanjut dari section {next_section} saat resume. " f"Expires: {expires_at} (session={session_id})")
             return PauseResult(success=True, expires_at=expires_at)
 
         return PauseResult(success=False, reason="Gagal menyimpan ke database.")
@@ -242,24 +224,13 @@ def resume_session(session_id: str) -> ResumeResult:
         state = check_and_resume_toefl_session(session_id=session_id, now=now)
 
         if state is None:
-            logger.info(
-                f"[toefl_session_manager] Resume gagal — sesi expired "
-                f"atau tidak valid (session={session_id})"
-            )
+            logger.info(f"[toefl_session_manager] Resume gagal — sesi expired " f"atau tidak valid (session={session_id})")
             return ResumeResult(
                 success=False,
-                reason=(
-                    "Sesi tidak dapat dilanjutkan. "
-                    "Kemungkinan sudah melewati batas 7 hari atau "
-                    "tidak dalam kondisi pause."
-                ),
+                reason=("Sesi tidak dapat dilanjutkan. " "Kemungkinan sudah melewati batas 7 hari atau " "tidak dalam kondisi pause."),
             )
 
-        logger.info(
-            f"[toefl_session_manager] Resume berhasil. "
-            f"Lanjut dari section {state.get('current_section')} "
-            f"(session={session_id})"
-        )
+        logger.info(f"[toefl_session_manager] Resume berhasil. " f"Lanjut dari section {state.get('current_section')} " f"(session={session_id})")
 
         return ResumeResult(
             success=True,
@@ -296,6 +267,7 @@ def get_paused_session_info(session_id: str) -> Optional[dict]:
         return None
 
     from database.repositories.session_repository import get_session
+
     session = get_session(session_id)
 
     if not session or session.get("status") != "paused":
@@ -304,16 +276,13 @@ def get_paused_session_info(session_id: str) -> Optional[dict]:
     current_section = toefl_data.get("current_section", 1)
 
     return {
-        "session_id"      : session_id,
-        "mode"            : toefl_data.get("mode"),
-        "current_section" : current_section,
+        "session_id": session_id,
+        "mode": toefl_data.get("mode"),
+        "current_section": current_section,
         "next_section_name": SECTION_NAMES.get(current_section, "Unknown"),
-        "expires_at"      : session.get("expires_at"),
+        "expires_at": session.get("expires_at"),
         # Sections yang sudah selesai
-        "completed_sections": [
-            SECTION_NAMES[s] for s in SECTION_ORDER
-            if s < current_section
-        ],
+        "completed_sections": [SECTION_NAMES[s] for s in SECTION_ORDER if s < current_section],
     }
 
 
@@ -323,5 +292,6 @@ def is_session_abandoned(session_id: str) -> bool:
     Shortcut utility untuk pages/toefl.py.
     """
     from database.repositories.session_repository import get_session
+
     session = get_session(session_id)
     return session is not None and session.get("status") == "abandoned"

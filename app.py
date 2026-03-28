@@ -56,6 +56,7 @@ st.markdown(
 # Init DB — sekali saja saat app start
 # ===================================================
 from database.connection import init_database
+
 init_database()
 
 # ===================================================
@@ -89,13 +90,10 @@ with st.sidebar:
 
     # Profil ringkas — konteks cepat untuk user yang sudah onboarding
     if not ctx.needs_onboarding:
-        level  = ctx.grammar_level or "—"
-        target = ctx.target_toefl  or "—"
+        level = ctx.grammar_level or "—"
+        target = ctx.target_toefl or "—"
         st.markdown(
-            f"<div style='background:#1e2a3a; padding:10px; border-radius:8px; "
-            f"margin-bottom:12px; font-size:0.85em;'>"
-            f"📚 <b>{level}</b> &nbsp;|&nbsp; 🎯 Target: <b>{target}</b>"
-            f"</div>",
+            f"<div style='background:#1e2a3a; padding:10px; border-radius:8px; " f"margin-bottom:12px; font-size:0.85em;'>" f"📚 <b>{level}</b> &nbsp;|&nbsp; 🎯 Target: <b>{target}</b>" f"</div>",
             unsafe_allow_html=True,
         )
 
@@ -105,7 +103,7 @@ with st.sidebar:
     # Proses nav request dari Dashboard sebelum widget di-render
     if "_nav_request" in st.session_state:
         st.session_state["sidebar_nav"] = st.session_state.pop("_nav_request")
-        
+
     current_nav = st.session_state.get("sidebar_nav", "🏠 Dashboard")
     current_idx = PAGES.index(current_nav) if current_nav in PAGES else 0
 
@@ -121,12 +119,12 @@ with st.sidebar:
 
     # Quick stats ringkas di sidebar — tampil setelah onboarding
     if not ctx.needs_onboarding:
-        stats      = ctx.mode_stats
+        stats = ctx.mode_stats
         mode_icons = {
-            "vocab"   : "📚",
-            "quiz"    : "📝",
+            "vocab": "📚",
+            "quiz": "📝",
             "speaking": "🎤",
-            "toefl"   : "📊",
+            "toefl": "📊",
         }
         lines = []
         for mode, icon in mode_icons.items():
@@ -163,17 +161,14 @@ def _require_onboarding() -> bool:
     sudah menghentikan eksekusi saat ini.
     """
     if ctx.needs_onboarding:
-        st.info(
-            "👋 **Selamat datang!** Selesaikan setup profil singkat "
-            "di Dashboard sebelum mulai latihan."
-        )
+        st.info("👋 **Selamat datang!** Selesaikan setup profil singkat " "di Dashboard sebelum mulai latihan.")
         st.caption("Kamu akan diarahkan ke Dashboard secara otomatis.")
 
         # Redirect sidebar ke Dashboard
         st.session_state["sidebar_nav"] = "🏠 Dashboard"
 
         # Pastikan dashboard membuka state onboarding
-        st.session_state["db_state"]   = "onboarding"
+        st.session_state["db_state"] = "onboarding"
         st.session_state["db_ob_step"] = 1
 
         st.rerun()
@@ -197,28 +192,33 @@ if page == "🏠 Dashboard":
     st.session_state["_prev_page"] = "🏠 Dashboard"
 
     from pages.dashboard import main as dashboard_main
+
     dashboard_main()
 
 elif page == "📚 Vocab Agent":
     if _require_onboarding():
         st.session_state["_prev_page"] = "📚 Vocab Agent"
         from pages.vocab import main as vocab_main
+
         vocab_main()
 
 elif page == "📝 Quiz Agent":
     if _require_onboarding():
         st.session_state["_prev_page"] = "📝 Quiz Agent"
         from pages.quiz import main as quiz_main
+
         quiz_main()
 
 elif page == "🎤 Speaking Agent":
     if _require_onboarding():
         st.session_state["_prev_page"] = "🎤 Speaking Agent"
         from pages.speaking import main as speaking_main
+
         speaking_main()
 
 elif page == "📊 TOEFL Simulator":
     if _require_onboarding():
         st.session_state["_prev_page"] = "📊 TOEFL Simulator"
         from pages.toefl import main as toefl_main
+
         toefl_main()

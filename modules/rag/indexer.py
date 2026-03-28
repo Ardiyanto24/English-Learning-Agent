@@ -43,6 +43,7 @@ def _get_embedding_function():
     """
     if EMBEDDING_PROVIDER == "openai":
         from openai import OpenAI
+
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
         def embed_openai(texts: list[str]) -> list[list[float]]:
@@ -58,6 +59,7 @@ def _get_embedding_function():
         # Local: sentence-transformers
         # Install: pip install sentence-transformers
         from sentence_transformers import SentenceTransformer
+
         model = SentenceTransformer("all-MiniLM-L6-v2")
 
         def embed_local(texts: list[str]) -> list[list[float]]:
@@ -77,19 +79,21 @@ def split_by_heading(content: str, filename: str) -> list[dict]:
     Split dokumen berdasarkan heading level 2 (##).
     Setiap section menjadi satu chunk dasar.
     """
-    sections = re.split(r'\n(?=## )', content)
+    sections = re.split(r"\n(?=## )", content)
     chunks = []
 
     for section in sections:
         if not section.strip():
             continue
-        lines = section.strip().split('\n')
-        section_title = lines[0].lstrip('#').strip() if lines else "General"
-        chunks.append({
-            "text": section.strip(),
-            "section_title": section_title,
-            "filename": filename,
-        })
+        lines = section.strip().split("\n")
+        section_title = lines[0].lstrip("#").strip() if lines else "General"
+        chunks.append(
+            {
+                "text": section.strip(),
+                "section_title": section_title,
+                "filename": filename,
+            }
+        )
 
     return chunks
 
@@ -101,7 +105,7 @@ def split_long_chunk(chunk: dict) -> list[dict]:
     if estimate_tokens(chunk["text"]) <= MAX_CHUNK_TOKENS:
         return [chunk]
 
-    paragraphs = [p.strip() for p in chunk["text"].split('\n\n') if p.strip()]
+    paragraphs = [p.strip() for p in chunk["text"].split("\n\n") if p.strip()]
     result_chunks = []
     current_paragraphs = []
     current_tokens = 0
@@ -111,11 +115,13 @@ def split_long_chunk(chunk: dict) -> list[dict]:
         para_tokens = estimate_tokens(para)
 
         if current_tokens + para_tokens > MAX_CHUNK_TOKENS and current_paragraphs:
-            result_chunks.append({
-                **chunk,
-                "text": '\n\n'.join(current_paragraphs),
-                "section_title": f"{chunk['section_title']} (part {len(result_chunks)+1})",
-            })
+            result_chunks.append(
+                {
+                    **chunk,
+                    "text": "\n\n".join(current_paragraphs),
+                    "section_title": f"{chunk['section_title']} (part {len(result_chunks)+1})",
+                }
+            )
             overlap_start = max(0, len(current_paragraphs) - overlap_size)
             current_paragraphs = current_paragraphs[overlap_start:]
             current_tokens = sum(estimate_tokens(p) for p in current_paragraphs)
@@ -125,11 +131,13 @@ def split_long_chunk(chunk: dict) -> list[dict]:
 
     if current_paragraphs:
         part_label = f" (part {len(result_chunks)+1})" if result_chunks else ""
-        result_chunks.append({
-            **chunk,
-            "text": '\n\n'.join(current_paragraphs),
-            "section_title": f"{chunk['section_title']}{part_label}",
-        })
+        result_chunks.append(
+            {
+                **chunk,
+                "text": "\n\n".join(current_paragraphs),
+                "section_title": f"{chunk['section_title']}{part_label}",
+            }
+        )
 
     return result_chunks if result_chunks else [chunk]
 
@@ -147,11 +155,11 @@ def parse_topic_from_file(filepath: Path) -> tuple[str, str]:
         cluster = "General"
 
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             first_line = f.readline().strip()
-        topic = first_line.lstrip('#').strip() if first_line.startswith('#') else filepath.stem
+        topic = first_line.lstrip("#").strip() if first_line.startswith("#") else filepath.stem
     except Exception:
-        topic = filepath.stem.replace('_', ' ').title()
+        topic = filepath.stem.replace("_", " ").title()
 
     return topic, cluster
 
@@ -199,7 +207,7 @@ def index_knowledge_base(
     print(f"  📚 Membaca {len(md_files)} file grammar...")
 
     for md_file in md_files:
-        with open(md_file, 'r', encoding='utf-8') as f:
+        with open(md_file, "r", encoding="utf-8") as f:
             content = f.read()
 
         topic_name, cluster = parse_topic_from_file(md_file)
@@ -213,27 +221,28 @@ def index_knowledge_base(
             chunk_id = f"{md_file.stem}_{i:03d}"
             all_ids.append(chunk_id)
             all_texts.append(chunk["text"])
-            all_metadatas.append({
-                "filename": md_file.name,
-                "topic": topic_name,
-                "cluster": cluster,
-                "section_title": chunk["section_title"],
-                "chunk_index": i,
-            })
+            all_metadatas.append(
+                {
+                    "filename": md_file.name,
+                    "topic": topic_name,
+                    "cluster": cluster,
+                    "section_title": chunk["section_title"],
+                    "chunk_index": i,
+                }
+            )
 
         total_chunks += len(final_chunks)
         print(f"    ✓ {md_file.name}: {len(final_chunks)} chunks")
 
     # Embed semua chunks
-    print(f"\n  🔢 Embedding {total_chunks} chunks "
-          f"(provider: {EMBEDDING_PROVIDER})...")
+    print(f"\n  🔢 Embedding {total_chunks} chunks " f"(provider: {EMBEDDING_PROVIDER})...")
 
     embed_fn = _get_embedding_function()
     BATCH_SIZE = 64
     all_embeddings = []
 
     for i in range(0, len(all_texts), BATCH_SIZE):
-        batch = all_texts[i:i + BATCH_SIZE]
+        batch = all_texts[i : i + BATCH_SIZE]
         embeddings = embed_fn(batch)
         all_embeddings.extend(embeddings)
         batch_num = i // BATCH_SIZE + 1

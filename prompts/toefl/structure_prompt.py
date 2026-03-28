@@ -117,14 +117,23 @@ def build_structure_prompt(
     """
     # Tentukan distribusi grammar focus agar tidak monoton
     grammar_areas_a = [
-        "tense and aspect", "subject-verb agreement", "passive voice",
-        "article usage", "prepositions", "clause connectors",
-        "verb forms (gerund/infinitive)", "parallel structure",
+        "tense and aspect",
+        "subject-verb agreement",
+        "passive voice",
+        "article usage",
+        "prepositions",
+        "clause connectors",
+        "verb forms (gerund/infinitive)",
+        "parallel structure",
     ]
     grammar_areas_b = [
-        "subject-verb agreement error", "wrong tense form",
-        "incorrect word form (adjective/adverb)", "parallel structure violation",
-        "article error", "preposition error", "pronoun agreement",
+        "subject-verb agreement error",
+        "wrong tense form",
+        "incorrect word form (adjective/adverb)",
+        "parallel structure violation",
+        "article error",
+        "preposition error",
+        "pronoun agreement",
         "comparative/superlative form",
     ]
 

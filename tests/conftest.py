@@ -31,10 +31,12 @@ def tmp_db(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_PATH", db_path)
 
     import database.connection as conn_module
+
     monkeypatch.setattr(conn_module, "DATABASE_PATH", db_path)
 
     # Init semua 14 tabel di DB temp
     from database.connection import init_database
+
     init_database()
 
     yield db_path
@@ -96,8 +98,16 @@ def sample_vocab_questions():
     """
     formats = ["tebak_arti"] * 4 + ["sinonim_antonim"] * 3 + ["tebak_inggris"] * 3
     words = [
-        "accomplish", "adequate", "ambiguous", "analyze", "apparent",
-        "appropriate", "approximate", "arbitrary", "assess", "assume",
+        "accomplish",
+        "adequate",
+        "ambiguous",
+        "analyze",
+        "apparent",
+        "appropriate",
+        "approximate",
+        "arbitrary",
+        "assess",
+        "assume",
     ]
     return [
         {
@@ -140,15 +150,17 @@ def sample_generator_output_quiz():
     questions = []
     for i in range(10):
         fmt = "multiple_choice" if i < 7 else ("error_id" if i == 7 else "fill_blank")
-        questions.append({
-            "id": i + 1,
-            "format": fmt,
-            "question_text": f"Sample question {i + 1}.",
-            "options": ["A. opt A", "B. opt B", "C. opt C", "D. opt D"],
-            "correct_answer": "A",
-            "difficulty": "easy",
-            "topic": "present_tenses",
-        })
+        questions.append(
+            {
+                "id": i + 1,
+                "format": fmt,
+                "question_text": f"Sample question {i + 1}.",
+                "options": ["A. opt A", "B. opt B", "C. opt C", "D. opt D"],
+                "correct_answer": "A",
+                "difficulty": "easy",
+                "topic": "present_tenses",
+            }
+        )
     return {"questions": questions}
 
 
@@ -159,9 +171,9 @@ def sample_generator_output_quiz():
 def sample_speaking_history_short():
     """2 exchange — belum sampai batas prompted_response (max 3)."""
     return [
-        {"role": "ai",   "text": "Tell me about your daily routine."},
+        {"role": "ai", "text": "Tell me about your daily routine."},
         {"role": "user", "text": "I wake up at 7 AM."},
-        {"role": "ai",   "text": "What do you have for breakfast?"},
+        {"role": "ai", "text": "What do you have for breakfast?"},
         {"role": "user", "text": "I have rice and eggs."},
     ]
 
@@ -171,6 +183,6 @@ def sample_speaking_history_long():
     """12 exchange — sudah masuk Fase 2 conversation_practice (> 10)."""
     h = []
     for i in range(12):
-        h.append({"role": "ai",   "text": f"AI turn {i + 1}"})
+        h.append({"role": "ai", "text": f"AI turn {i + 1}"})
         h.append({"role": "user", "text": f"User response {i + 1}"})
     return h

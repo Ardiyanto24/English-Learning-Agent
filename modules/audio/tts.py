@@ -27,15 +27,15 @@ load_dotenv()
 VOICE_MAP = {
     "SPEAKER_A": "en-US-Neural2-D",
     "SPEAKER_B": "en-US-Neural2-F",
-    "NARRATOR":  "en-US-Neural2-J",
+    "NARRATOR": "en-US-Neural2-J",
 }
 DEFAULT_VOICE = "en-US-Neural2-D"
 
 # Mapping voice lama OpenAI → Google Neural2
 _LEGACY_VOICE_MAP = {
     "alloy": "en-US-Neural2-D",
-    "nova":  "en-US-Neural2-F",
-    "onyx":  "en-US-Neural2-J",
+    "nova": "en-US-Neural2-F",
+    "onyx": "en-US-Neural2-J",
 }
 
 _client: Optional[texttospeech.TextToSpeechClient] = None
@@ -59,7 +59,7 @@ def generate_speech(
     voice = _LEGACY_VOICE_MAP.get(voice, voice)
 
     synthesis_input = texttospeech.SynthesisInput(text=text.strip())
-    voice_params    = texttospeech.VoiceSelectionParams(
+    voice_params = texttospeech.VoiceSelectionParams(
         language_code="en-US",
         name=voice,
     )
@@ -67,7 +67,7 @@ def generate_speech(
         audio_encoding=texttospeech.AudioEncoding.MP3,
     )
 
-    client     = _get_client()
+    client = _get_client()
     last_error = None
 
     for attempt in range(2):
@@ -89,10 +89,7 @@ def generate_speech(
 
 
 def generate_speech_multivoice(script: str) -> Optional[bytes]:
-    pattern = (
-        r'\[(SPEAKER_A|SPEAKER_B|NARRATOR)\]:\s*'
-        r'(.+?)(?=\[(?:SPEAKER_A|SPEAKER_B|NARRATOR)\]:|$)'
-    )
+    pattern = r"\[(SPEAKER_A|SPEAKER_B|NARRATOR)\]:\s*" r"(.+?)(?=\[(?:SPEAKER_A|SPEAKER_B|NARRATOR)\]:|$)"
     matches = re.findall(pattern, script, re.DOTALL)
 
     if not matches:
@@ -100,8 +97,8 @@ def generate_speech_multivoice(script: str) -> Optional[bytes]:
 
     audio_parts = []
     for speaker_tag, text in matches:
-        voice       = VOICE_MAP.get(speaker_tag, DEFAULT_VOICE)
-        text        = text.strip()
+        voice = VOICE_MAP.get(speaker_tag, DEFAULT_VOICE)
+        text = text.strip()
         if not text:
             continue
         audio_bytes = generate_speech(text, voice=voice)

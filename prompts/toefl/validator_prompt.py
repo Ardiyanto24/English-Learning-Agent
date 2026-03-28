@@ -85,10 +85,10 @@ Respond with valid JSON only. No explanation, no markdown.
 
 
 def build_validator_prompt(
-    planner_output:       dict,
-    listening_content:    dict,
-    structure_content:    dict,
-    reading_content:      dict,
+    planner_output: dict,
+    listening_content: dict,
+    structure_content: dict,
+    reading_content: dict,
 ) -> str:
     """
     Bangun user prompt untuk TOEFL Validator.
@@ -110,16 +110,16 @@ def build_validator_prompt(
             "part_a": len(listening_content.get("part_a", [])),
             "part_b": len(listening_content.get("part_b", [])),
             "part_c": len(listening_content.get("part_c", [])),
-            "total":  listening_content.get("total_questions", 0),
+            "total": listening_content.get("total_questions", 0),
         },
         "structure": {
             "part_a": len(structure_content.get("part_a", [])),
             "part_b": len(structure_content.get("part_b", [])),
-            "total":  structure_content.get("total_questions", 0),
+            "total": structure_content.get("total_questions", 0),
         },
         "reading": {
             "passages": reading_content.get("passages_generated", 0),
-            "total":    reading_content.get("total_questions", 0),
+            "total": reading_content.get("total_questions", 0),
         },
     }
 
@@ -130,11 +130,13 @@ def build_validator_prompt(
         items = listening_content.get(part_key, [])
         if items:
             item = items[0]
-            listening_samples.append({
-                "part":      part_key.upper().replace("_", " "),
-                "script":    item["script"] + "...",
-                "questions": item["questions"][:2],
-            })
+            listening_samples.append(
+                {
+                    "part": part_key.upper().replace("_", " "),
+                    "script": item["script"] + "...",
+                    "questions": item["questions"][:2],
+                }
+            )
 
     # Structure: ambil 3 dari Part A dan 3 dari Part B
     structure_samples = {
@@ -147,12 +149,14 @@ def build_validator_prompt(
     passages = reading_content.get("passages", [])
     if passages:
         p = passages[0]
-        reading_samples.append({
-            "title":        p["title"],
-            "passage_text": p["passage_text"][:400] + "...",
-            "word_count":   p["word_count"],
-            "questions":    p["questions"],
-        })
+        reading_samples.append(
+            {
+                "title": p["title"],
+                "passage_text": p["passage_text"][:400] + "...",
+                "word_count": p["word_count"],
+                "questions": p["questions"],
+            }
+        )
 
     return f"""Perform quality check on this generated TOEFL ITP content.
 

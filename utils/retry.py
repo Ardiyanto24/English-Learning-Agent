@@ -33,10 +33,12 @@ from tenacity import (
 )
 import logging
 
+
 # Tenacity menggunakan standard logging — arahkan ke Loguru
 # Import lazy untuk hindari circular import
 def _get_logger():
     from utils.logger import logger
+
     return logger
 
 
@@ -51,7 +53,7 @@ retry_llm = retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=8),
     # multiplier=1, min=2, max=8 → 2s, 4s, 8s
-    reraise=True,   # Raise exception asli setelah habis retry
+    reraise=True,  # Raise exception asli setelah habis retry
     before_sleep=before_sleep_log(_std_logger, logging.WARNING),
 )
 """
@@ -75,8 +77,8 @@ Contoh penggunaan:
 # Decorator 2: retry_once
 # ===================================================
 retry_once = retry(
-    stop=stop_after_attempt(2),    # 2 attempt = 1 retry
-    wait=wait_fixed(1),            # Tunggu 1s sebelum retry
+    stop=stop_after_attempt(2),  # 2 attempt = 1 retry
+    wait=wait_fixed(1),  # Tunggu 1s sebelum retry
     reraise=True,
     before_sleep=before_sleep_log(_std_logger, logging.WARNING),
 )

@@ -90,15 +90,9 @@ def _load_latest_snapshots() -> dict:
                 if row:
                     try:
                         results[mode] = json.loads(row["content"])
-                        logger.info(
-                            f"[master_analytics] Loaded {mode} snapshot "
-                            f"(generated: {row['generated_at']})"
-                        )
+                        logger.info(f"[master_analytics] Loaded {mode} snapshot " f"(generated: {row['generated_at']})")
                     except json.JSONDecodeError as e:
-                        logger.warning(
-                            f"[master_analytics] Failed to parse "
-                            f"{mode} snapshot: {e}"
-                        )
+                        logger.warning(f"[master_analytics] Failed to parse " f"{mode} snapshot: {e}")
 
     except Exception as e:
         log_error(
@@ -157,9 +151,7 @@ def _empty_insight(reason: str = "insufficient_data") -> dict:
             "avg_improvement_per_sim": None,
             "estimated_weeks": None,
             "readiness_level": "no_data",
-            "recommendation": (
-                "Mulai latihan di semua mode untuk mendapatkan analisis lengkap."
-            ),
+            "recommendation": ("Mulai latihan di semua mode untuk mendapatkan analisis lengkap."),
         },
         "top_priority": None,
         "insight": None,
@@ -227,32 +219,21 @@ def run_master_analytics(target_toefl: int) -> dict:
         dict insight holistik lintas mode.
         Jika tidak ada data sama sekali, return _empty_insight().
     """
-    logger.info(
-        f"[master_analytics] Starting master analytics run "
-        f"(target={target_toefl})..."
-    )
+    logger.info(f"[master_analytics] Starting master analytics run " f"(target={target_toefl})...")
 
     # Load semua snapshot terakhir
     snapshots = _load_latest_snapshots()
 
     # Cek apakah minimal satu mode punya snapshot
-    modes_with_data = [
-        mode for mode, data in snapshots.items()
-        if data and data.get("insight")
-    ]
+    modes_with_data = [mode for mode, data in snapshots.items() if data and data.get("insight")]
 
     if not modes_with_data:
-        logger.info(
-            "[master_analytics] No snapshots available — user has not completed"
-            "enough sessions in any mode."
-        )
+        logger.info("[master_analytics] No snapshots available — user has not completed" "enough sessions in any mode.")
         result = _empty_insight("no_snapshots_available")
         result["toefl_readiness"]["target_score"] = target_toefl
         return result
 
-    logger.info(
-        f"[master_analytics] Snapshots loaded for: {modes_with_data}"
-    )
+    logger.info(f"[master_analytics] Snapshots loaded for: {modes_with_data}")
 
     try:
         result = _call_master_llm(snapshots, target_toefl)

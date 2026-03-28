@@ -48,14 +48,15 @@ class TestVocabPlanner:
             mock_hist.return_value = {"is_cold_start": True}
 
             from agents.vocab.planner import run_planner
+
             result = run_planner(topic="sehari_hari")
 
-        assert result["topic"]             == "sehari_hari"
+        assert result["topic"] == "sehari_hari"
         assert result["difficulty_target"] == "easy"
-        assert result["total_words"]       == 10
-        assert result["new_words"]         == 5
-        assert result["review_words"]      == 5
-        assert "format_distribution"       in result
+        assert result["total_words"] == 10
+        assert result["new_words"] == 5
+        assert result["review_words"] == 5
+        assert "format_distribution" in result
 
     def test_cold_start_topic_override(self):
         """
@@ -66,6 +67,7 @@ class TestVocabPlanner:
             mock_hist.return_value = {"is_cold_start": True}
 
             from agents.vocab.planner import run_planner
+
             result = run_planner(topic="di_kampus")
 
         assert result["topic"] == "di_kampus"
@@ -75,12 +77,12 @@ class TestVocabPlanner:
         Saat cold start, _call_planner_llm tidak boleh dipanggil sama sekali.
         Ini penting untuk hemat token.
         """
-        with patch("agents.vocab.planner._build_history_summary") as mock_hist, \
-             patch("agents.vocab.planner._call_planner_llm") as mock_llm:
+        with patch("agents.vocab.planner._build_history_summary") as mock_hist, patch("agents.vocab.planner._call_planner_llm") as mock_llm:
 
             mock_hist.return_value = {"is_cold_start": True}
 
             from agents.vocab.planner import run_planner
+
             run_planner(topic="sehari_hari")
 
         # LLM tidak boleh dipanggil saat cold start
@@ -91,27 +93,27 @@ class TestVocabPlanner:
         Jika LLM gagal setelah 3x retry, Planner harus fallback
         ke default config — tidak boleh raise exception ke UI.
         """
-        with patch("agents.vocab.planner._build_history_summary") as mock_hist, \
-             patch("agents.vocab.planner._call_planner_llm") as mock_llm:
+        with patch("agents.vocab.planner._build_history_summary") as mock_hist, patch("agents.vocab.planner._call_planner_llm") as mock_llm:
 
             mock_hist.return_value = {
-                "is_cold_start":      False,
+                "is_cold_start": False,
                 "current_difficulty": "easy",
-                "avg_mastery_easy":   50.0,
+                "avg_mastery_easy": 50.0,
                 "avg_mastery_medium": -1,
-                "avg_mastery_hard":   -1,
-                "weak_words_count":   3,
-                "total_sessions":     2,
+                "avg_mastery_hard": -1,
+                "weak_words_count": 3,
+                "total_sessions": 2,
             }
             mock_llm.side_effect = Exception("LLM timeout")
 
             from agents.vocab.planner import run_planner
+
             result = run_planner(topic="perkenalan")
 
         # Fallback ke default — tidak raise exception
         assert result["difficulty_target"] == "easy"
-        assert result["topic"]             == "perkenalan"
-        assert result["total_words"]       == 10
+        assert result["topic"] == "perkenalan"
+        assert result["total_words"] == 10
 
     def test_output_has_all_required_fields(self):
         """
@@ -122,6 +124,7 @@ class TestVocabPlanner:
             mock_hist.return_value = {"is_cold_start": True}
 
             from agents.vocab.planner import run_planner
+
             result = run_planner()
 
         required = {
@@ -144,6 +147,7 @@ class TestVocabPlanner:
             mock_hist.return_value = {"is_cold_start": True}
 
             from agents.vocab.planner import run_planner
+
             result = run_planner()
 
         dist_sum = sum(result["format_distribution"].values())
@@ -224,20 +228,23 @@ class TestVocabValidator:
         Jika match_score >= 0.8, Validator langsung return is_valid=True
         tanpa trigger regenerate. LLM hanya dipanggil 1x.
         """
-        valid_resp = json.dumps({
-            "is_valid":       True,
-            "match_score":    0.95,
-            "issues":         [],
-            "adjusted_words": [],
-        })
+        valid_resp = json.dumps(
+            {
+                "is_valid": True,
+                "match_score": 0.95,
+                "issues": [],
+                "adjusted_words": [],
+            }
+        )
 
         with patch("agents.vocab.validator._call_validator_llm") as mock_llm:
             mock_llm.return_value = json.loads(valid_resp)
 
             from agents.vocab.validator import run_validator
+
             result = run_validator(self.PLANNER, self.GENERATOR)
 
-        assert result["is_valid"]    is True
+        assert result["is_valid"] is True
         assert result["is_adjusted"] is False
         assert result["match_score"] >= 0.8
         # LLM hanya dipanggil 1x — tidak ada retry
@@ -249,19 +256,19 @@ class TestVocabValidator:
         untuk mendapatkan soal baru. Ini memastikan kualitas soal terjaga.
         """
         bad_resp = {
-            "is_valid":       False,
-            "match_score":    0.5,
-            "issues":         ["format mismatch"],
+            "is_valid": False,
+            "match_score": 0.5,
+            "issues": ["format mismatch"],
             "adjusted_words": [],
         }
 
-        with patch("agents.vocab.validator._call_validator_llm") as mock_llm, \
-             patch("agents.vocab.validator.run_generator") as mock_gen:
+        with patch("agents.vocab.validator._call_validator_llm") as mock_llm, patch("agents.vocab.validator.run_generator") as mock_gen:
 
             mock_llm.return_value = bad_resp
             mock_gen.return_value = self.GENERATOR
 
             from agents.vocab.validator import run_validator
+
             run_validator(self.PLANNER, self.GENERATOR)
 
         # Generator harus dipanggil setelah validasi gagal
@@ -274,19 +281,19 @@ class TestVocabValidator:
         tapi sesi tetap lanjut.
         """
         bad_resp = {
-            "is_valid":       False,
-            "match_score":    0.3,
-            "issues":         ["bad quality"],
+            "is_valid": False,
+            "match_score": 0.3,
+            "issues": ["bad quality"],
             "adjusted_words": [],
         }
 
-        with patch("agents.vocab.validator._call_validator_llm") as mock_llm, \
-             patch("agents.vocab.validator.run_generator") as mock_gen:
+        with patch("agents.vocab.validator._call_validator_llm") as mock_llm, patch("agents.vocab.validator.run_generator") as mock_gen:
 
             mock_llm.return_value = bad_resp
             mock_gen.return_value = self.GENERATOR
 
             from agents.vocab.validator import run_validator
+
             result = run_validator(self.PLANNER, self.GENERATOR)
 
         assert result["is_adjusted"] is True
@@ -296,16 +303,16 @@ class TestVocabValidator:
         Output Validator selalu punya 'final_words' — bahkan saat
         validasi gagal total. Ini memastikan UI tidak crash.
         """
-        with patch("agents.vocab.validator._call_validator_llm") as mock_llm, \
-             patch("agents.vocab.validator.run_generator") as mock_gen:
+        with patch("agents.vocab.validator._call_validator_llm") as mock_llm, patch("agents.vocab.validator.run_generator") as mock_gen:
 
             mock_llm.side_effect = Exception("LLM down")
             mock_gen.return_value = self.GENERATOR
 
             from agents.vocab.validator import run_validator
+
             result = run_validator(self.PLANNER, self.GENERATOR)
 
-        assert "final_words"       in result
+        assert "final_words" in result
         assert isinstance(result["final_words"], list)
 
     def test_generator_failure_handled_gracefully(self):
@@ -314,19 +321,19 @@ class TestVocabValidator:
         Validator tidak crash — fallback ke soal yang ada.
         """
         bad_resp = {
-            "is_valid":       False,
-            "match_score":    0.5,
-            "issues":         [],
+            "is_valid": False,
+            "match_score": 0.5,
+            "issues": [],
             "adjusted_words": [],
         }
 
-        with patch("agents.vocab.validator._call_validator_llm") as mock_llm, \
-             patch("agents.vocab.validator.run_generator") as mock_gen:
+        with patch("agents.vocab.validator._call_validator_llm") as mock_llm, patch("agents.vocab.validator.run_generator") as mock_gen:
 
             mock_llm.return_value = bad_resp
-            mock_gen.side_effect  = RuntimeError("Generator totally failed")
+            mock_gen.side_effect = RuntimeError("Generator totally failed")
 
             from agents.vocab.validator import run_validator
+
             result = run_validator(self.PLANNER, self.GENERATOR)
 
         # Tidak crash, final_words tetap ada
@@ -347,11 +354,12 @@ class TestVocabEvaluator:
         with patch("agents.vocab.evaluator._call_evaluator_llm") as mock_llm:
             mock_llm.return_value = {
                 "is_correct": True,
-                "is_graded":  True,
-                "feedback":   "Benar! Sarapan adalah terjemahan yang tepat.",
+                "is_graded": True,
+                "feedback": "Benar! Sarapan adalah terjemahan yang tepat.",
             }
 
             from agents.vocab.evaluator import run_evaluator
+
             result = run_evaluator(
                 word="breakfast",
                 format="tebak_arti",
@@ -361,8 +369,8 @@ class TestVocabEvaluator:
             )
 
         assert "is_correct" in result
-        assert "is_graded"  in result
-        assert "feedback"   in result
+        assert "is_graded" in result
+        assert "feedback" in result
 
     def test_llm_failure_returns_is_graded_false(self):
         """
@@ -376,6 +384,7 @@ class TestVocabEvaluator:
             mock_llm.side_effect = Exception("LLM timeout")
 
             from agents.vocab.evaluator import run_evaluator
+
             result = run_evaluator(
                 word="breakfast",
                 format="tebak_arti",
@@ -384,7 +393,7 @@ class TestVocabEvaluator:
                 user_answer="sarapan",
             )
 
-        assert result["is_graded"]  is False
+        assert result["is_graded"] is False
         assert result["is_correct"] is False
         # Feedback harus ada dan mengandung kata "belum dinilai"
         assert "belum dinilai" in result["feedback"]
@@ -394,11 +403,12 @@ class TestVocabEvaluator:
         with patch("agents.vocab.evaluator._call_evaluator_llm") as mock_llm:
             mock_llm.return_value = {
                 "is_correct": True,
-                "is_graded":  True,
-                "feedback":   "Benar!",
+                "is_graded": True,
+                "feedback": "Benar!",
             }
 
             from agents.vocab.evaluator import run_evaluator
+
             result = run_evaluator(
                 word="sleep",
                 format="tebak_arti",
@@ -408,18 +418,19 @@ class TestVocabEvaluator:
             )
 
         assert result["is_correct"] is True
-        assert result["is_graded"]  is True
+        assert result["is_graded"] is True
 
     def test_wrong_answer_returns_is_correct_false(self):
         """Jawaban salah → is_correct=False, is_graded=True."""
         with patch("agents.vocab.evaluator._call_evaluator_llm") as mock_llm:
             mock_llm.return_value = {
                 "is_correct": False,
-                "is_graded":  True,
-                "feedback":   "Kurang tepat. Sleep artinya tidur.",
+                "is_graded": True,
+                "feedback": "Kurang tepat. Sleep artinya tidur.",
             }
 
             from agents.vocab.evaluator import run_evaluator
+
             result = run_evaluator(
                 word="sleep",
                 format="tebak_arti",
@@ -429,18 +440,19 @@ class TestVocabEvaluator:
             )
 
         assert result["is_correct"] is False
-        assert result["is_graded"]  is True
+        assert result["is_graded"] is True
 
     def test_feedback_is_string(self):
         """Feedback harus berupa string, bukan None atau tipe lain."""
         with patch("agents.vocab.evaluator._call_evaluator_llm") as mock_llm:
             mock_llm.return_value = {
                 "is_correct": True,
-                "is_graded":  True,
-                "feedback":   "Benar sekali!",
+                "is_graded": True,
+                "feedback": "Benar sekali!",
             }
 
             from agents.vocab.evaluator import run_evaluator
+
             result = run_evaluator(
                 word="eat",
                 format="tebak_arti",

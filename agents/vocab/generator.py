@@ -73,8 +73,7 @@ def _parse_generator_response(raw: str) -> dict:
         raise ValueError("'words' list is empty")
 
     # Validasi setiap word object
-    required_fields = {"word", "difficulty", "format", "question_text",
-                       "correct_answer", "is_new"}
+    required_fields = {"word", "difficulty", "format", "question_text", "correct_answer", "is_new"}
     for i, word in enumerate(parsed["words"]):
         missing = required_fields - set(word.keys())
         if missing:
@@ -146,19 +145,18 @@ def run_generator(planner_output: dict) -> dict:
             limit=review_count,
         )
         for w in db_words:
-            review_words.append({
-                "word": w["word"],
-                "difficulty": w["difficulty"],
-                "format": None,   # ⏳ pending decision — diisi nanti
-                "question_text": None,   # ⏳ pending decision — diisi nanti
-                "correct_answer": None,   # ⏳ pending decision — diisi nanti
-                "is_new": False,
-            })
+            review_words.append(
+                {
+                    "word": w["word"],
+                    "difficulty": w["difficulty"],
+                    "format": None,  # ⏳ pending decision — diisi nanti
+                    "question_text": None,  # ⏳ pending decision — diisi nanti
+                    "correct_answer": None,  # ⏳ pending decision — diisi nanti
+                    "is_new": False,
+                }
+            )
 
-        logger.info(
-            f"[vocab_generator] Spaced repetition: "
-            f"{len(review_words)}/{review_count} review words from DB"
-        )
+        logger.info(f"[vocab_generator] Spaced repetition: " f"{len(review_words)}/{review_count} review words from DB")
 
     # ── Step 2: LLM generate new words saja ──────────────────────────────
     try:
@@ -171,12 +169,7 @@ def run_generator(planner_output: dict) -> dict:
         # Gabung: new words dari LLM + review words dari DB
         result["words"] = result["words"] + review_words
 
-        logger.info(
-            f"[vocab_generator] Done — "
-            f"{len(result['words'])} total words "
-            f"({len(result['words']) - len(review_words)} new, "
-            f"{len(review_words)} review)"
-        )
+        logger.info(f"[vocab_generator] Done — " f"{len(result['words'])} total words " f"({len(result['words']) - len(review_words)} new, " f"{len(review_words)} review)")
         return result
 
     except Exception as e:
@@ -191,6 +184,4 @@ def run_generator(planner_output: dict) -> dict:
             fallback_used=False,
         )
         # Tidak ada fallback untuk generator — sesi harus dibatalkan
-        raise RuntimeError(
-            f"Vocab Generator gagal setelah 3x retry: {e}"
-        ) from e
+        raise RuntimeError(f"Vocab Generator gagal setelah 3x retry: {e}") from e

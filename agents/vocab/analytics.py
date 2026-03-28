@@ -53,36 +53,30 @@ def _fetch_vocab_data() -> tuple[list, list, list]:
     try:
         with get_db() as conn:
             # Ambil semua vocab sessions yang completed
-            sessions = conn.execute(
-                """
+            sessions = conn.execute("""
                 SELECT vs.*, s.created_at, s.completed_at
                 FROM vocab_sessions vs
                 JOIN sessions s ON vs.session_id = s.session_id
                 WHERE s.status = 'completed'
                 ORDER BY s.created_at ASC
-                """
-            ).fetchall()
+                """).fetchall()
 
             # Ambil semua word tracking
-            word_tracking = conn.execute(
-                """
+            word_tracking = conn.execute("""
                 SELECT * FROM vocab_word_tracking
                 ORDER BY last_seen DESC
                 LIMIT 200
-                """
-            ).fetchall()
+                """).fetchall()
 
             # Ambil semua questions yang sudah di-grade
-            questions = conn.execute(
-                """
+            questions = conn.execute("""
                 SELECT vq.word, vq.format, vq.is_correct, vq.is_graded
                 FROM vocab_questions vq
                 JOIN sessions s ON vq.session_id = s.session_id
                 WHERE vq.is_graded = 1
                 ORDER BY s.created_at DESC
                 LIMIT 500
-                """
-            ).fetchall()
+                """).fetchall()
 
         return (
             [dict(r) for r in sessions],
@@ -156,8 +150,7 @@ def _parse_analytics_response(raw: str) -> dict:
     parsed = json.loads(text)
 
     # Validasi field wajib ada
-    required = {"total_words_learned", "mastery_distribution",
-                "weakest_format", "trend", "insight"}
+    required = {"total_words_learned", "mastery_distribution", "weakest_format", "trend", "insight"}
     missing = required - set(parsed.keys())
     if missing:
         raise ValueError(f"Analytics response missing fields: {missing}")
@@ -212,17 +205,10 @@ def run_analytics() -> dict:
     # Cek threshold minimum
     total_sessions = len(sessions_data)
     if total_sessions < MIN_SESSIONS_FOR_ANALYTICS:
-        logger.info(
-            f"[vocab_analytics] Insufficient data: {total_sessions} sessions "
-            f"(minimum: {MIN_SESSIONS_FOR_ANALYTICS}) — returning empty insight"
-        )
+        logger.info(f"[vocab_analytics] Insufficient data: {total_sessions} sessions " f"(minimum: {MIN_SESSIONS_FOR_ANALYTICS}) — returning empty insight")
         return _empty_insight()
 
-    logger.info(
-        f"[vocab_analytics] Analyzing {total_sessions} sessions, "
-        f"{len(word_tracking_data)} words tracked, "
-        f"{len(questions_data)} questions"
-    )
+    logger.info(f"[vocab_analytics] Analyzing {total_sessions} sessions, " f"{len(word_tracking_data)} words tracked, " f"{len(questions_data)} questions")
 
     try:
         result = _call_analytics_llm(
@@ -234,10 +220,7 @@ def run_analytics() -> dict:
         # Simpan ke DB
         _save_analytics_snapshot(result)
 
-        logger.info(
-            f"[vocab_analytics] Done — trend={result.get('trend')} "
-            f"words_learned={result.get('total_words_learned')}"
-        )
+        logger.info(f"[vocab_analytics] Done — trend={result.get('trend')} " f"words_learned={result.get('total_words_learned')}")
         return result
 
     except Exception as e:

@@ -50,7 +50,7 @@ except Exception as e:
     # tidak ditemukan di _filter_by_prerequisite(), sehingga requires
     # tidak pernah kosong. Kita gunakan sentinel khusus agar semua
     # topik advance diblokir.
-    PREREQUISITE_RULES = None   # ← None, bukan {} — sinyal "data tidak tersedia"
+    PREREQUISITE_RULES = None  # ← None, bukan {} — sinyal "data tidak tersedia"
     CLUSTER_METADATA = {"clusters": {}}
 
 # Default format distribution (60/20/20)
@@ -72,9 +72,7 @@ def _get_all_topic_tracking() -> dict[str, dict]:
     """
     try:
         with get_db() as conn:
-            rows = conn.execute(
-                "SELECT * FROM quiz_topic_tracking"
-            ).fetchall()
+            rows = conn.execute("SELECT * FROM quiz_topic_tracking").fetchall()
         return {row["topic"]: dict(row) for row in rows}
     except Exception as e:
         log_error("db_error", "quiz_planner", context={"error": str(e)})
@@ -88,10 +86,7 @@ def _get_practiced_topics_this_session_pool() -> set[str]:
     """
     try:
         with get_db() as conn:
-            rows = conn.execute(
-                "SELECT DISTINCT topic FROM quiz_topic_tracking "
-                "WHERE total_sessions > 0"
-            ).fetchall()
+            rows = conn.execute("SELECT DISTINCT topic FROM quiz_topic_tracking " "WHERE total_sessions > 0").fetchall()
         return {row["topic"] for row in rows}
     except Exception:
         return set()
@@ -107,11 +102,8 @@ def _filter_by_prerequisite(
     # Jika config gagal load (None), blokir semua topik advance —
     # hanya topik tanpa prerequisite yang lolos via fallback list.
     if PREREQUISITE_RULES is None:
-        logger.warning(
-            "[quiz_planner] PREREQUISITE_RULES unavailable — "
-            "blocking all topics as safe fallback"
-        )
-        return []   # Tidak ada topik yang accessible → fallback di run_planner()
+        logger.warning("[quiz_planner] PREREQUISITE_RULES unavailable — " "blocking all topics as safe fallback")
+        return []  # Tidak ada topik yang accessible → fallback di run_planner()
 
     accessible = []
     for topic in all_topics:
@@ -211,6 +203,7 @@ def _prioritize_weak_topics(
     Urutkan review_topics dari yang paling lemah (avg_score rendah).
     Ambil max_topics teratas untuk sesi ini.
     """
+
     def score_key(topic):
         data = topic_tracking.get(topic, {})
         # Topik yang belum pernah dilatih dapat skor 0 (prioritas tinggi)
@@ -247,9 +240,7 @@ def _apply_clustering(
         return selected_topics
 
     # Cari topik lain di cluster yang sama yang accessible
-    cluster_topics = CLUSTER_METADATA["clusters"].get(
-        primary_cluster, {}
-    ).get("topics", [])
+    cluster_topics = CLUSTER_METADATA["clusters"].get(primary_cluster, {}).get("topics", [])
 
     for candidate in cluster_topics:
         if candidate not in selected_topics and candidate in accessible_topics:
@@ -322,15 +313,10 @@ def run_planner(total_questions: int = DEFAULT_TOTAL_QUESTIONS) -> dict:
 
     # ── Logic 1: Prerequisite Awareness ──────────────────
     accessible = _filter_by_prerequisite(all_topics, topic_tracking)
-    logger.info(
-        "[quiz_planner] Accessible topics after "
-        f"prereq filter: {len(accessible)}"
-    )
+    logger.info("[quiz_planner] Accessible topics after " f"prereq filter: {len(accessible)}")
 
     # ── Logic 2: Cognitive Load ───────────────────────────
-    new_topics, review_topics = _apply_cognitive_load(
-        accessible, practiced_topics
-    )
+    new_topics, review_topics = _apply_cognitive_load(accessible, practiced_topics)
 
     # ── Logic 3: Difficulty Progression ──────────────────
     difficulty = _determine_difficulty(review_topics, topic_tracking)
@@ -355,9 +341,7 @@ def run_planner(total_questions: int = DEFAULT_TOTAL_QUESTIONS) -> dict:
     # Tentukan cluster utama
     primary_cluster = None
     if selected:
-        primary_cluster = PREREQUISITE_RULES.get(
-            selected[0], {}
-        ).get("cluster", "Unknown")
+        primary_cluster = PREREQUISITE_RULES.get(selected[0], {}).get("cluster", "Unknown")
 
     # Hitung format distribution
     format_dist = _build_format_distribution(total_questions)
@@ -374,8 +358,5 @@ def run_planner(total_questions: int = DEFAULT_TOTAL_QUESTIONS) -> dict:
         "accessible_topics": accessible,
     }
 
-    logger.info(
-        f"[quiz_planner] Recommendation: topics={selected} "
-        f"difficulty={difficulty} cluster={primary_cluster}"
-    )
+    logger.info(f"[quiz_planner] Recommendation: topics={selected} " f"difficulty={difficulty} cluster={primary_cluster}")
     return result

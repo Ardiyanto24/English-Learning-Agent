@@ -104,20 +104,17 @@ def _generate_audio(
     audio_bytes = generate_speech_multivoice(script)
 
     if not audio_bytes:
-        logger.warning(
-            f"[listening_generator] TTS failed for "
-            f"part={part} item={item_id} — UI will fallback to text"
-        )
+        logger.warning(f"[listening_generator] TTS failed for " f"part={part} item={item_id} — UI will fallback to text")
         log_error(
-            error_type    = "tts_failure",
-            agent_name    = "listening_generator",
-            context       = {"session_id": session_id, "part": part, "item_id": item_id},
-            fallback_used = True,
+            error_type="tts_failure",
+            agent_name="listening_generator",
+            context={"session_id": session_id, "part": part, "item_id": item_id},
+            fallback_used=True,
         )
         return None
 
     suffix = f"_r{attempt}" if attempt > 0 else ""
-    filename   = f"toefl_{session_id}_L{part}_{item_id:02d}{suffix}.mp3"
+    filename = f"toefl_{session_id}_L{part}_{item_id:02d}{suffix}.mp3"
     audio_path = TEMP_AUDIO_DIR / filename
 
     try:
@@ -168,33 +165,21 @@ def _parse_response(raw: str, part: str) -> list[dict]:
         script = item["script"]
         if part in ("A", "B"):
             if "[SPEAKER_A]" not in script:
-                raise ValueError(
-                    f"Item {i} Part {part} script missing [SPEAKER_A] tag"
-                )
+                raise ValueError(f"Item {i} Part {part} script missing [SPEAKER_A] tag")
             if part == "B" and "[SPEAKER_B]" not in script:
-                raise ValueError(
-                    f"Item {i} Part B script missing [SPEAKER_B] tag — "
-                    f"Part B must be a two-speaker dialogue"
-                )
+                raise ValueError(f"Item {i} Part B script missing [SPEAKER_B] tag — " f"Part B must be a two-speaker dialogue")
         elif part == "C":
             if "[NARRATOR]" not in script:
-                raise ValueError(
-                    f"Item {i} Part C script missing [NARRATOR] tag"
-                )
+                raise ValueError(f"Item {i} Part C script missing [NARRATOR] tag")
 
         # Validasi setiap soal
         for j, q in enumerate(item["questions"]):
             required = {"question_text", "options", "correct_answer"}
             missing = required - set(q.keys())
             if missing:
-                raise ValueError(
-                    f"Item {i} Question {j} missing fields: {missing}"
-                )
+                raise ValueError(f"Item {i} Question {j} missing fields: {missing}")
             if q.get("correct_answer") not in ("A", "B", "C", "D"):
-                raise ValueError(
-                    f"Item {i} Question {j} invalid correct_answer: "
-                    f"{q.get('correct_answer')}"
-                )
+                raise ValueError(f"Item {i} Question {j} invalid correct_answer: " f"{q.get('correct_answer')}")
 
     return items
 
@@ -206,17 +191,17 @@ def _parse_response(raw: str, part: str) -> list[dict]:
 def _call_llm(part: str, item_count: int, questions_per_item: int) -> list[dict]:
     """Panggil Claude Sonnet untuk generate script + soal."""
     user_prompt = build_listening_prompt(
-        part               = part,
-        item_count         = item_count,
-        questions_per_item = questions_per_item,
+        part=part,
+        item_count=item_count,
+        questions_per_item=questions_per_item,
     )
 
     client = _get_client()
     response = client.messages.create(
-        model      = SONNET_MODEL,
-        max_tokens = 4096,
-        system     = LISTENING_GENERATOR_SYSTEM_PROMPT,
-        messages   = [{"role": "user", "content": user_prompt}],
+        model=SONNET_MODEL,
+        max_tokens=4096,
+        system=LISTENING_GENERATOR_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_prompt}],
     )
 
     raw = response.content[0].text
@@ -259,79 +244,67 @@ def run_generator(
     Raises:
         RuntimeError jika LLM gagal untuk satu part setelah 3x retry
     """
-    result      = {"part_a": [], "part_b": [], "part_c": []}
+    result = {"part_a": [], "part_b": [], "part_c": []}
     tts_success = 0
-    tts_total   = 0
-    total_q     = 0
+    tts_total = 0
+    total_q = 0
 
     for part_key, part_label in [("part_a", "A"), ("part_b", "B"), ("part_c", "C")]:
-        item_count         = _item_count_from_distribution(part_label, listening_dist)
+        item_count = _item_count_from_distribution(part_label, listening_dist)
         questions_per_item = _questions_per_item(part_label)
 
-        logger.info(
-            f"[listening_generator] Generating Part {part_label}: "
-            f"{item_count} item(s) × {questions_per_item} question(s)"
-        )
+        logger.info(f"[listening_generator] Generating Part {part_label}: " f"{item_count} item(s) × {questions_per_item} question(s)")
 
         try:
             items = _call_llm(part_label, item_count, questions_per_item)
         except Exception as e:
             log_error(
-                error_type    = "llm_timeout",
-                agent_name    = "listening_generator",
-                context       = {
+                error_type="llm_timeout",
+                agent_name="listening_generator",
+                context={
                     "session_id": session_id,
-                    "part":       part_label,
-                    "error":      str(e),
+                    "part": part_label,
+                    "error": str(e),
                 },
-                fallback_used = False,
+                fallback_used=False,
             )
-            raise RuntimeError(
-                f"Listening Generator Part {part_label} gagal setelah 3x retry: {e}"
-            ) from e
+            raise RuntimeError(f"Listening Generator Part {part_label} gagal setelah 3x retry: {e}") from e
 
         # Generate audio untuk setiap item
         enriched_items = []
         for idx, item in enumerate(items):
-            item_id    = idx + 1
+            item_id = idx + 1
             tts_total += 1
 
             audio_path = _generate_audio(
-                script     = item["script"],
-                session_id = session_id,
-                part       = part_label,
-                item_id    = item_id,
-                attempt    = attempt,
+                script=item["script"],
+                session_id=session_id,
+                part=part_label,
+                item_id=item_id,
+                attempt=attempt,
             )
 
             if audio_path:
                 tts_success += 1
 
-            enriched_items.append({
-                "item_id":    item_id,
-                "part":       part_label,
-                "script":     item["script"],
-                "audio_path": audio_path,
-                "questions":  item["questions"],
-            })
+            enriched_items.append(
+                {
+                    "item_id": item_id,
+                    "part": part_label,
+                    "script": item["script"],
+                    "audio_path": audio_path,
+                    "questions": item["questions"],
+                }
+            )
 
             total_q += len(item["questions"])
 
         result[part_key] = enriched_items
-        logger.info(
-            f"[listening_generator] Part {part_label} done: "
-            f"{len(enriched_items)} items, {total_q} questions so far"
-        )
+        logger.info(f"[listening_generator] Part {part_label} done: " f"{len(enriched_items)} items, {total_q} questions so far")
 
     result["total_questions"] = total_q
-    result["tts_available"] = (
-        tts_success / tts_total >= 0.5 if tts_total > 0 else False
-    )
+    result["tts_available"] = tts_success / tts_total >= 0.5 if tts_total > 0 else False
 
-    logger.info(
-        f"[listening_generator] Complete — "
-        f"total_q={total_q} "
-        f"tts={tts_success}/{tts_total}"
-    )
+    logger.info(f"[listening_generator] Complete — " f"total_q={total_q} " f"tts={tts_success}/{tts_total}")
 
     return result

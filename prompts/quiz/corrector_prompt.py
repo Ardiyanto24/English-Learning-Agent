@@ -117,14 +117,8 @@ def build_corrector_prompt(
     is_correct = user_answer.strip().upper() == correct_answer.strip().upper()
 
     # Ambil teks jawaban benar dan jawaban user untuk konteks lebih jelas
-    correct_option_text = next(
-        (opt for opt in options if opt.startswith(correct_answer)),
-        correct_answer
-    )
-    user_option_text = next(
-        (opt for opt in options if opt.startswith(user_answer.upper())),
-        user_answer
-    )
+    correct_option_text = next((opt for opt in options if opt.startswith(correct_answer)), correct_answer)
+    user_option_text = next((opt for opt in options if opt.startswith(user_answer.upper())), user_answer)
 
     return f"""Evaluate this student's answer and provide 4-layer feedback.
 

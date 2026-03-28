@@ -79,11 +79,11 @@ Respond with valid JSON only. No explanation, no markdown.
 
 
 def build_master_analytics_prompt(
-    vocab_analytics   : dict | None,
-    quiz_analytics    : dict | None,
+    vocab_analytics: dict | None,
+    quiz_analytics: dict | None,
     speaking_analytics: dict | None,
-    toefl_analytics   : dict | None,
-    target_score      : int,
+    toefl_analytics: dict | None,
+    target_score: int,
 ) -> str:
     """
     Bangun user prompt untuk Master Analytics Agent.
@@ -103,24 +103,24 @@ def build_master_analytics_prompt(
 
     # Identifikasi mode mana yang punya data
     analytics_map = {
-        "vocab"   : vocab_analytics,
-        "quiz"    : quiz_analytics,
+        "vocab": vocab_analytics,
+        "quiz": quiz_analytics,
         "speaking": speaking_analytics,
-        "toefl"   : toefl_analytics,
+        "toefl": toefl_analytics,
     }
 
-    modes_with_data    = [m for m, a in analytics_map.items() if a and a.get("insight")]
+    modes_with_data = [m for m, a in analytics_map.items() if a and a.get("insight")]
     modes_without_data = [m for m, a in analytics_map.items() if not a or not a.get("insight")]
 
     # Ringkasan TOEFL untuk readiness kalkulasi
     toefl_summary = None
     if toefl_analytics and toefl_analytics.get("latest_estimated_score"):
         toefl_summary = {
-            "best_score"       : toefl_analytics.get("best_estimated_score"),
-            "latest_score"     : toefl_analytics.get("latest_estimated_score"),
-            "avg_score"        : toefl_analytics.get("avg_estimated_score"),
-            "trend"            : toefl_analytics.get("score_trend"),
-            "weakest_section"  : toefl_analytics.get("weakest_section"),
+            "best_score": toefl_analytics.get("best_estimated_score"),
+            "latest_score": toefl_analytics.get("latest_estimated_score"),
+            "avg_score": toefl_analytics.get("avg_estimated_score"),
+            "trend": toefl_analytics.get("score_trend"),
+            "weakest_section": toefl_analytics.get("weakest_section"),
             "total_simulations": toefl_analytics.get("total_simulations"),
         }
 
@@ -128,10 +128,10 @@ def build_master_analytics_prompt(
     quiz_summary = None
     if quiz_analytics and quiz_analytics.get("weakest_topics"):
         quiz_summary = {
-            "weakest_topics"           : quiz_analytics.get("weakest_topics", [])[:5],
-            "prerequisite_bottleneck"  : quiz_analytics.get("prerequisite_bottleneck"),
-            "trend"                    : quiz_analytics.get("trend"),
-            "coverage_pct"             : quiz_analytics.get("coverage_pct"),
+            "weakest_topics": quiz_analytics.get("weakest_topics", [])[:5],
+            "prerequisite_bottleneck": quiz_analytics.get("prerequisite_bottleneck"),
+            "trend": quiz_analytics.get("trend"),
+            "coverage_pct": quiz_analytics.get("coverage_pct"),
         }
 
     return f"""Analyze this student's complete learning data across all modes and generate \

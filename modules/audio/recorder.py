@@ -27,10 +27,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Spesifikasi audio yang kompatibel dengan Whisper
-SAMPLE_RATE = 16000    # 16kHz — standar speech recognition
-CHANNELS = 1           # Mono
-SAMPLE_WIDTH = 2       # 16-bit PCM
-CHUNK_SIZE = 1024      # Jumlah frame per buffer read
+SAMPLE_RATE = 16000  # 16kHz — standar speech recognition
+CHANNELS = 1  # Mono
+SAMPLE_WIDTH = 2  # 16-bit PCM
+CHUNK_SIZE = 1024  # Jumlah frame per buffer read
 
 # Folder penyimpanan file audio sementara
 TEMP_AUDIO_DIR = Path("temp_audio")
@@ -41,7 +41,7 @@ def _ensure_temp_dir():
     TEMP_AUDIO_DIR.mkdir(exist_ok=True)
 
 
-MAX_RECORD_ATTEMPTS = 3   # Sesuai flow: max 3x rekam ulang
+MAX_RECORD_ATTEMPTS = 3  # Sesuai flow: max 3x rekam ulang
 
 
 def record_audio(
@@ -72,8 +72,7 @@ def record_audio(
     try:
         import pyaudio
     except ImportError:
-        print("[Recorder] PyAudio tidak terinstall. "
-              "Install dengan: pip install pyaudio")
+        print("[Recorder] PyAudio tidak terinstall. " "Install dengan: pip install pyaudio")
         return None
 
     _ensure_temp_dir()
@@ -90,10 +89,9 @@ def record_audio(
 
         output_path = TEMP_AUDIO_DIR / attempt_filename
 
-        print(f"[Recorder] 🎙️ Attempt {attempt}/{max_attempts} — "
-              f"merekam selama {duration_seconds} detik...")
+        print(f"[Recorder] 🎙️ Attempt {attempt}/{max_attempts} — " f"merekam selama {duration_seconds} detik...")
 
-        pa     = pyaudio.PyAudio()
+        pa = pyaudio.PyAudio()
         stream = None
         frames = []
         success = False
@@ -136,11 +134,11 @@ def record_audio(
 
         # Simpan ke file WAV
         try:
-            with wave.open(str(output_path), 'wb') as wf:
+            with wave.open(str(output_path), "wb") as wf:
                 wf.setnchannels(CHANNELS)
                 wf.setsampwidth(SAMPLE_WIDTH)
                 wf.setframerate(SAMPLE_RATE)
-                wf.writeframes(b''.join(frames))
+                wf.writeframes(b"".join(frames))
 
             print(f"[Recorder] 💾 Disimpan: {output_path}")
             return str(output_path)
@@ -152,8 +150,7 @@ def record_audio(
                 time.sleep(1)
 
     # Semua attempt habis
-    print(f"[Recorder] ❌ Gagal setelah {max_attempts}x percobaan. "
-          f"Error terakhir: {last_error}")
+    print(f"[Recorder] ❌ Gagal setelah {max_attempts}x percobaan. " f"Error terakhir: {last_error}")
     print("[Recorder] → UI harus fallback ke text input manual")
     return None
 
@@ -199,14 +196,11 @@ def record_audio_streaming(
             frames_per_buffer=CHUNK_SIZE,
         )
 
-        print(f"[Recorder] 🎙️ Merekam (max {max_duration_seconds}s, "
-              f"auto-stop jika hening {silence_duration}s)...")
+        print(f"[Recorder] 🎙️ Merekam (max {max_duration_seconds}s, " f"auto-stop jika hening {silence_duration}s)...")
 
         frames = []
         silent_chunks = 0
-        silence_chunks_threshold = int(
-            SAMPLE_RATE / CHUNK_SIZE * silence_duration
-        )
+        silence_chunks_threshold = int(SAMPLE_RATE / CHUNK_SIZE * silence_duration)
         max_chunks = int(SAMPLE_RATE / CHUNK_SIZE * max_duration_seconds)
 
         for i in range(max_chunks):
@@ -241,11 +235,11 @@ def record_audio_streaming(
 
     # Simpan ke WAV
     try:
-        with wave.open(str(output_path), 'wb') as wf:
+        with wave.open(str(output_path), "wb") as wf:
             wf.setnchannels(CHANNELS)
             wf.setsampwidth(SAMPLE_WIDTH)
             wf.setframerate(SAMPLE_RATE)
-            wf.writeframes(b''.join(frames))
+            wf.writeframes(b"".join(frames))
         return str(output_path)
     except Exception as e:
         print(f"[Recorder] Error simpan: {e}")

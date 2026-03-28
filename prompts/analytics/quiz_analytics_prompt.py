@@ -80,9 +80,9 @@ def build_quiz_analytics_prompt(
     """
     import json
 
-    total_sessions   = len(sessions_data)
+    total_sessions = len(sessions_data)
     practiced_topics = [t for t in topic_tracking_data if t.get("total_sessions", 0) > 0]
-    coverage_pct     = round(len(practiced_topics) / total_topics * 100, 1)
+    coverage_pct = round(len(practiced_topics) / total_topics * 100, 1)
 
     # Trend dari skor sesi terakhir
     scores = [s.get("score_pct", 0) for s in sessions_data]
@@ -91,9 +91,7 @@ def build_quiz_analytics_prompt(
         recent = sum(scores[-3:]) / 3
         if len(scores) >= 6:
             prev = sum(scores[-6:-3]) / 3
-            trend_hint = "improving" if recent > prev + 5 else (
-                "declining" if recent < prev - 5 else "stable"
-            )
+            trend_hint = "improving" if recent > prev + 5 else ("declining" if recent < prev - 5 else "stable")
         else:
             trend_hint = "improving" if scores[-1] >= scores[0] else "declining"
 
@@ -104,16 +102,15 @@ def build_quiz_analytics_prompt(
         score = t_data.get("avg_score_pct", 0)
         if score < 60 and t_data.get("total_sessions", 0) > 0:
             # Cek apakah topik ini jadi prereq untuk topik lain
-            dependents = [
-                other for other, rules in prerequisite_rules.items()
-                if topic in rules.get("requires", [])
-            ]
+            dependents = [other for other, rules in prerequisite_rules.items() if topic in rules.get("requires", [])]
             if dependents:
-                weak_as_prereq.append({
-                    "topic": topic,
-                    "score": score,
-                    "blocks": dependents,
-                })
+                weak_as_prereq.append(
+                    {
+                        "topic": topic,
+                        "score": score,
+                        "blocks": dependents,
+                    }
+                )
 
     return f"""Analyze this student's quiz learning data and generate insights.
 

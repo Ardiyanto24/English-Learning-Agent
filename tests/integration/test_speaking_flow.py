@@ -34,7 +34,7 @@ def _make_transcript(n_exchanges: int = 3) -> list[dict]:
     """Buat full_history speaking dengan n exchange pasang AI-user."""
     h = []
     for i in range(n_exchanges):
-        h.append({"role": "ai",   "text": f"AI prompt {i+1}: Tell me about topic {i+1}."})
+        h.append({"role": "ai", "text": f"AI prompt {i+1}: Tell me about topic {i+1}."})
         h.append({"role": "user", "text": f"User answer {i+1}: I think that is very important."})
     return h
 
@@ -42,21 +42,21 @@ def _make_transcript(n_exchanges: int = 3) -> list[dict]:
 def _make_evaluation(sub_mode: str = "prompted_response", is_graded: bool = True) -> dict:
     """Buat mock evaluation result dari Speaking Evaluator."""
     base = {
-        "grammar_score":   8.0,
+        "grammar_score": 8.0,
         "relevance_score": 7.0,
-        "final_score":     7.5,
-        "is_graded":       is_graded,
+        "final_score": 7.5,
+        "is_graded": is_graded,
         "feedback": {
-            "grammar":   "Good grammar usage overall.",
+            "grammar": "Good grammar usage overall.",
             "relevance": "Stayed on topic well.",
-            "overall":   "Well done!",
+            "overall": "Well done!",
         },
     }
     if sub_mode == "oral_presentation":
         base["vocabulary_score"] = 6.0
-        base["structure_score"]  = 8.0
+        base["structure_score"] = 8.0
         base["feedback"]["vocabulary"] = "Good vocabulary range."
-        base["feedback"]["structure"]  = "Well structured presentation."
+        base["feedback"]["structure"] = "Well structured presentation."
     return base
 
 
@@ -78,12 +78,10 @@ class TestSpeakingFullFlow:
         create_session(sid, mode="speaking")
 
         with get_db() as conn:
-            row = conn.execute(
-                "SELECT * FROM sessions WHERE session_id = ?", (sid,)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM sessions WHERE session_id = ?", (sid,)).fetchone()
 
         assert row is not None
-        assert row["mode"]   == "speaking"
+        assert row["mode"] == "speaking"
         assert row["status"] == "active"
 
     def test_speaking_session_metadata_saved(self, tmp_db):
@@ -99,20 +97,18 @@ class TestSpeakingFullFlow:
         sid = generate_session_id()
         create_session(sid, mode="speaking")
         save_speaking_session(
-            session_id = sid,
-            sub_mode   = "prompted_response",
-            topic      = "Daily routines",
-            category   = "General",
+            session_id=sid,
+            sub_mode="prompted_response",
+            topic="Daily routines",
+            category="General",
         )
 
         with get_db() as conn:
-            row = conn.execute(
-                "SELECT * FROM speaking_sessions WHERE session_id = ?", (sid,)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM speaking_sessions WHERE session_id = ?", (sid,)).fetchone()
 
         assert row is not None
         assert row["sub_mode"] == "prompted_response"
-        assert row["topic"]    == "Daily routines"
+        assert row["topic"] == "Daily routines"
         assert row["category"] == "General"
 
     def test_exchange_saved_incrementally(self, tmp_db):
@@ -136,20 +132,18 @@ class TestSpeakingFullFlow:
 
         # Exchange 1 — AI prompt dulu, user belum menjawab
         eid1 = save_exchange(
-            session_id      = sid,
-            exchange_number = 1,
-            agent_prompt    = "Tell me about your exercise routine.",
-            user_transcript = None,   # belum dijawab
-            is_followup     = False,
+            session_id=sid,
+            exchange_number=1,
+            agent_prompt="Tell me about your exercise routine.",
+            user_transcript=None,  # belum dijawab
+            is_followup=False,
         )
 
         with get_db() as conn:
-            row = conn.execute(
-                "SELECT * FROM speaking_exchanges WHERE id = ?", (eid1,)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM speaking_exchanges WHERE id = ?", (eid1,)).fetchone()
 
         # AI prompt tersimpan, user_transcript masih None
-        assert row["agent_prompt"]    == "Tell me about your exercise routine."
+        assert row["agent_prompt"] == "Tell me about your exercise routine."
         assert row["user_transcript"] is None
         assert row["exchange_number"] == 1
 
@@ -172,27 +166,23 @@ class TestSpeakingFullFlow:
         save_speaking_session(sid, "prompted_response", "Health", "General")
 
         eid = save_exchange(
-            session_id      = sid,
-            exchange_number = 1,
-            agent_prompt    = "How often do you exercise?",
-            user_transcript = None,
+            session_id=sid,
+            exchange_number=1,
+            agent_prompt="How often do you exercise?",
+            user_transcript=None,
         )
 
         # Simulasi STT selesai — update transcript
         update_exchange_transcript(
-            exchange_id        = eid,
-            user_transcript    = "I exercise three times a week.",
-            assessor_decision  = "continue",
+            exchange_id=eid,
+            user_transcript="I exercise three times a week.",
+            assessor_decision="continue",
         )
 
         with get_db() as conn:
-            row = conn.execute(
-                "SELECT user_transcript, assessor_decision "
-                "FROM speaking_exchanges WHERE id = ?",
-                (eid,)
-            ).fetchone()
+            row = conn.execute("SELECT user_transcript, assessor_decision " "FROM speaking_exchanges WHERE id = ?", (eid,)).fetchone()
 
-        assert row["user_transcript"]   == "I exercise three times a week."
+        assert row["user_transcript"] == "I exercise three times a week."
         assert row["assessor_decision"] == "continue"
 
     def test_multiple_exchanges_saved_in_order(self, tmp_db):
@@ -208,9 +198,9 @@ class TestSpeakingFullFlow:
         )
         from utils.helpers import generate_session_id
 
-        sid       = generate_session_id()
-        history   = _make_transcript(n_exchanges=3)
-        ai_turns  = [h for h in history if h["role"] == "ai"]
+        sid = generate_session_id()
+        history = _make_transcript(n_exchanges=3)
+        ai_turns = [h for h in history if h["role"] == "ai"]
         user_turns = [h for h in history if h["role"] == "user"]
 
         create_session(sid, mode="speaking")
@@ -218,20 +208,15 @@ class TestSpeakingFullFlow:
 
         for i, (ai, user) in enumerate(zip(ai_turns, user_turns)):
             save_exchange(
-                session_id      = sid,
-                exchange_number = i + 1,
-                agent_prompt    = ai["text"],
-                user_transcript = user["text"],
-                is_followup     = i > 0,   # exchange ke-2 dst adalah follow-up
+                session_id=sid,
+                exchange_number=i + 1,
+                agent_prompt=ai["text"],
+                user_transcript=user["text"],
+                is_followup=i > 0,  # exchange ke-2 dst adalah follow-up
             )
 
         with get_db() as conn:
-            rows = conn.execute(
-                "SELECT exchange_number, agent_prompt, user_transcript "
-                "FROM speaking_exchanges WHERE session_id = ? "
-                "ORDER BY exchange_number ASC",
-                (sid,)
-            ).fetchall()
+            rows = conn.execute("SELECT exchange_number, agent_prompt, user_transcript " "FROM speaking_exchanges WHERE session_id = ? " "ORDER BY exchange_number ASC", (sid,)).fetchall()
 
         assert len(rows) == 3
         assert rows[0]["exchange_number"] == 1
@@ -258,8 +243,8 @@ class TestSpeakingFullFlow:
         )
         from utils.helpers import generate_session_id
 
-        sid        = generate_session_id()
-        history    = _make_transcript(n_exchanges=3)
+        sid = generate_session_id()
+        history = _make_transcript(n_exchanges=3)
         evaluation = _make_evaluation("prompted_response")
 
         create_session(sid, mode="speaking")
@@ -267,33 +252,28 @@ class TestSpeakingFullFlow:
 
         user_turns = [t for t in history if t["role"] == "user"]
         update_speaking_scores(
-            session_id      = sid,
-            total_exchanges = len(user_turns),
-            full_transcript = json.dumps(history, ensure_ascii=False),
-            grammar_score   = evaluation["grammar_score"],
-            relevance_score = evaluation["relevance_score"],
-            final_score     = evaluation["final_score"],
-            is_graded       = evaluation["is_graded"],
+            session_id=sid,
+            total_exchanges=len(user_turns),
+            full_transcript=json.dumps(history, ensure_ascii=False),
+            grammar_score=evaluation["grammar_score"],
+            relevance_score=evaluation["relevance_score"],
+            final_score=evaluation["final_score"],
+            is_graded=evaluation["is_graded"],
         )
 
         with get_db() as conn:
-            row = conn.execute(
-                "SELECT grammar_score, relevance_score, final_score, "
-                "total_exchanges, is_graded, full_transcript "
-                "FROM speaking_sessions WHERE session_id = ?",
-                (sid,)
-            ).fetchone()
+            row = conn.execute("SELECT grammar_score, relevance_score, final_score, " "total_exchanges, is_graded, full_transcript " "FROM speaking_sessions WHERE session_id = ?", (sid,)).fetchone()
 
-        assert row["grammar_score"]   == pytest.approx(8.0, abs=0.01)
+        assert row["grammar_score"] == pytest.approx(8.0, abs=0.01)
         assert row["relevance_score"] == pytest.approx(7.0, abs=0.01)
-        assert row["final_score"]     == pytest.approx(7.5, abs=0.01)
+        assert row["final_score"] == pytest.approx(7.5, abs=0.01)
         assert row["total_exchanges"] == 3
-        assert row["is_graded"]       == 1   # True di SQLite
+        assert row["is_graded"] == 1  # True di SQLite
 
         # full_transcript bisa di-parse kembali
         transcript = json.loads(row["full_transcript"])
         assert isinstance(transcript, list)
-        assert len(transcript) == 6   # 3 AI + 3 user
+        assert len(transcript) == 6  # 3 AI + 3 user
 
     def test_oral_presentation_extra_scores_saved(self, tmp_db):
         """
@@ -308,34 +288,30 @@ class TestSpeakingFullFlow:
         )
         from utils.helpers import generate_session_id
 
-        sid        = generate_session_id()
-        history    = _make_transcript(n_exchanges=1)
+        sid = generate_session_id()
+        history = _make_transcript(n_exchanges=1)
         evaluation = _make_evaluation("oral_presentation")
 
         create_session(sid, mode="speaking")
         save_speaking_session(sid, "oral_presentation", "Climate change", "Academic")
 
         update_speaking_scores(
-            session_id       = sid,
-            total_exchanges  = 1,
-            full_transcript  = json.dumps(history, ensure_ascii=False),
-            grammar_score    = evaluation["grammar_score"],
-            relevance_score  = evaluation["relevance_score"],
-            final_score      = evaluation["final_score"],
-            vocabulary_score = evaluation["vocabulary_score"],
-            structure_score  = evaluation["structure_score"],
-            is_graded        = evaluation["is_graded"],
+            session_id=sid,
+            total_exchanges=1,
+            full_transcript=json.dumps(history, ensure_ascii=False),
+            grammar_score=evaluation["grammar_score"],
+            relevance_score=evaluation["relevance_score"],
+            final_score=evaluation["final_score"],
+            vocabulary_score=evaluation["vocabulary_score"],
+            structure_score=evaluation["structure_score"],
+            is_graded=evaluation["is_graded"],
         )
 
         with get_db() as conn:
-            row = conn.execute(
-                "SELECT vocabulary_score, structure_score "
-                "FROM speaking_sessions WHERE session_id = ?",
-                (sid,)
-            ).fetchone()
+            row = conn.execute("SELECT vocabulary_score, structure_score " "FROM speaking_sessions WHERE session_id = ?", (sid,)).fetchone()
 
         assert row["vocabulary_score"] == pytest.approx(6.0, abs=0.01)
-        assert row["structure_score"]  == pytest.approx(8.0, abs=0.01)
+        assert row["structure_score"] == pytest.approx(8.0, abs=0.01)
 
     def test_session_completed_status_saved(self, tmp_db):
         """
@@ -354,12 +330,9 @@ class TestSpeakingFullFlow:
         update_session_status(sid, status="completed")
 
         with get_db() as conn:
-            row = conn.execute(
-                "SELECT status, completed_at FROM sessions WHERE session_id = ?",
-                (sid,)
-            ).fetchone()
+            row = conn.execute("SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)).fetchone()
 
-        assert row["status"]       == "completed"
+        assert row["status"] == "completed"
         assert row["completed_at"] is not None
 
     def test_ungraded_session_saved_when_evaluator_fails(self, tmp_db):
@@ -375,7 +348,7 @@ class TestSpeakingFullFlow:
         )
         from utils.helpers import generate_session_id
 
-        sid     = generate_session_id()
+        sid = generate_session_id()
         history = _make_transcript(n_exchanges=2)
 
         create_session(sid, mode="speaking")
@@ -383,23 +356,19 @@ class TestSpeakingFullFlow:
 
         # Simpan sebagai ungraded
         update_speaking_scores(
-            session_id      = sid,
-            total_exchanges = 2,
-            full_transcript = json.dumps(history, ensure_ascii=False),
-            grammar_score   = 0,
-            relevance_score = 0,
-            final_score     = 0,
-            is_graded       = False,
+            session_id=sid,
+            total_exchanges=2,
+            full_transcript=json.dumps(history, ensure_ascii=False),
+            grammar_score=0,
+            relevance_score=0,
+            final_score=0,
+            is_graded=False,
         )
 
         with get_db() as conn:
-            row = conn.execute(
-                "SELECT is_graded, full_transcript "
-                "FROM speaking_sessions WHERE session_id = ?",
-                (sid,)
-            ).fetchone()
+            row = conn.execute("SELECT is_graded, full_transcript " "FROM speaking_sessions WHERE session_id = ?", (sid,)).fetchone()
 
-        assert row["is_graded"] == 0   # False
+        assert row["is_graded"] == 0  # False
 
         # Transcript tetap tersimpan meskipun ungraded
         transcript = json.loads(row["full_transcript"])
@@ -421,10 +390,10 @@ class TestSpeakingFullFlow:
         )
         from utils.helpers import generate_session_id
 
-        sid     = generate_session_id()
+        sid = generate_session_id()
         history = _make_transcript(n_exchanges=2)
 
-        ai_turns   = [h for h in history if h["role"] == "ai"]
+        ai_turns = [h for h in history if h["role"] == "ai"]
         user_turns = [h for h in history if h["role"] == "user"]
 
         create_session(sid, mode="speaking")
@@ -433,22 +402,22 @@ class TestSpeakingFullFlow:
         # Simpan 2 exchange ke DB
         for i, (ai, user) in enumerate(zip(ai_turns, user_turns)):
             save_exchange(
-                session_id      = sid,
-                exchange_number = i + 1,
-                agent_prompt    = ai["text"],
-                user_transcript = user["text"],
-                is_followup     = i > 0,
+                session_id=sid,
+                exchange_number=i + 1,
+                agent_prompt=ai["text"],
+                user_transcript=user["text"],
+                is_followup=i > 0,
             )
 
         # Simulasi browser refresh — rebuild dari DB
         recovered = rebuild_transcript_from_db(sid)
 
         assert recovered is not None
-        assert recovered["is_recoverable"]   is True
-        assert recovered["exchange_count"]   == 2
-        assert recovered["sub_mode"]         == "conversation_practice"
-        assert recovered["main_topic"]       == "Technology"
-        assert len(recovered["full_history"]) == 4   # 2 AI + 2 user
+        assert recovered["is_recoverable"] is True
+        assert recovered["exchange_count"] == 2
+        assert recovered["sub_mode"] == "conversation_practice"
+        assert recovered["main_topic"] == "Technology"
+        assert len(recovered["full_history"]) == 4  # 2 AI + 2 user
 
     def test_rebuild_empty_session_not_recoverable(self, tmp_db):
         """
@@ -506,9 +475,9 @@ class TestSpeakingFullFlow:
         )
         from utils.helpers import generate_session_id
 
-        sid      = generate_session_id()
+        sid = generate_session_id()
         sub_mode = "prompted_response"
-        topic    = "Daily routines"
+        topic = "Daily routines"
 
         # ── Step 1: Buat session ─────────────────────────
         create_session(sid, mode="speaking")
@@ -520,11 +489,11 @@ class TestSpeakingFullFlow:
         # ── Step 3: Loop exchange dengan mock STT + Assessor
         full_history = [{"role": "ai", "text": opening_prompt}]
         exchange_ids = []
-        n_exchanges  = 2
+        n_exchanges = 2
 
         mock_assessor_responses = [
             {"decision": "continue", "reason": "Needs more detail.", "suggested_followup": "Can you elaborate?"},
-            {"decision": "stop",     "reason": "Conversation complete.", "suggested_followup": None},
+            {"decision": "stop", "reason": "Conversation complete.", "suggested_followup": None},
         ]
         mock_transcripts = [
             "I usually wake up at 6 AM and exercise.",
@@ -539,11 +508,11 @@ class TestSpeakingFullFlow:
             for i in range(n_exchanges):
                 # Simpan AI prompt dulu (incremental)
                 eid = save_exchange(
-                    session_id      = sid,
-                    exchange_number = i + 1,
-                    agent_prompt    = opening_prompt if i == 0 else "Can you elaborate?",
-                    user_transcript = None,
-                    is_followup     = i > 0,
+                    session_id=sid,
+                    exchange_number=i + 1,
+                    agent_prompt=opening_prompt if i == 0 else "Can you elaborate?",
+                    user_transcript=None,
+                    is_followup=i > 0,
                 )
                 exchange_ids.append(eid)
 
@@ -553,18 +522,18 @@ class TestSpeakingFullFlow:
 
                 # Assessor decide
                 assessment = run_assessor(
-                    sub_mode          = sub_mode,
-                    exchange_count    = i + 1,
-                    full_history      = full_history,
-                    main_topic        = topic,
-                    latest_transcript = user_transcript,
+                    sub_mode=sub_mode,
+                    exchange_count=i + 1,
+                    full_history=full_history,
+                    main_topic=topic,
+                    latest_transcript=user_transcript,
                 )
 
                 # Update transcript + keputusan assessor ke DB
                 update_exchange_transcript(
-                    exchange_id       = eid,
-                    user_transcript   = user_transcript,
-                    assessor_decision = assessment["decision"],
+                    exchange_id=eid,
+                    user_transcript=user_transcript,
+                    assessor_decision=assessment["decision"],
                 )
 
                 if assessment["decision"] == "stop":
@@ -581,24 +550,25 @@ class TestSpeakingFullFlow:
             mock_ev.return_value = mock_eval
 
             from agents.speaking.evaluator import run_evaluator
+
             evaluation = run_evaluator(
-                sub_mode        = sub_mode,
-                main_topic      = topic,
-                prompt_text     = opening_prompt,
-                full_transcript = full_history,
-                session_id      = sid,
+                sub_mode=sub_mode,
+                main_topic=topic,
+                prompt_text=opening_prompt,
+                full_transcript=full_history,
+                session_id=sid,
             )
 
         # ── Step 5: Simpan skor ──────────────────────────
         user_turns = [t for t in full_history if t["role"] == "user"]
         update_speaking_scores(
-            session_id      = sid,
-            total_exchanges = len(user_turns),
-            full_transcript = json.dumps(full_history, ensure_ascii=False),
-            grammar_score   = evaluation["grammar_score"],
-            relevance_score = evaluation["relevance_score"],
-            final_score     = evaluation["final_score"],
-            is_graded       = evaluation["is_graded"],
+            session_id=sid,
+            total_exchanges=len(user_turns),
+            full_transcript=json.dumps(full_history, ensure_ascii=False),
+            grammar_score=evaluation["grammar_score"],
+            relevance_score=evaluation["relevance_score"],
+            final_score=evaluation["final_score"],
+            is_graded=evaluation["is_graded"],
         )
 
         # ── Step 6: Complete session ─────────────────────
@@ -610,32 +580,19 @@ class TestSpeakingFullFlow:
         with get_db() as conn:
 
             # 1. sessions: status completed
-            session = conn.execute(
-                "SELECT status, completed_at FROM sessions WHERE session_id = ?",
-                (sid,)
-            ).fetchone()
-            assert session["status"]       == "completed"
+            session = conn.execute("SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)).fetchone()
+            assert session["status"] == "completed"
             assert session["completed_at"] is not None
 
             # 2. speaking_sessions: skor tersimpan
-            sp = conn.execute(
-                "SELECT grammar_score, relevance_score, final_score, "
-                "total_exchanges, is_graded "
-                "FROM speaking_sessions WHERE session_id = ?",
-                (sid,)
-            ).fetchone()
-            assert sp["grammar_score"]   == pytest.approx(8.0, abs=0.01)
+            sp = conn.execute("SELECT grammar_score, relevance_score, final_score, " "total_exchanges, is_graded " "FROM speaking_sessions WHERE session_id = ?", (sid,)).fetchone()
+            assert sp["grammar_score"] == pytest.approx(8.0, abs=0.01)
             assert sp["relevance_score"] == pytest.approx(7.0, abs=0.01)
-            assert sp["final_score"]     == pytest.approx(7.5, abs=0.01)
-            assert sp["is_graded"]       == 1
+            assert sp["final_score"] == pytest.approx(7.5, abs=0.01)
+            assert sp["is_graded"] == 1
 
             # 3. speaking_exchanges: semua exchange tersimpan
-            exchanges = conn.execute(
-                "SELECT exchange_number, user_transcript, assessor_decision "
-                "FROM speaking_exchanges WHERE session_id = ? "
-                "ORDER BY exchange_number ASC",
-                (sid,)
-            ).fetchall()
+            exchanges = conn.execute("SELECT exchange_number, user_transcript, assessor_decision " "FROM speaking_exchanges WHERE session_id = ? " "ORDER BY exchange_number ASC", (sid,)).fetchall()
 
             assert len(exchanges) >= 1
 
@@ -665,19 +622,13 @@ class TestSpeakingFullFlow:
         update_session_status(sid, status="abandoned")
 
         with get_db() as conn:
-            session = conn.execute(
-                "SELECT status FROM sessions WHERE session_id = ?", (sid,)
-            ).fetchone()
-            sp = conn.execute(
-                "SELECT grammar_score, final_score, is_graded "
-                "FROM speaking_sessions WHERE session_id = ?",
-                (sid,)
-            ).fetchone()
+            session = conn.execute("SELECT status FROM sessions WHERE session_id = ?", (sid,)).fetchone()
+            sp = conn.execute("SELECT grammar_score, final_score, is_graded " "FROM speaking_sessions WHERE session_id = ?", (sid,)).fetchone()
 
-        assert session["status"]    == "abandoned"
-        assert sp["grammar_score"]  is None   # tidak ada skor
-        assert sp["final_score"]    is None
+        assert session["status"] == "abandoned"
+        assert sp["grammar_score"] is None  # tidak ada skor
+        assert sp["final_score"] is None
         # is_graded DEFAULT TRUE di schema — sesi abandoned tidak memanggil
         # update_speaking_scores(), jadi nilainya tetap default (1/True)
         # yang penting: grammar_score dan final_score masih None (belum dievaluasi)
-        assert sp["grammar_score"]  is None
+        assert sp["grammar_score"] is None

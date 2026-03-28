@@ -117,9 +117,9 @@ These prompts have been used recently — generate something different:
 """
 
     duration_hint = {
-        "prompted_response":    "60-90 seconds",
+        "prompted_response": "60-90 seconds",
         "conversation_practice": "45-60 seconds per exchange",
-        "oral_presentation":    "120-180 seconds",
+        "oral_presentation": "120-180 seconds",
     }.get(sub_mode, "60-90 seconds")
 
     return f"""Generate a speaking prompt for the following context.

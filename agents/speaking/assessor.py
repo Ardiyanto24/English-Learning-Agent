@@ -81,10 +81,7 @@ def _check_hard_limits(
         dict jika hard limit tercapai, None jika belum
     """
     if sub_mode == "prompted_response" and exchange_count >= PROMPTED_RESPONSE_MAX:
-        logger.info(
-            f"[speaking_assessor] Hard stop: prompted_response "
-            f"reached {exchange_count} exchanges"
-        )
+        logger.info(f"[speaking_assessor] Hard stop: prompted_response " f"reached {exchange_count} exchanges")
         return {
             "decision": "stop",
             "reason": f"Batas maksimum {PROMPTED_RESPONSE_MAX}x exchange untuk Prompted Response telah tercapai.",
@@ -92,10 +89,7 @@ def _check_hard_limits(
         }
 
     if sub_mode == "conversation_practice" and exchange_count >= CONVERSATION_HARD_STOP:
-        logger.info(
-            f"[speaking_assessor] Hard stop: conversation_practice "
-            f"reached {exchange_count} exchanges"
-        )
+        logger.info(f"[speaking_assessor] Hard stop: conversation_practice " f"reached {exchange_count} exchanges")
         return {
             "decision": "stop",
             "reason": f"Batas maksimum {CONVERSATION_HARD_STOP}x exchange untuk Conversation Practice telah tercapai.",
@@ -188,9 +182,7 @@ def run_assessor(
             "suggested_followup": str | None,
         }
     """
-    logger.info(
-        f"[speaking_assessor] Assessing — " f"sub_mode={sub_mode} exchange={exchange_count}"
-    )
+    logger.info(f"[speaking_assessor] Assessing — " f"sub_mode={sub_mode} exchange={exchange_count}")
 
     # 1. Cek hard limit dulu (tanpa memanggil LLM)
     hard_stop = _check_hard_limits(sub_mode, exchange_count)
@@ -199,9 +191,7 @@ def run_assessor(
 
     # 2. Bangun sliding window
     window = _build_sliding_window(full_history)
-    logger.debug(
-        f"[speaking_assessor] Sliding window: " f"{len(full_history)} total → {len(window)} sent"
-    )
+    logger.debug(f"[speaking_assessor] Sliding window: " f"{len(full_history)} total → {len(window)} sent")
 
     # 3. Panggil LLM
     try:
@@ -213,25 +203,15 @@ def run_assessor(
             latest_transcript=latest_transcript,
         )
 
-        logger.info(
-            f"[speaking_assessor] Decision: {result.get('decision')} "
-            f"— {result.get('reason', '')[:60]}"
-        )
+        logger.info(f"[speaking_assessor] Decision: {result.get('decision')} " f"— {result.get('reason', '')[:60]}")
 
         # Fase 1 guard: conversation_practice < 10 exchange → tidak boleh stop
-        if (
-            sub_mode == "conversation_practice"
-            and exchange_count < CONVERSATION_PHASE2_MIN
-            and result.get("decision") == "stop"
-        ):
-            logger.warning(
-                "[speaking_assessor] Overriding 'stop' in Phase 1 " "→ changing to 'new_subtopic'"
-            )
+        if sub_mode == "conversation_practice" and exchange_count < CONVERSATION_PHASE2_MIN and result.get("decision") == "stop":
+            logger.warning("[speaking_assessor] Overriding 'stop' in Phase 1 " "→ changing to 'new_subtopic'")
             result["decision"] = "new_subtopic"
             result["reason"] += " [Override: Phase 1 belum selesai]"
             result["suggested_followup"] = result.get("suggested_followup") or (
-                "That's a great point! Let me ask you something related — "
-                "what do you think would be the most important factor in this situation?"
+                "That's a great point! Let me ask you something related — " "what do you think would be the most important factor in this situation?"
             )
 
         return result

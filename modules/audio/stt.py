@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-LANGUAGE_CODE  = "en-US"
+LANGUAGE_CODE = "en-US"
 SAMPLE_RATE_HZ = 16000
 
 _client: Optional[speech.SpeechClient] = None
@@ -64,10 +64,10 @@ def transcribe_audio_bytes(
 
     ext = Path(filename).suffix.lower()
     encoding_map = {
-        ".wav":  speech.RecognitionConfig.AudioEncoding.LINEAR16,
+        ".wav": speech.RecognitionConfig.AudioEncoding.LINEAR16,
         ".flac": speech.RecognitionConfig.AudioEncoding.FLAC,
-        ".mp3":  speech.RecognitionConfig.AudioEncoding.MP3,
-        ".ogg":  speech.RecognitionConfig.AudioEncoding.OGG_OPUS,
+        ".mp3": speech.RecognitionConfig.AudioEncoding.MP3,
+        ".ogg": speech.RecognitionConfig.AudioEncoding.OGG_OPUS,
         ".webm": speech.RecognitionConfig.AudioEncoding.WEBM_OPUS,
     }
     encoding = encoding_map.get(
@@ -81,31 +81,26 @@ def transcribe_audio_bytes(
         language_code=lang_code,
         enable_automatic_punctuation=True,
     )
-    audio  = speech.RecognitionAudio(content=audio_bytes)
+    audio = speech.RecognitionAudio(content=audio_bytes)
     client = _get_client()
     last_error = None
 
     for attempt in range(3):
         try:
-            response   = client.recognize(config=config, audio=audio)
-            transcript = " ".join(
-                result.alternatives[0].transcript
-                for result in response.results
-                if result.alternatives
-            ).strip()
+            response = client.recognize(config=config, audio=audio)
+            transcript = " ".join(result.alternatives[0].transcript for result in response.results if result.alternatives).strip()
 
             if not transcript:
                 last_error = "empty_transcript"
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
                 continue
 
             return transcript
 
         except Exception as e:
             last_error = e
-            wait = 2 ** attempt
-            print(f"[STT] Attempt {attempt+1} gagal: {e}. "
-                  f"Retry dalam {wait}s...")
+            wait = 2**attempt
+            print(f"[STT] Attempt {attempt+1} gagal: {e}. " f"Retry dalam {wait}s...")
             if attempt < 2:
                 time.sleep(wait)
 

@@ -27,10 +27,10 @@ from typing import Optional
 
 import streamlit as st
 
-from modules.audio.tts      import generate_speech
-from modules.audio.stt      import transcribe_audio_bytes
+from modules.audio.tts import generate_speech
+from modules.audio.stt import transcribe_audio_bytes
 from modules.audio.recorder import record_audio
-from utils.logger           import log_error, logger
+from utils.logger import log_error, logger
 
 # Voice default untuk AI di speaking conversation
 AI_VOICE = "nova"
@@ -89,10 +89,10 @@ def speaking_turn(
         # TTS gagal — teks sudah ditampilkan di atas, cukup beri notifikasi
         ctx.caption("⚠️ Audio tidak tersedia. Silakan baca teks di atas.")
         log_error(
-            error_type    = "tts_failure",
-            agent_name    = "audio_pipeline",
-            context       = {"prompt_preview": agent_prompt[:60]},
-            fallback_used = True,
+            error_type="tts_failure",
+            agent_name="audio_pipeline",
+            context={"prompt_preview": agent_prompt[:60]},
+            fallback_used=True,
         )
         logger.warning("[audio_pipeline] TTS failed — text fallback active")
         return False
@@ -131,15 +131,15 @@ def user_response(
     ctx = container if container else st
 
     # Key unik per exchange untuk state
-    key_mode    = f"sp_mode_{exchange_index}"       # "record" | "text_fallback"
+    key_mode = f"sp_mode_{exchange_index}"  # "record" | "text_fallback"
     key_stt_fail = f"sp_stt_fail_{exchange_index}"  # counter kegagalan STT
-    key_answer  = f"sp_answer_{exchange_index}"     # transcript final
+    key_answer = f"sp_answer_{exchange_index}"  # transcript final
 
     # Jika sudah ada jawaban dari exchange ini, return langsung
     if st.session_state.get(key_answer):
         return st.session_state[key_answer]
 
-    mode      = st.session_state.get(key_mode, "record")
+    mode = st.session_state.get(key_mode, "record")
     stt_fails = st.session_state.get(key_stt_fail, 0)
 
     # ── MODE: text_fallback ────────────────────────────────────────
@@ -151,25 +151,22 @@ def user_response(
     ctx.markdown("🎙️ **Giliranmu berbicara**")
 
     if stt_fails > 0:
-        ctx.warning(
-            f"⚠️ Percobaan {stt_fails}/3 gagal ditranskrip. "
-            f"Coba bicara lebih keras dan jelas."
-        )
+        ctx.warning(f"⚠️ Percobaan {stt_fails}/3 gagal ditranskrip. " f"Coba bicara lebih keras dan jelas.")
 
     col1, col2 = ctx.columns([2, 3])
     with col1:
         record_btn = st.button(
-            label    = "🔴 Mulai Rekam",
-            key      = f"sp_rec_btn_{exchange_index}",
-            type     = "primary",
-            use_container_width = True,
+            label="🔴 Mulai Rekam",
+            key=f"sp_rec_btn_{exchange_index}",
+            type="primary",
+            use_container_width=True,
         )
     with col2:
         # Tombol skip ke text input tersedia sejak awal
         if st.button(
-            label = "⌨️ Ketik manual",
-            key   = f"sp_text_btn_{exchange_index}",
-            use_container_width = True,
+            label="⌨️ Ketik manual",
+            key=f"sp_text_btn_{exchange_index}",
+            use_container_width=True,
         ):
             st.session_state[key_mode] = "text_fallback"
             st.rerun()
@@ -183,15 +180,12 @@ def user_response(
 
     if not audio_path:
         # record_audio() sudah retry 3x internal → langsung fallback
-        ctx.error(
-            "❌ Mikrofon tidak dapat diakses setelah 3x percobaan. "
-            "Beralih ke input teks."
-        )
+        ctx.error("❌ Mikrofon tidak dapat diakses setelah 3x percobaan. " "Beralih ke input teks.")
         log_error(
-            error_type    = "recorder_failure",
-            agent_name    = "audio_pipeline",
-            context       = {"exchange_index": exchange_index},
-            fallback_used = True,
+            error_type="recorder_failure",
+            agent_name="audio_pipeline",
+            context={"exchange_index": exchange_index},
+            fallback_used=True,
         )
         st.session_state[key_mode] = "text_fallback"
         st.rerun()
@@ -202,35 +196,27 @@ def user_response(
         transcript = _transcribe_file(audio_path)
 
     if transcript:
-        logger.info(
-            f"[audio_pipeline] STT success exchange={exchange_index} "
-            f"— '{transcript[:60]}'"
-        )
+        logger.info(f"[audio_pipeline] STT success exchange={exchange_index} " f"— '{transcript[:60]}'")
         st.session_state[key_answer] = transcript
         ctx.success("✅ Transkrip berhasil!")
-        ctx.markdown(f"*\"{transcript}\"*")
+        ctx.markdown(f'*"{transcript}"*')
         return transcript
 
     # STT gagal
     stt_fails += 1
     st.session_state[key_stt_fail] = stt_fails
     log_error(
-        error_type    = "stt_failure",
-        agent_name    = "audio_pipeline",
-        context       = {"exchange_index": exchange_index, "attempt": stt_fails},
-        fallback_used = stt_fails >= 3,
+        error_type="stt_failure",
+        agent_name="audio_pipeline",
+        context={"exchange_index": exchange_index, "attempt": stt_fails},
+        fallback_used=stt_fails >= 3,
     )
 
     if stt_fails >= 3:
-        ctx.error(
-            "❌ Transkrip gagal 3x. Beralih ke input teks manual."
-        )
+        ctx.error("❌ Transkrip gagal 3x. Beralih ke input teks manual.")
         st.session_state[key_mode] = "text_fallback"
     else:
-        ctx.warning(
-            f"Transkrip gagal (percobaan {stt_fails}/3). "
-            "Klik 'Mulai Rekam' untuk coba lagi."
-        )
+        ctx.warning(f"Transkrip gagal (percobaan {stt_fails}/3). " "Klik 'Mulai Rekam' untuk coba lagi.")
 
     st.rerun()
     return None
@@ -250,25 +236,22 @@ def _render_text_fallback(
     Dipanggil setelah 3x STT gagal atau user klik 'Ketik manual'.
     """
     if stt_fails >= 3:
-        ctx.info(
-            "⌨️ **Mode teks aktif** — Audio tidak berhasil ditranskrip "
-            "setelah 3x percobaan. Ketik jawabanmu di bawah."
-        )
+        ctx.info("⌨️ **Mode teks aktif** — Audio tidak berhasil ditranskrip " "setelah 3x percobaan. Ketik jawabanmu di bawah.")
     else:
         ctx.info("⌨️ **Mode teks aktif** — Ketik jawabanmu di bawah.")
 
     text_answer = ctx.text_area(
-        label       = "Jawaban kamu:",
-        placeholder = "Ketik jawabanmu dalam Bahasa Inggris...",
-        height      = 120,
-        key         = f"sp_text_area_{exchange_index}",
+        label="Jawaban kamu:",
+        placeholder="Ketik jawabanmu dalam Bahasa Inggris...",
+        height=120,
+        key=f"sp_text_area_{exchange_index}",
     )
 
     if ctx.button(
-        label = "Submit ✓",
-        key   = f"sp_text_submit_{exchange_index}",
-        type  = "primary",
-        disabled = not text_answer,
+        label="Submit ✓",
+        key=f"sp_text_submit_{exchange_index}",
+        type="primary",
+        disabled=not text_answer,
     ):
         st.session_state[key_answer] = text_answer.strip()
         st.rerun()
@@ -287,6 +270,7 @@ def _transcribe_file(audio_path: str) -> Optional[str]:
             audio_bytes = f.read()
 
         from modules.audio.stt import transcribe_audio_bytes
+
         transcript = transcribe_audio_bytes(audio_bytes, filename="recording.wav")
         return transcript if transcript and transcript.strip() else None
 

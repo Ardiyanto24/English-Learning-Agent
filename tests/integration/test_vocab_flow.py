@@ -42,18 +42,26 @@ def _make_words(n: int = 5, topic: str = "sehari_hari") -> list[dict]:
     """Buat n kata vocab sample untuk dipakai sebagai mock generator output."""
     formats = ["tebak_arti", "sinonim_antonim", "tebak_inggris"]
     words = [
-        "accomplish", "adequate", "ambiguous", "analyze", "apparent",
-        "appropriate", "approximate", "arbitrary", "assess", "assume",
+        "accomplish",
+        "adequate",
+        "ambiguous",
+        "analyze",
+        "apparent",
+        "appropriate",
+        "approximate",
+        "arbitrary",
+        "assess",
+        "assume",
     ]
     return [
         {
-            "word":           words[i % len(words)],
-            "difficulty":     "easy",
-            "format":         formats[i % len(formats)],
-            "topic":          topic,
-            "question_text":  f"What does '{words[i % len(words)]}' mean?",
+            "word": words[i % len(words)],
+            "difficulty": "easy",
+            "format": formats[i % len(formats)],
+            "topic": topic,
+            "question_text": f"What does '{words[i % len(words)]}' mean?",
             "correct_answer": f"answer_{words[i % len(words)]}",
-            "is_new":         True,
+            "is_new": True,
         }
         for i in range(n)
     ]
@@ -77,14 +85,12 @@ class TestVocabFullFlow:
         create_session(sid, mode="vocab")
 
         with get_db() as conn:
-            row = conn.execute(
-                "SELECT * FROM sessions WHERE session_id = ?", (sid,)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM sessions WHERE session_id = ?", (sid,)).fetchone()
 
         assert row is not None
         assert row["session_id"] == sid
-        assert row["mode"]       == "vocab"
-        assert row["status"]     == "active"
+        assert row["mode"] == "vocab"
+        assert row["status"] == "active"
 
     def test_vocab_session_metadata_saved(self, tmp_db):
         """
@@ -107,14 +113,12 @@ class TestVocabFullFlow:
         )
 
         with get_db() as conn:
-            row = conn.execute(
-                "SELECT * FROM vocab_sessions WHERE session_id = ?", (sid,)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM vocab_sessions WHERE session_id = ?", (sid,)).fetchone()
 
         assert row is not None
-        assert row["topic"]        == "sehari_hari"
-        assert row["total_words"]  == 10
-        assert row["new_words"]    == 5
+        assert row["topic"] == "sehari_hari"
+        assert row["total_words"] == 10
+        assert row["new_words"] == 5
         assert row["review_words"] == 5
 
     def test_all_questions_saved_to_db(self, tmp_db):
@@ -130,7 +134,7 @@ class TestVocabFullFlow:
         )
         from utils.helpers import generate_session_id
 
-        sid   = generate_session_id()
+        sid = generate_session_id()
         words = _make_words(n=5)
 
         create_session(sid, mode="vocab")
@@ -138,21 +142,18 @@ class TestVocabFullFlow:
 
         for w in words:
             save_vocab_question(
-                session_id    = sid,
-                word          = w["word"],
-                format        = w["format"],
-                topic         = w["topic"],
-                difficulty    = w["difficulty"],
-                question_text = w["question_text"],
-                correct_answer= w["correct_answer"],
-                is_new_word   = w["is_new"],
+                session_id=sid,
+                word=w["word"],
+                format=w["format"],
+                topic=w["topic"],
+                difficulty=w["difficulty"],
+                question_text=w["question_text"],
+                correct_answer=w["correct_answer"],
+                is_new_word=w["is_new"],
             )
 
         with get_db() as conn:
-            count = conn.execute(
-                "SELECT COUNT(*) as cnt FROM vocab_questions WHERE session_id = ?",
-                (sid,)
-            ).fetchone()["cnt"]
+            count = conn.execute("SELECT COUNT(*) as cnt FROM vocab_questions WHERE session_id = ?", (sid,)).fetchone()["cnt"]
 
         assert count == 5
 
@@ -172,7 +173,7 @@ class TestVocabFullFlow:
         )
         from utils.helpers import generate_session_id
 
-        sid   = generate_session_id()
+        sid = generate_session_id()
         words = _make_words(n=3)
 
         create_session(sid, mode="vocab")
@@ -182,35 +183,31 @@ class TestVocabFullFlow:
         q_ids = []
         for w in words:
             qid = save_vocab_question(
-                session_id    = sid,
-                word          = w["word"],
-                format        = w["format"],
-                topic         = w["topic"],
-                difficulty    = w["difficulty"],
-                question_text = w["question_text"],
-                correct_answer= w["correct_answer"],
-                is_new_word   = w["is_new"],
+                session_id=sid,
+                word=w["word"],
+                format=w["format"],
+                topic=w["topic"],
+                difficulty=w["difficulty"],
+                question_text=w["question_text"],
+                correct_answer=w["correct_answer"],
+                is_new_word=w["is_new"],
             )
             q_ids.append(qid)
 
         # Simulasi user jawab soal 1 dan 2, soal 3 belum dijawab
-        update_vocab_answer(q_ids[0], "answer_accomplish", is_correct=True,  is_graded=True)
-        update_vocab_answer(q_ids[1], "wrong_answer",      is_correct=False, is_graded=True)
+        update_vocab_answer(q_ids[0], "answer_accomplish", is_correct=True, is_graded=True)
+        update_vocab_answer(q_ids[1], "wrong_answer", is_correct=False, is_graded=True)
         # q_ids[2] sengaja tidak dijawab
 
         with get_db() as conn:
-            rows = conn.execute(
-                "SELECT id, user_answer, is_correct FROM vocab_questions "
-                "WHERE session_id = ? ORDER BY id ASC",
-                (sid,)
-            ).fetchall()
+            rows = conn.execute("SELECT id, user_answer, is_correct FROM vocab_questions " "WHERE session_id = ? ORDER BY id ASC", (sid,)).fetchall()
 
         # Soal 1 dan 2 sudah ada jawaban
         assert rows[0]["user_answer"] == "answer_accomplish"
-        assert rows[0]["is_correct"]  == 1
+        assert rows[0]["is_correct"] == 1
 
         assert rows[1]["user_answer"] == "wrong_answer"
-        assert rows[1]["is_correct"]  == 0
+        assert rows[1]["is_correct"] == 0
 
         # Soal 3 belum dijawab — user_answer masih None
         assert rows[2]["user_answer"] is None
@@ -234,13 +231,10 @@ class TestVocabFullFlow:
         update_session_status(sid, status="completed")
 
         with get_db() as conn:
-            row = conn.execute(
-                "SELECT status, completed_at FROM sessions WHERE session_id = ?",
-                (sid,)
-            ).fetchone()
+            row = conn.execute("SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)).fetchone()
 
-        assert row["status"]       == "completed"
-        assert row["completed_at"] is not None   # timestamp terisi
+        assert row["status"] == "completed"
+        assert row["completed_at"] is not None  # timestamp terisi
 
     def test_final_score_saved_to_vocab_session(self, tmp_db):
         """
@@ -261,20 +255,16 @@ class TestVocabFullFlow:
 
         # Simulasi: 4 benar, 1 salah dari 5 soal
         correct = 4
-        wrong   = 1
-        score   = calculate_score_pct(correct, correct + wrong)   # = 80.0
+        wrong = 1
+        score = calculate_score_pct(correct, correct + wrong)  # = 80.0
         update_vocab_session_scores(sid, correct, wrong, score)
 
         with get_db() as conn:
-            row = conn.execute(
-                "SELECT correct_count, wrong_count, score_pct "
-                "FROM vocab_sessions WHERE session_id = ?",
-                (sid,)
-            ).fetchone()
+            row = conn.execute("SELECT correct_count, wrong_count, score_pct " "FROM vocab_sessions WHERE session_id = ?", (sid,)).fetchone()
 
         assert row["correct_count"] == 4
-        assert row["wrong_count"]   == 1
-        assert row["score_pct"]     == pytest.approx(80.0, abs=0.01)
+        assert row["wrong_count"] == 1
+        assert row["score_pct"] == pytest.approx(80.0, abs=0.01)
 
     def test_word_tracking_updated_after_session(self, tmp_db):
         """
@@ -292,16 +282,14 @@ class TestVocabFullFlow:
         # Simulasi update tracking setelah sesi selesai
         for w in words:
             update_word_tracking(
-                word       = w["word"],
-                topic      = w["topic"],
-                difficulty = w["difficulty"],
-                is_correct = True,
+                word=w["word"],
+                topic=w["topic"],
+                difficulty=w["difficulty"],
+                is_correct=True,
             )
 
         with get_db() as conn:
-            count = conn.execute(
-                "SELECT COUNT(*) as cnt FROM vocab_word_tracking"
-            ).fetchone()["cnt"]
+            count = conn.execute("SELECT COUNT(*) as cnt FROM vocab_word_tracking").fetchone()["cnt"]
 
         assert count == 3
 
@@ -318,12 +306,11 @@ class TestVocabFullFlow:
 
         with get_db() as conn:
             row = conn.execute(
-                "SELECT mastery_score, total_seen, total_correct "
-                "FROM vocab_word_tracking WHERE word = ? AND topic = ?",
+                "SELECT mastery_score, total_seen, total_correct " "FROM vocab_word_tracking WHERE word = ? AND topic = ?",
                 ("accomplish", "sehari_hari"),
             ).fetchone()
 
-        assert row["total_seen"]    == 1
+        assert row["total_seen"] == 1
         assert row["total_correct"] == 1
         assert row["mastery_score"] == pytest.approx(100.0, abs=0.01)
 
@@ -342,14 +329,13 @@ class TestVocabFullFlow:
 
         with get_db() as conn:
             row = conn.execute(
-                "SELECT mastery_score, total_seen, total_correct "
-                "FROM vocab_word_tracking WHERE word = ? AND topic = ?",
+                "SELECT mastery_score, total_seen, total_correct " "FROM vocab_word_tracking WHERE word = ? AND topic = ?",
                 ("adequate", "sehari_hari"),
             ).fetchone()
 
-        assert row["total_seen"]    == 2
+        assert row["total_seen"] == 2
         assert row["total_correct"] == 1
-        assert row["mastery_score"] == pytest.approx(50.0, abs=0.01)   # 1/2 * 100
+        assert row["mastery_score"] == pytest.approx(50.0, abs=0.01)  # 1/2 * 100
 
     def test_full_flow_end_to_end_with_mocked_llm(self, tmp_db):
         """
@@ -388,11 +374,11 @@ class TestVocabFullFlow:
 
         # ── Step 1: Mock Planner cold start ──────────────
         planner_output = {
-            "topic":              "sehari_hari",
-            "total_words":        5,
-            "new_words":          5,
-            "review_words":       0,
-            "difficulty_target":  "easy",
+            "topic": "sehari_hari",
+            "total_words": 5,
+            "new_words": 5,
+            "review_words": 0,
+            "difficulty_target": "easy",
             "format_distribution": {"tebak_arti": 2, "sinonim_antonim": 2, "tebak_inggris": 1},
         }
 
@@ -403,64 +389,66 @@ class TestVocabFullFlow:
         sid = generate_session_id()
         create_session(sid, mode="vocab")
         save_vocab_session(
-            session_id  = sid,
-            topic       = planner_output["topic"],
-            total_words = len(final_words),
-            new_words   = planner_output["new_words"],
-            review_words= planner_output["review_words"],
+            session_id=sid,
+            topic=planner_output["topic"],
+            total_words=len(final_words),
+            new_words=planner_output["new_words"],
+            review_words=planner_output["review_words"],
         )
 
         # ── Step 5: Simpan soal ke DB ────────────────────
         q_ids = []
         for w in final_words:
             qid = save_vocab_question(
-                session_id    = sid,
-                word          = w["word"],
-                format        = w["format"],
-                topic         = w["topic"],
-                difficulty    = w["difficulty"],
-                question_text = w["question_text"],
-                correct_answer= w["correct_answer"],
-                is_new_word   = w["is_new"],
+                session_id=sid,
+                word=w["word"],
+                format=w["format"],
+                topic=w["topic"],
+                difficulty=w["difficulty"],
+                question_text=w["question_text"],
+                correct_answer=w["correct_answer"],
+                is_new_word=w["is_new"],
             )
             q_ids.append(qid)
 
         # ── Step 6 & 7: Simulasi user jawab + Evaluator ──
-        eval_resp = json.dumps({
-            "is_correct": True,
-            "is_graded":  True,
-            "feedback":   "Benar!",
-        })
+        eval_resp = json.dumps(
+            {
+                "is_correct": True,
+                "is_graded": True,
+                "feedback": "Benar!",
+            }
+        )
 
         correct_count = 0
         with patch("agents.vocab.evaluator._call_evaluator_llm") as mock_llm:
             mock_llm.return_value = {
                 "is_correct": True,
-                "is_graded":  True,
-                "feedback":   "Benar!",
+                "is_graded": True,
+                "feedback": "Benar!",
             }
 
             from agents.vocab.evaluator import run_evaluator
 
             for i, (w, qid) in enumerate(zip(final_words, q_ids)):
                 # Simulasi user menjawab
-                user_answer = w["correct_answer"]   # jawab benar semua
+                user_answer = w["correct_answer"]  # jawab benar semua
 
                 eval_result = run_evaluator(
-                    word          = w["word"],
-                    format        = w["format"],
-                    question_text = w["question_text"],
-                    correct_answer= w["correct_answer"],
-                    user_answer   = user_answer,
-                    session_id    = sid,
+                    word=w["word"],
+                    format=w["format"],
+                    question_text=w["question_text"],
+                    correct_answer=w["correct_answer"],
+                    user_answer=user_answer,
+                    session_id=sid,
                 )
 
                 # ── Step 8: Simpan jawaban ke DB ─────────
                 update_vocab_answer(
-                    question_id = qid,
-                    user_answer = user_answer,
-                    is_correct  = eval_result["is_correct"],
-                    is_graded   = eval_result["is_graded"],
+                    question_id=qid,
+                    user_answer=user_answer,
+                    is_correct=eval_result["is_correct"],
+                    is_graded=eval_result["is_graded"],
                 )
 
                 if eval_result["is_correct"]:
@@ -468,10 +456,10 @@ class TestVocabFullFlow:
 
                 # ── Step 9: Update word tracking ─────────
                 update_word_tracking(
-                    word       = w["word"],
-                    topic      = w["topic"],
-                    difficulty = w["difficulty"],
-                    is_correct = eval_result["is_correct"],
+                    word=w["word"],
+                    topic=w["topic"],
+                    difficulty=w["difficulty"],
+                    is_correct=eval_result["is_correct"],
                 )
 
         # ── Step 10: Complete session ────────────────────
@@ -485,38 +473,24 @@ class TestVocabFullFlow:
         with get_db() as conn:
 
             # 1. sessions: status harus completed
-            session = conn.execute(
-                "SELECT status, completed_at FROM sessions WHERE session_id = ?",
-                (sid,)
-            ).fetchone()
-            assert session["status"]       == "completed"
+            session = conn.execute("SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)).fetchone()
+            assert session["status"] == "completed"
             assert session["completed_at"] is not None
 
             # 2. vocab_sessions: skor tersimpan
-            vs = conn.execute(
-                "SELECT correct_count, wrong_count, score_pct "
-                "FROM vocab_sessions WHERE session_id = ?",
-                (sid,)
-            ).fetchone()
-            assert vs["correct_count"] == 5           # jawab benar semua
-            assert vs["wrong_count"]   == 0
-            assert vs["score_pct"]     == pytest.approx(100.0, abs=0.01)
+            vs = conn.execute("SELECT correct_count, wrong_count, score_pct " "FROM vocab_sessions WHERE session_id = ?", (sid,)).fetchone()
+            assert vs["correct_count"] == 5  # jawab benar semua
+            assert vs["wrong_count"] == 0
+            assert vs["score_pct"] == pytest.approx(100.0, abs=0.01)
 
             # 3. vocab_questions: semua soal ada dan semua dijawab
-            qs = conn.execute(
-                "SELECT COUNT(*) as total, "
-                "SUM(CASE WHEN user_answer IS NOT NULL THEN 1 ELSE 0 END) as answered "
-                "FROM vocab_questions WHERE session_id = ?",
-                (sid,)
-            ).fetchone()
-            assert qs["total"]    == 5
-            assert qs["answered"] == 5   # semua soal sudah dijawab
+            qs = conn.execute("SELECT COUNT(*) as total, " "SUM(CASE WHEN user_answer IS NOT NULL THEN 1 ELSE 0 END) as answered " "FROM vocab_questions WHERE session_id = ?", (sid,)).fetchone()
+            assert qs["total"] == 5
+            assert qs["answered"] == 5  # semua soal sudah dijawab
 
             # 4. vocab_word_tracking: semua kata ter-track
-            wt = conn.execute(
-                "SELECT COUNT(*) as cnt FROM vocab_word_tracking"
-            ).fetchone()
-            assert wt["cnt"] == 5   # 5 kata unik ter-track
+            wt = conn.execute("SELECT COUNT(*) as cnt FROM vocab_word_tracking").fetchone()
+            assert wt["cnt"] == 5  # 5 kata unik ter-track
 
     def test_abandoned_session_status_is_abandoned(self, tmp_db):
         """
@@ -539,9 +513,7 @@ class TestVocabFullFlow:
         update_session_status(sid, status="abandoned")
 
         with get_db() as conn:
-            row = conn.execute(
-                "SELECT status FROM sessions WHERE session_id = ?", (sid,)
-            ).fetchone()
+            row = conn.execute("SELECT status FROM sessions WHERE session_id = ?", (sid,)).fetchone()
 
         assert row["status"] == "abandoned"
 
@@ -566,8 +538,6 @@ class TestVocabFullFlow:
         update_session_status(sid, status="completed", is_adjusted=True)
 
         with get_db() as conn:
-            row = conn.execute(
-                "SELECT is_adjusted FROM sessions WHERE session_id = ?", (sid,)
-            ).fetchone()
+            row = conn.execute("SELECT is_adjusted FROM sessions WHERE session_id = ?", (sid,)).fetchone()
 
-        assert row["is_adjusted"] == 1   # True di SQLite disimpan sebagai 1
+        assert row["is_adjusted"] == 1  # True di SQLite disimpan sebagai 1

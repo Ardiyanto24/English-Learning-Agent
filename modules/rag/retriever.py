@@ -207,10 +207,7 @@ def format_context_for_prompt(retrieval_result: dict) -> str:
         topic = meta.get("topic", "")
         section = meta.get("section_title", "")
         similarity = chunk.get("similarity", 0)
-        header = (
-            f"[Chunk {i} | Topic: {topic} | "
-            f"Section: {section} | Relevance: {similarity:.2f}]"
-        )
+        header = f"[Chunk {i} | Topic: {topic} | " f"Section: {section} | Relevance: {similarity:.2f}]"
         context_parts.append(f"{header}\n{chunk['text']}")
 
     return "\n\n---\n\n".join(context_parts)

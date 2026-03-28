@@ -21,11 +21,18 @@ def save_toefl_session(session_id: str, mode: str) -> bool:
     return True
 
 
-def save_toefl_question(session_id: str, section: str, part: str,
-                        question_number: int, question_text: str,
-                        options: str, correct_answer: str, difficulty: str,
-                        passage_text: Optional[str] = None,
-                        audio_script: Optional[str] = None) -> int:
+def save_toefl_question(
+    session_id: str,
+    section: str,
+    part: str,
+    question_number: int,
+    question_text: str,
+    options: str,
+    correct_answer: str,
+    difficulty: str,
+    passage_text: Optional[str] = None,
+    audio_script: Optional[str] = None,
+) -> int:
     """
     Simpan satu soal TOEFL (incremental save, sebelum user menjawab).
 
@@ -43,14 +50,12 @@ def save_toefl_question(session_id: str, section: str, part: str,
                  options, correct_answer, difficulty, passage_text, audio_script)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (session_id, section, part, question_number, question_text,
-             options, correct_answer, difficulty, passage_text, audio_script),
+            (session_id, section, part, question_number, question_text, options, correct_answer, difficulty, passage_text, audio_script),
         )
     return cursor.lastrowid
 
 
-def update_toefl_answer(question_id: int, user_answer: str,
-                        is_correct: bool) -> bool:
+def update_toefl_answer(question_id: int, user_answer: str, is_correct: bool) -> bool:
     """Update jawaban user untuk sebuah soal TOEFL."""
     with get_db() as conn:
         conn.execute(
@@ -64,14 +69,19 @@ def update_toefl_answer(question_id: int, user_answer: str,
     return True
 
 
-def update_toefl_scores(session_id: str, listening_raw: int,
-                        structure_raw: int, reading_raw: int,
-                        listening_extrapolated: int,
-                        structure_extrapolated: int,
-                        reading_extrapolated: int,
-                        listening_scaled: int, structure_scaled: int,
-                        reading_scaled: int,
-                        estimated_score: int) -> bool:
+def update_toefl_scores(
+    session_id: str,
+    listening_raw: int,
+    structure_raw: int,
+    reading_raw: int,
+    listening_extrapolated: int,
+    structure_extrapolated: int,
+    reading_extrapolated: int,
+    listening_scaled: int,
+    structure_scaled: int,
+    reading_scaled: int,
+    estimated_score: int,
+) -> bool:
     """Update semua skor setelah simulasi selesai."""
     with get_db() as conn:
         conn.execute(
@@ -86,11 +96,19 @@ def update_toefl_scores(session_id: str, listening_raw: int,
                 updated_at = CURRENT_TIMESTAMP
             WHERE session_id = ?
             """,
-            (listening_raw, structure_raw, reading_raw,
-             listening_extrapolated, structure_extrapolated,
-             reading_extrapolated,
-             listening_scaled, structure_scaled, reading_scaled,
-             estimated_score, session_id),
+            (
+                listening_raw,
+                structure_raw,
+                reading_raw,
+                listening_extrapolated,
+                structure_extrapolated,
+                reading_extrapolated,
+                listening_scaled,
+                structure_scaled,
+                reading_scaled,
+                estimated_score,
+                session_id,
+            ),
         )
     return True
 

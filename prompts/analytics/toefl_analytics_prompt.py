@@ -78,35 +78,27 @@ def build_toefl_analytics_prompt(sessions_data: list) -> str:
 
     avg_listening = _avg("listening_scaled")
     avg_structure = _avg("structure_scaled")
-    avg_reading   = _avg("reading_scaled")
+    avg_reading = _avg("reading_scaled")
     avg_estimated = _avg("estimated_score")
 
-    scores     = [s.get("estimated_score", 0) for s in sessions_data]
+    scores = [s.get("estimated_score", 0) for s in sessions_data]
     trend_hint = "insufficient_data"
     if len(scores) >= 3:
         if len(scores) >= 6:
             first_avg = sum(scores[:3]) / 3
-            last_avg  = sum(scores[-3:]) / 3
-            trend_hint = (
-                "improving" if last_avg >= first_avg + 10 else
-                "declining" if last_avg <= first_avg - 10 else
-                "stable"
-            )
+            last_avg = sum(scores[-3:]) / 3
+            trend_hint = "improving" if last_avg >= first_avg + 10 else "declining" if last_avg <= first_avg - 10 else "stable"
         else:
-            trend_hint = (
-                "improving" if scores[-1] >= scores[0] + 10 else
-                "declining" if scores[-1] <= scores[0] - 10 else
-                "stable"
-            )
+            trend_hint = "improving" if scores[-1] >= scores[0] + 10 else "declining" if scores[-1] <= scores[0] - 10 else "stable"
 
     section_avgs = {
         "listening": avg_listening,
         "structure": avg_structure,
-        "reading"  : avg_reading,
+        "reading": avg_reading,
     }
     weakest = min(section_avgs, key=lambda k: section_avgs[k])
 
-    modes       = [s.get("mode", "") for s in sessions_data]
+    modes = [s.get("mode", "") for s in sessions_data]
     mode_counts = {m: modes.count(m) for m in set(modes)}
 
     return f"""Analyze this student's TOEFL simulation history and generate insights.

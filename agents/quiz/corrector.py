@@ -66,10 +66,7 @@ def _get_rag_context_for_correction(topic: str) -> str:
         chunks = format_context_for_prompt(result)
         context = chunks if chunks else f"[Topic: {topic}]"
     except Exception as e:
-        logger.warning(
-            f"[quiz_corrector] RAG retrieve failed for '{topic}': {e} "
-            f"— using topic name as fallback"
-        )
+        logger.warning(f"[quiz_corrector] RAG retrieve failed for '{topic}': {e} " f"— using topic name as fallback")
         context = f"[Topic: {topic}]"
 
     _rag_cache[topic] = context
@@ -92,10 +89,7 @@ def _parse_corrector_response(raw: str) -> dict:
     required_top = {"is_correct", "is_graded", "feedback"}
     missing = required_top - set(parsed.keys())
     if missing:
-        raise ValueError(
-            f"Corrector response missing top-level fields: "
-            f"{missing}"
-        )
+        raise ValueError(f"Corrector response missing top-level fields: " f"{missing}")
 
     # Validasi 4 lapisan feedback
     feedback = parsed.get("feedback", {})
@@ -107,10 +101,7 @@ def _parse_corrector_response(raw: str) -> dict:
     # Validasi example adalah list dengan 2 item
     example = feedback.get("example", [])
     if not isinstance(example, list) or len(example) < 2:
-        raise ValueError(
-            f"'example' must be a list with 2 items, got: "
-            f"{example}"
-        )
+        raise ValueError(f"'example' must be a list with 2 items, got: " f"{example}")
 
     return parsed
 
@@ -181,10 +172,7 @@ def run_corrector(
             }
         }
     """
-    logger.info(
-        f"[quiz_corrector] Correcting topic='{topic}' "
-        f"format={format} user_answer='{user_answer}'"
-    )
+    logger.info(f"[quiz_corrector] Correcting topic='{topic}' " f"format={format} user_answer='{user_answer}'")
 
     # Retrieve RAG context untuk topik ini
     rag_context = _get_rag_context_for_correction(topic)
@@ -200,10 +188,7 @@ def run_corrector(
             rag_context=rag_context,
         )
 
-        logger.info(
-            f"[quiz_corrector] Done — is_correct= "
-            f"{result.get('is_correct')}"
-        )
+        logger.info(f"[quiz_corrector] Done — is_correct= " f"{result.get('is_correct')}")
         return result
 
     except Exception as e:
@@ -218,10 +203,7 @@ def run_corrector(
             },
             fallback_used=True,
         )
-        logger.warning(
-            f"[quiz_corrector] Failed after 3 retries for topic='{topic}' "
-            f"— marking as ungraded"
-        )
+        logger.warning(f"[quiz_corrector] Failed after 3 retries for topic='{topic}' " f"— marking as ungraded")
 
         # Sesi tetap jalan — tandai sebagai ungraded
         return {

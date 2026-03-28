@@ -72,10 +72,7 @@ def _get_rag_context(topics: list[str]) -> tuple[str, bool]:
                 all_chunks.append(f"## {topic}\n[Topic: {topic}]")
                 rag_failed = True
         except Exception as e:
-            logger.warning(
-                f"[quiz_generator] RAG retrieve failed for '{topic}': {e} "
-                f"— using topic name as fallback"
-            )
+            logger.warning(f"[quiz_generator] RAG retrieve failed for '{topic}': {e} " f"— using topic name as fallback")
             all_chunks.append(f"## {topic}\n[Topic: {topic}]")
             rag_failed = True
 
@@ -115,8 +112,7 @@ def _parse_generator_response(raw: str) -> dict:
         raise ValueError("'questions' list is empty")
 
     # Validasi field wajib setiap soal
-    required = {"topic", "format", "difficulty", "question_text",
-                "options", "correct_answer"}
+    required = {"topic", "format", "difficulty", "question_text", "options", "correct_answer"}
     for i, q in enumerate(parsed["questions"]):
         missing = required - set(q.keys())
         if missing:
@@ -136,7 +132,7 @@ def _call_generator_llm(planner_output: dict, rag_context: str) -> dict:
     client = _get_client()
     response = client.messages.create(
         model=SONNET_MODEL,
-        max_tokens=4096,   # Sonnet, soal grammar butuh token lebih banyak
+        max_tokens=4096,  # Sonnet, soal grammar butuh token lebih banyak
         system=QUIZ_GENERATOR_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_prompt}],
     )
@@ -166,27 +162,18 @@ def run_generator(planner_output: dict) -> dict:
     topics = planner_output.get("topics", [])
     total = planner_output.get("total_questions", 10)
 
-    logger.info(
-        f"[quiz_generator] Generating {total} questions "
-        f"for topics={topics}"
-    )
+    logger.info(f"[quiz_generator] Generating {total} questions " f"for topics={topics}")
 
     # Step 1: Retrieve RAG context
     rag_context, is_fallback = _get_rag_context(topics)
 
     if is_fallback:
-        logger.warning(
-            "[quiz_generator] Using fallback context "
-            "(topic names only, no KB material)"
-        )
+        logger.warning("[quiz_generator] Using fallback context " "(topic names only, no KB material)")
 
     # Step 2: Call LLM
     try:
         result = _call_generator_llm(planner_output, rag_context)
-        logger.info(
-            f"[quiz_generator] Generated {len(result.get('questions', []))} questions"
-            f"{' (with RAG fallback)' if is_fallback else ''}"
-        )
+        logger.info(f"[quiz_generator] Generated {len(result.get('questions', []))} questions" f"{' (with RAG fallback)' if is_fallback else ''}")
         return result
 
     except Exception as e:
@@ -201,6 +188,4 @@ def run_generator(planner_output: dict) -> dict:
             },
             fallback_used=False,
         )
-        raise RuntimeError(
-            f"Quiz Generator gagal setelah 3x retry: {e}"
-        ) from e
+        raise RuntimeError(f"Quiz Generator gagal setelah 3x retry: {e}") from e

@@ -133,16 +133,15 @@ def run_evaluator(
     logger.info(f"[toefl_evaluator] Evaluating session={session_id} mode={mode}")
 
     # ── Cek apakah ada konten yang di-adjust oleh Validator ──────────────
-    content_adjusted = any([
-        listening_content.get("is_adjusted", False),
-        structure_content.get("is_adjusted", False),
-        reading_content.get("is_adjusted", False),
-    ])
+    content_adjusted = any(
+        [
+            listening_content.get("is_adjusted", False),
+            structure_content.get("is_adjusted", False),
+            reading_content.get("is_adjusted", False),
+        ]
+    )
     if content_adjusted:
-        logger.warning(
-            "[toefl_evaluator] One or more sections contain adjusted content — "
-            "score reliability may be reduced"
-        )
+        logger.warning("[toefl_evaluator] One or more sections contain adjusted content — " "score reliability may be reduced")
 
     # ── Bangun kunci jawaban dari konten generator ────────────────────────
     listening_key = _build_answer_key(listening_content, "listening")
@@ -161,7 +160,7 @@ def run_evaluator(
     # ── Total soal di mode ini (untuk extrapolasi) ────────────────────────
     l_total = listening_content.get("total_questions", 0)
     s_total = structure_content.get("total_questions", 0)
-    r_total = reading_content.get("total_questions",   0)
+    r_total = reading_content.get("total_questions", 0)
 
     # Full-test totals (dari score_conversion di planner)
     score_conv = planner_output.get("score_conversion", {})
@@ -171,10 +170,7 @@ def run_evaluator(
 
     total_answered = len(l_answers) + len(s_answers) + len(r_answers)
 
-    logger.info(
-        f"[toefl_evaluator] Raw scores — "
-        f"L:{l_raw}/{l_total} S:{s_raw}/{s_total} R:{r_raw}/{r_total}"
-    )
+    logger.info(f"[toefl_evaluator] Raw scores — " f"L:{l_raw}/{l_total} S:{s_raw}/{s_total} R:{r_raw}/{r_total}")
 
     # ── Konversi skor ─────────────────────────────────────────────────────
     try:
@@ -204,9 +200,7 @@ def run_evaluator(
             },
             fallback_used=True,
         )
-        logger.error(
-            f"[toefl_evaluator] Score conversion failed: {e} — saving raw scores only"
-        )
+        logger.error(f"[toefl_evaluator] Score conversion failed: {e} — saving raw scores only")
         # Fallback: simpan raw saja tanpa konversi
         score_result = {
             "listening_raw": l_raw,

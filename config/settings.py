@@ -35,11 +35,11 @@ VOCAB_DEFAULT_FORMAT_DISTRIBUTION = {
 # ===================================================
 # Kata dengan mastery_score di bawah threshold ini
 # diprioritaskan sebagai review words
-MASTERY_THRESHOLD = 0.6          # 60%
+MASTERY_THRESHOLD = 0.6  # 60%
 
 # Difficulty progression thresholds
-DIFFICULTY_UPGRADE_THRESHOLD = 80.0   # Naik level jika avg mastery >= 80%
-DIFFICULTY_DOWNGRADE_THRESHOLD = 40.0 # Turun level jika avg mastery < 40%
+DIFFICULTY_UPGRADE_THRESHOLD = 80.0  # Naik level jika avg mastery >= 80%
+DIFFICULTY_DOWNGRADE_THRESHOLD = 40.0  # Turun level jika avg mastery < 40%
 
 # ===================================================
 # Analytics
@@ -50,21 +50,21 @@ MIN_SESSIONS_FOR_ANALYTICS = 3
 # ===================================================
 # Validator
 # ===================================================
-VALIDATOR_MATCH_THRESHOLD = 0.8   # match_score >= 0.8 dianggap valid
+VALIDATOR_MATCH_THRESHOLD = 0.8  # match_score >= 0.8 dianggap valid
 VALIDATOR_MAX_RETRY = 3
 
 # ===================================================
 # Retry & Timeout
 # ===================================================
 LLM_MAX_RETRY = 3
-LLM_RETRY_MIN_WAIT = 2    # seconds
-LLM_RETRY_MAX_WAIT = 8    # seconds
+LLM_RETRY_MIN_WAIT = 2  # seconds
+LLM_RETRY_MAX_WAIT = 8  # seconds
 
 # ===================================================
 # Session
 # ===================================================
 VALID_MODES = {"vocab", "quiz", "speaking", "toefl"}
-SESSION_EXPIRY_HOURS = 24   # Sesi expired setelah 24 jam tidak aktif
+SESSION_EXPIRY_HOURS = 24  # Sesi expired setelah 24 jam tidak aktif
 
 # ===================================================
 # ChromaDB / RAG

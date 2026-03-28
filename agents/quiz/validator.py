@@ -152,39 +152,27 @@ def run_validator(
     last_validation = None
 
     for attempt in range(MAX_REGENERATE_ATTEMPTS):
-        logger.info(
-            f"[quiz_validator] Validation attempt "
-            f"{attempt + 1}/{MAX_REGENERATE_ATTEMPTS}"
-        )
+        logger.info(f"[quiz_validator] Validation attempt " f"{attempt + 1}/{MAX_REGENERATE_ATTEMPTS}")
 
         try:
-            validation = _call_validator_llm(
-                planner_output, current_generator_output
-            )
+            validation = _call_validator_llm(planner_output, current_generator_output)
             last_validation = validation
 
             score = validation.get("match_score", 0)
 
             if score >= 0.8:
                 # ✅ Valid
-                logger.info(
-                    f"[quiz_validator] Valid — match_score={score}"
-                )
+                logger.info(f"[quiz_validator] Valid — match_score={score}")
                 return {
                     "is_valid": True,
                     "match_score": score,
                     "issues": validation.get("issues", []),
-                    "final_questions": current_generator_output.get(
-                        "questions", []
-                    ),
+                    "final_questions": current_generator_output.get("questions", []),
                     "is_adjusted": False,
                 }
 
             # ❌ Tidak valid — log dan coba regenerate
-            logger.warning(
-                f"[quiz_validator] Invalid (score={score}) "
-                f"— issues: {validation.get('issues', [])}"
-            )
+            logger.warning(f"[quiz_validator] Invalid (score={score}) " f"— issues: {validation.get('issues', [])}")
 
             if attempt < MAX_REGENERATE_ATTEMPTS - 1:
                 logger.info("[quiz_validator] Triggering regeneration...")
@@ -204,9 +192,7 @@ def run_validator(
                 break
 
     # ⚠️ Semua attempt habis → adjust paksa + flag
-    logger.warning(
-        "[quiz_validator] All attempts failed — forcing adjustment"
-    )
+    logger.warning("[quiz_validator] All attempts failed — forcing adjustment")
 
     validator_unavailable = last_validation is None
 
@@ -214,9 +200,7 @@ def run_validator(
     if last_validation:
         adjusted_questions = last_validation.get("adjusted_questions", [])
 
-    final_output = _apply_adjusted_questions(
-        current_generator_output, adjusted_questions, planner_output
-    )
+    final_output = _apply_adjusted_questions(current_generator_output, adjusted_questions, planner_output)
 
     log_error(
         error_type="validator_unavailable" if validator_unavailable else "validation_failed",

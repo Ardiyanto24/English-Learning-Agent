@@ -38,8 +38,12 @@ load_dotenv()
 
 # Tipe soal wajib per passage
 REQUIRED_QUESTION_TYPES = {
-    "main_idea", "factual", "negative_factual",
-    "inference", "vocabulary_in_context", "pronoun_reference",
+    "main_idea",
+    "factual",
+    "negative_factual",
+    "inference",
+    "vocabulary_in_context",
+    "pronoun_reference",
 }
 
 _client: Optional[anthropic.Anthropic] = None
@@ -57,7 +61,7 @@ def _parse_passage_response(raw: str) -> dict:
     text = raw.strip()
     if text.startswith("```"):
         parts = text.split("```")
-        text  = parts[1] if len(parts) > 1 else text
+        text = parts[1] if len(parts) > 1 else text
         if text.startswith("json"):
             text = text[4:]
     text = text.strip()
@@ -71,9 +75,7 @@ def _parse_passage_response(raw: str) -> dict:
 
     word_count = len(parsed["passage"].split())
     if word_count < 400:
-        raise ValueError(
-            f"Passage too short: {word_count} words (minimum 400, target 400-450)"
-        )
+        raise ValueError(f"Passage too short: {word_count} words (minimum 400, target 400-450)")
 
     # Simpan word count aktual
     parsed["word_count"] = word_count
@@ -85,12 +87,12 @@ def _parse_questions_response(raw: str, expected_count: int) -> list[dict]:
     text = raw.strip()
     if text.startswith("```"):
         parts = text.split("```")
-        text  = parts[1] if len(parts) > 1 else text
+        text = parts[1] if len(parts) > 1 else text
         if text.startswith("json"):
             text = text[4:]
     text = text.strip()
 
-    parsed    = json.loads(text)
+    parsed = json.loads(text)
     questions = parsed.get("questions", [])
 
     if not questions:
@@ -104,9 +106,7 @@ def _parse_questions_response(raw: str, expected_count: int) -> list[dict]:
     present_types = {q.get("question_type") for q in questions}
     missing_types = REQUIRED_QUESTION_TYPES - present_types
     if missing_types:
-        raise ValueError(
-            f"Missing required question types after truncation: {missing_types}"
-        )
+        raise ValueError(f"Missing required question types after truncation: {missing_types}")
 
     # Validasi field per soal
     required = {"question_text", "options", "correct_answer", "question_type"}
@@ -115,9 +115,7 @@ def _parse_questions_response(raw: str, expected_count: int) -> list[dict]:
         if missing:
             raise ValueError(f"Question {i} missing fields: {missing}")
         if q.get("correct_answer") not in ("A", "B", "C", "D"):
-            raise ValueError(
-                f"Question {i} invalid correct_answer: {q.get('correct_answer')}"
-            )
+            raise ValueError(f"Question {i} invalid correct_answer: {q.get('correct_answer')}")
 
     return questions
 
@@ -127,21 +125,21 @@ def _parse_questions_response(raw: str, expected_count: int) -> list[dict]:
 def _generate_passage(
     passage_number: int,
     total_passages: int,
-    used_domains:   list[str],
+    used_domains: list[str],
 ) -> dict:
     """Panggil LLM untuk generate satu passage."""
     user_prompt = build_passage_prompt(
-        passage_number = passage_number,
-        total_passages = total_passages,
-        used_domains   = used_domains,
+        passage_number=passage_number,
+        total_passages=total_passages,
+        used_domains=used_domains,
     )
 
     client = _get_client()
     response = client.messages.create(
-        model      = SONNET_MODEL,
-        max_tokens = 1024,
-        system     = READING_PASSAGE_SYSTEM_PROMPT,
-        messages   = [{"role": "user", "content": user_prompt}],
+        model=SONNET_MODEL,
+        max_tokens=1024,
+        system=READING_PASSAGE_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_prompt}],
     )
 
     return _parse_passage_response(response.content[0].text)
@@ -150,28 +148,26 @@ def _generate_passage(
 # ── Step 2: Generate Questions ────────────────────────────────────────────────
 @retry_llm
 def _generate_questions(
-    passage_title:        str,
-    passage_text:         str,
+    passage_title: str,
+    passage_text: str,
     questions_per_passage: int,
 ) -> list[dict]:
     """Panggil LLM untuk generate soal dari passage yang sudah ada."""
     user_prompt = build_questions_prompt(
-        passage_title         = passage_title,
-        passage_text          = passage_text,
-        questions_per_passage = questions_per_passage,
+        passage_title=passage_title,
+        passage_text=passage_text,
+        questions_per_passage=questions_per_passage,
     )
 
     client = _get_client()
     response = client.messages.create(
-        model      = SONNET_MODEL,
-        max_tokens = 2048,
-        system     = READING_QUESTIONS_SYSTEM_PROMPT,
-        messages   = [{"role": "user", "content": user_prompt}],
+        model=SONNET_MODEL,
+        max_tokens=2048,
+        system=READING_QUESTIONS_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_prompt}],
     )
 
-    return _parse_questions_response(
-        response.content[0].text, questions_per_passage
-    )
+    return _parse_questions_response(response.content[0].text, questions_per_passage)
 
 
 # ── Main: run_generator ───────────────────────────────────────────────────────
@@ -206,105 +202,84 @@ def run_generator(reading_dist: dict) -> dict:
     Raises:
         RuntimeError jika semua passage gagal di-generate
     """
-    passage_count        = reading_dist.get("passages", 5)
+    passage_count = reading_dist.get("passages", 5)
     questions_per_passage = reading_dist.get("per_passage", 10)
 
-    logger.info(
-        f"[reading_generator] Generating {passage_count} passages × "
-        f"{questions_per_passage} questions each"
-    )
+    logger.info(f"[reading_generator] Generating {passage_count} passages × " f"{questions_per_passage} questions each")
 
-    passages     = []
+    passages = []
     used_domains: list[str] = []
-    total_q      = 0
+    total_q = 0
 
     for p_num in range(1, passage_count + 1):
-        logger.info(
-            f"[reading_generator] Passage {p_num}/{passage_count} — Step 1: passage"
-        )
+        logger.info(f"[reading_generator] Passage {p_num}/{passage_count} — Step 1: passage")
 
         # ── Step 1: Generate passage ──────────────────────────────────────
         try:
             passage_data = _generate_passage(
-                passage_number = p_num,
-                total_passages = passage_count,
-                used_domains   = used_domains,
+                passage_number=p_num,
+                total_passages=passage_count,
+                used_domains=used_domains,
             )
         except Exception as e:
             log_error(
-                error_type    = "llm_timeout",
-                agent_name    = "reading_generator",
-                context       = {"passage_num": p_num, "step": 1, "error": str(e)},
-                fallback_used = False,
+                error_type="llm_timeout",
+                agent_name="reading_generator",
+                context={"passage_num": p_num, "step": 1, "error": str(e)},
+                fallback_used=False,
             )
-            logger.error(
-                f"[reading_generator] Passage {p_num} Step 1 failed — skipping"
-            )
+            logger.error(f"[reading_generator] Passage {p_num} Step 1 failed — skipping")
             continue  # Skip passage ini, coba yang berikutnya
 
         domain = passage_data.get("topic_domain", "")
         if domain:
             used_domains.append(domain)
 
-        logger.info(
-            f"[reading_generator] Passage {p_num} Step 1 done — "
-            f"'{passage_data.get('title')}' ({passage_data.get('word_count')} words)"
-        )
+        logger.info(f"[reading_generator] Passage {p_num} Step 1 done — " f"'{passage_data.get('title')}' ({passage_data.get('word_count')} words)")
 
         # ── Step 2: Generate questions ────────────────────────────────────
-        logger.info(
-            f"[reading_generator] Passage {p_num}/{passage_count} — Step 2: questions"
-        )
+        logger.info(f"[reading_generator] Passage {p_num}/{passage_count} — Step 2: questions")
         try:
             questions = _generate_questions(
-                passage_title         = passage_data["title"],
-                passage_text          = passage_data["passage"],
-                questions_per_passage = questions_per_passage,
+                passage_title=passage_data["title"],
+                passage_text=passage_data["passage"],
+                questions_per_passage=questions_per_passage,
             )
         except Exception as e:
             log_error(
-                error_type    = "llm_timeout",
-                agent_name    = "reading_generator",
-                context       = {"passage_num": p_num, "step": 2, "error": str(e)},
-                fallback_used = False,
+                error_type="llm_timeout",
+                agent_name="reading_generator",
+                context={"passage_num": p_num, "step": 2, "error": str(e)},
+                fallback_used=False,
             )
-            logger.error(
-                f"[reading_generator] Passage {p_num} Step 2 failed — skipping"
-            )
+            logger.error(f"[reading_generator] Passage {p_num} Step 2 failed — skipping")
             continue
 
         domain = passage_data.get("topic_domain", "")
         if domain:
             used_domains.append(domain)
-        
-        
-        passages.append({
-            "passage_id":   p_num,
-            "title":        passage_data["title"],
-            "topic_domain": passage_data.get("topic_domain", ""),
-            "passage_text": passage_data["passage"],
-            "word_count":   passage_data.get("word_count", 0),
-            "questions":    questions,
-        })
+
+        passages.append(
+            {
+                "passage_id": p_num,
+                "title": passage_data["title"],
+                "topic_domain": passage_data.get("topic_domain", ""),
+                "passage_text": passage_data["passage"],
+                "word_count": passage_data.get("word_count", 0),
+                "questions": questions,
+            }
+        )
         total_q += len(questions)
 
-        logger.info(
-            f"[reading_generator] Passage {p_num} complete — "
-            f"{len(questions)} questions"
-        )
+        logger.info(f"[reading_generator] Passage {p_num} complete — " f"{len(questions)} questions")
 
     if not passages:
-        raise RuntimeError(
-            "Reading Generator gagal: tidak ada passage yang berhasil di-generate"
-        )
+        raise RuntimeError("Reading Generator gagal: tidak ada passage yang berhasil di-generate")
 
-    logger.info(
-        f"[reading_generator] Done — "
-        f"{len(passages)}/{passage_count} passages, {total_q} total questions"
-    )
+    logger.info(f"[reading_generator] Done — " f"{len(passages)}/{passage_count} passages, {total_q} total questions")
 
     return {
-        "passages":           passages,
-        "total_questions":    total_q,
+        "passages": passages,
+        "total_questions": total_q,
         "passages_generated": len(passages),
     }

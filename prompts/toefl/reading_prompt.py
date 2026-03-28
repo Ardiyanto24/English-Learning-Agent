@@ -109,10 +109,7 @@ def build_passage_prompt(
     """
     avoid_section = ""
     if used_domains:
-        avoid_section = (
-            f"\nAvoid these domains already used: "
-            f"{', '.join(used_domains)}"
-        )
+        avoid_section = f"\nAvoid these domains already used: " f"{', '.join(used_domains)}"
 
     return f"""Generate academic reading passage #{passage_number} of {total_passages}.
 
@@ -143,10 +140,7 @@ def build_questions_prompt(
     extra_q = max(0, questions_per_passage - 6)
     extra_section = ""
     if extra_q > 0:
-        extra_section = (
-            f"\nAfter the 6 required types, add {extra_q} more question(s) "
-            f"of any type (prefer factual or inference)."
-        )
+        extra_section = f"\nAfter the 6 required types, add {extra_q} more question(s) " f"of any type (prefer factual or inference)."
 
     return f"""Generate reading comprehension questions for this passage.
 

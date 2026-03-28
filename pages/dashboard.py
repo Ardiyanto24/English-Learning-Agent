@@ -40,25 +40,44 @@ from database.connection import get_db
 # Konstanta
 # ===================================================
 VOCAB_TOPICS = [
-    "sehari_hari", "perkenalan", "keluarga", "pekerjaan", "pendidikan",
-    "kesehatan", "teknologi", "lingkungan", "budaya", "perjalanan",
-    "makanan", "olahraga", "ekonomi", "politik", "seni",
+    "sehari_hari",
+    "perkenalan",
+    "keluarga",
+    "pekerjaan",
+    "pendidikan",
+    "kesehatan",
+    "teknologi",
+    "lingkungan",
+    "budaya",
+    "perjalanan",
+    "makanan",
+    "olahraga",
+    "ekonomi",
+    "politik",
+    "seni",
 ]
 VOCAB_TOPIC_LABELS = {
-    "sehari_hari": "Kehidupan Sehari-hari", "perkenalan": "Perkenalan",
-    "keluarga": "Keluarga",                 "pekerjaan": "Pekerjaan & Karir",
-    "pendidikan": "Pendidikan",             "kesehatan": "Kesehatan",
-    "teknologi": "Teknologi",               "lingkungan": "Lingkungan Hidup",
-    "budaya": "Budaya & Tradisi",           "perjalanan": "Perjalanan",
-    "makanan": "Makanan & Kuliner",         "olahraga": "Olahraga",
-    "ekonomi": "Ekonomi & Bisnis",          "politik": "Politik & Sosial",
+    "sehari_hari": "Kehidupan Sehari-hari",
+    "perkenalan": "Perkenalan",
+    "keluarga": "Keluarga",
+    "pekerjaan": "Pekerjaan & Karir",
+    "pendidikan": "Pendidikan",
+    "kesehatan": "Kesehatan",
+    "teknologi": "Teknologi",
+    "lingkungan": "Lingkungan Hidup",
+    "budaya": "Budaya & Tradisi",
+    "perjalanan": "Perjalanan",
+    "makanan": "Makanan & Kuliner",
+    "olahraga": "Olahraga",
+    "ekonomi": "Ekonomi & Bisnis",
+    "politik": "Politik & Sosial",
     "seni": "Seni & Hiburan",
 }
-GRAMMAR_LEVELS      = ["Pemula", "Intermediate", "Advanced"]
+GRAMMAR_LEVELS = ["Pemula", "Intermediate", "Advanced"]
 GRAMMAR_LEVEL_HINTS = {
-    "Pemula"      : "Baru mulai belajar grammar bahasa Inggris",
+    "Pemula": "Baru mulai belajar grammar bahasa Inggris",
     "Intermediate": "Sudah paham dasar, ingin tingkatkan ke level lebih tinggi",
-    "Advanced"    : "Sudah kuat di grammar, fokus ke soal TOEFL level tinggi",
+    "Advanced": "Sudah kuat di grammar, fokus ke soal TOEFL level tinggi",
 }
 TOTAL_GRAMMAR_TOPICS = 46
 
@@ -69,8 +88,10 @@ TOTAL_GRAMMAR_TOPICS = 46
 def _get(key, default=None):
     return st.session_state.get(f"db_{key}", default)
 
+
 def _set(key, value):
     st.session_state[f"db_{key}"] = value
+
 
 def _reset_onboarding():
     keys = [k for k in st.session_state if k.startswith("db_ob_")]
@@ -87,10 +108,10 @@ def _query_layer1() -> dict:
     Semua query ringan dari tabel sessions + toefl_sessions + quiz_topic_tracking.
     """
     data = {
-        "streak"          : 0,
-        "last_session"    : None,   # dict: mode, completed_at, score
-        "latest_toefl"    : None,   # int estimated_score
-        "grammar_coverage": 0.0,    # float persen
+        "streak": 0,
+        "last_session": None,  # dict: mode, completed_at, score
+        "latest_toefl": None,  # int estimated_score
+        "grammar_coverage": 0.0,  # float persen
         "topics_practiced": 0,
     }
 
@@ -98,85 +119,71 @@ def _query_layer1() -> dict:
         with get_db() as conn:
 
             # --- Streak: hitung hari berturut-turut ada completed session ---
-            rows = conn.execute(
-                """
+            rows = conn.execute("""
                 SELECT DATE(completed_at) as day
                 FROM sessions
                 WHERE status = 'completed' AND completed_at IS NOT NULL
                 GROUP BY DATE(completed_at)
                 ORDER BY day DESC
-                """
-            ).fetchall()
+                """).fetchall()
 
             streak = 0
             if rows:
-                today      = datetime.now().date()
+                today = datetime.now().date()
                 check_date = today
                 for row in rows:
                     row_date = datetime.strptime(row["day"], "%Y-%m-%d").date()
                     # Toleransi: hari ini atau kemarin (untuk user yang baru buka)
-                    if row_date == check_date or (
-                        streak == 0 and row_date == today - timedelta(days=1)
-                    ):
-                        streak     += 1
-                        check_date  = row_date - timedelta(days=1)
+                    if row_date == check_date or (streak == 0 and row_date == today - timedelta(days=1)):
+                        streak += 1
+                        check_date = row_date - timedelta(days=1)
                     else:
                         break
             data["streak"] = streak
 
             # --- Last session ---
-            last = conn.execute(
-                """
+            last = conn.execute("""
                 SELECT mode, completed_at, status
                 FROM sessions
                 WHERE status = 'completed'
                 ORDER BY completed_at DESC
                 LIMIT 1
-                """
-            ).fetchone()
+                """).fetchone()
             if last:
                 last_dict = dict(last)
                 # Ambil skor dari tabel mode yang sesuai
                 mode = last_dict.get("mode")
                 score = None
                 if mode == "vocab":
-                    row = conn.execute(
-                        """SELECT score_pct FROM vocab_sessions
+                    row = conn.execute("""SELECT score_pct FROM vocab_sessions
                            WHERE session_id IN (
                                SELECT session_id FROM sessions
                                WHERE status='completed' ORDER BY completed_at DESC LIMIT 1
-                           )"""
-                    ).fetchone()
+                           )""").fetchone()
                     if row:
                         score = f"{row['score_pct']:.0f}%"
                 elif mode == "quiz":
-                    row = conn.execute(
-                        """SELECT score_pct FROM quiz_sessions
+                    row = conn.execute("""SELECT score_pct FROM quiz_sessions
                            WHERE session_id IN (
                                SELECT session_id FROM sessions
                                WHERE status='completed' ORDER BY completed_at DESC LIMIT 1
-                           )"""
-                    ).fetchone()
+                           )""").fetchone()
                     if row:
                         score = f"{row['score_pct']:.0f}%"
                 elif mode == "speaking":
-                    row = conn.execute(
-                        """SELECT final_score FROM speaking_sessions
+                    row = conn.execute("""SELECT final_score FROM speaking_sessions
                            WHERE session_id IN (
                                SELECT session_id FROM sessions
                                WHERE status='completed' ORDER BY completed_at DESC LIMIT 1
-                           )"""
-                    ).fetchone()
+                           )""").fetchone()
                     if row and row["final_score"]:
                         score = f"{row['final_score']:.0f}/100"
                 elif mode == "toefl":
-                    row = conn.execute(
-                        """SELECT estimated_score FROM toefl_sessions
+                    row = conn.execute("""SELECT estimated_score FROM toefl_sessions
                            WHERE session_id IN (
                                SELECT session_id FROM sessions
                                WHERE status='completed' ORDER BY completed_at DESC LIMIT 1
-                           )"""
-                    ).fetchone()
+                           )""").fetchone()
                     if row and row["estimated_score"]:
                         score = str(row["estimated_score"])
 
@@ -189,41 +196,36 @@ def _query_layer1() -> dict:
                     time_str = completed_at[:16] if completed_at else "—"
 
                 data["last_session"] = {
-                    "mode"        : mode,
+                    "mode": mode,
                     "completed_at": time_str,
-                    "score"       : score,
+                    "score": score,
                 }
 
             # --- Latest TOEFL estimated score ---
-            toefl_row = conn.execute(
-                """
+            toefl_row = conn.execute("""
                 SELECT ts.estimated_score
                 FROM toefl_sessions ts
                 JOIN sessions s ON ts.session_id = s.session_id
                 WHERE s.status = 'completed' AND ts.score_status = 'completed'
                 ORDER BY s.completed_at DESC
                 LIMIT 1
-                """
-            ).fetchone()
+                """).fetchone()
             if toefl_row:
                 data["latest_toefl"] = toefl_row["estimated_score"]
 
             # --- Grammar coverage ---
-            cov_row = conn.execute(
-                """
+            cov_row = conn.execute("""
                 SELECT COUNT(*) as practiced
                 FROM quiz_topic_tracking
                 WHERE total_sessions > 0
-                """
-            ).fetchone()
+                """).fetchone()
             practiced = cov_row["practiced"] if cov_row else 0
             data["topics_practiced"] = practiced
-            data["grammar_coverage"] = round(
-                (practiced / TOTAL_GRAMMAR_TOPICS) * 100, 1
-            )
+            data["grammar_coverage"] = round((practiced / TOTAL_GRAMMAR_TOPICS) * 100, 1)
 
     except Exception as e:
         import traceback
+
         st.caption(f"⚠️ Gagal load Layer 1: {e}")
 
     return data
@@ -235,65 +237,52 @@ def _query_layer1() -> dict:
 def _query_layer2() -> dict:
     """Query data ringkas per mode untuk Layer 2."""
     data = {
-        "vocab"   : None,
-        "quiz"    : None,
+        "vocab": None,
+        "quiz": None,
         "speaking": None,
-        "toefl"   : None,
+        "toefl": None,
     }
 
     try:
         with get_db() as conn:
 
             # --- Vocab ---
-            mastered_row = conn.execute(
-                "SELECT COUNT(*) as cnt FROM vocab_word_tracking WHERE mastery_score >= 80"
-            ).fetchone()
-            weak_rows = conn.execute(
-                """SELECT word, topic, mastery_score
+            mastered_row = conn.execute("SELECT COUNT(*) as cnt FROM vocab_word_tracking WHERE mastery_score >= 80").fetchone()
+            weak_rows = conn.execute("""SELECT word, topic, mastery_score
                    FROM vocab_word_tracking
                    WHERE mastery_score < 60
                    ORDER BY mastery_score ASC
-                   LIMIT 5"""
-            ).fetchall()
-            total_words = conn.execute(
-                "SELECT COUNT(*) as cnt FROM vocab_word_tracking"
-            ).fetchone()
+                   LIMIT 5""").fetchall()
+            total_words = conn.execute("SELECT COUNT(*) as cnt FROM vocab_word_tracking").fetchone()
 
             data["vocab"] = {
                 "total_tracked": total_words["cnt"] if total_words else 0,
-                "mastered"     : mastered_row["cnt"] if mastered_row else 0,
-                "weak_words"   : [dict(r) for r in weak_rows],
+                "mastered": mastered_row["cnt"] if mastered_row else 0,
+                "weak_words": [dict(r) for r in weak_rows],
             }
 
             # --- Quiz ---
-            strongest = conn.execute(
-                """SELECT topic, avg_score_pct, cluster
+            strongest = conn.execute("""SELECT topic, avg_score_pct, cluster
                    FROM quiz_topic_tracking
                    WHERE total_sessions > 0
                    ORDER BY avg_score_pct DESC
-                   LIMIT 3"""
-            ).fetchall()
-            weakest = conn.execute(
-                """SELECT topic, avg_score_pct, cluster
+                   LIMIT 3""").fetchall()
+            weakest = conn.execute("""SELECT topic, avg_score_pct, cluster
                    FROM quiz_topic_tracking
                    WHERE total_sessions > 0
                    ORDER BY avg_score_pct ASC
-                   LIMIT 3"""
-            ).fetchall()
-            total_quiz_sessions = conn.execute(
-                """SELECT COUNT(*) as cnt FROM sessions
-                   WHERE mode='quiz' AND status='completed'"""
-            ).fetchone()
+                   LIMIT 3""").fetchall()
+            total_quiz_sessions = conn.execute("""SELECT COUNT(*) as cnt FROM sessions
+                   WHERE mode='quiz' AND status='completed'""").fetchone()
 
             data["quiz"] = {
                 "total_sessions": total_quiz_sessions["cnt"] if total_quiz_sessions else 0,
-                "strongest"     : [dict(r) for r in strongest],
-                "weakest"       : [dict(r) for r in weakest],
+                "strongest": [dict(r) for r in strongest],
+                "weakest": [dict(r) for r in weakest],
             }
 
             # --- Speaking: rata-rata 3 sesi terakhir per sub-mode ---
-            speaking_rows = conn.execute(
-                """
+            speaking_rows = conn.execute("""
                 SELECT ss.sub_mode,
                        AVG(ss.grammar_score)   as avg_grammar,
                        AVG(ss.relevance_score) as avg_relevance,
@@ -309,21 +298,17 @@ def _query_layer2() -> dict:
                       LIMIT 9
                   )
                 GROUP BY ss.sub_mode
-                """
-            ).fetchall()
-            total_speaking = conn.execute(
-                """SELECT COUNT(*) as cnt FROM sessions
-                   WHERE mode='speaking' AND status='completed'"""
-            ).fetchone()
+                """).fetchall()
+            total_speaking = conn.execute("""SELECT COUNT(*) as cnt FROM sessions
+                   WHERE mode='speaking' AND status='completed'""").fetchone()
 
             data["speaking"] = {
                 "total_sessions": total_speaking["cnt"] if total_speaking else 0,
-                "by_mode"       : [dict(r) for r in speaking_rows],
+                "by_mode": [dict(r) for r in speaking_rows],
             }
 
             # --- TOEFL: 5 simulasi terakhir ---
-            toefl_rows = conn.execute(
-                """
+            toefl_rows = conn.execute("""
                 SELECT ts.mode, ts.estimated_score,
                        ts.listening_scaled, ts.structure_scaled, ts.reading_scaled,
                        s.completed_at
@@ -332,16 +317,13 @@ def _query_layer2() -> dict:
                 WHERE s.status = 'completed' AND ts.score_status = 'completed'
                 ORDER BY s.completed_at DESC
                 LIMIT 5
-                """
-            ).fetchall()
-            total_toefl = conn.execute(
-                """SELECT COUNT(*) as cnt FROM sessions
-                   WHERE mode='toefl' AND status='completed'"""
-            ).fetchone()
+                """).fetchall()
+            total_toefl = conn.execute("""SELECT COUNT(*) as cnt FROM sessions
+                   WHERE mode='toefl' AND status='completed'""").fetchone()
 
             data["toefl"] = {
                 "total_sessions": total_toefl["cnt"] if total_toefl else 0,
-                "recent"        : list(reversed([dict(r) for r in toefl_rows])),
+                "recent": list(reversed([dict(r) for r in toefl_rows])),
             }
 
     except Exception as e:
@@ -369,15 +351,13 @@ def _render_layer1(d: dict, target_toefl: Optional[int]):
     with col2:
         latest = d.get("latest_toefl")
         if latest and target_toefl:
-            gap   = target_toefl - latest
+            gap = target_toefl - latest
             delta = f"-{gap} dari target" if gap > 0 else "✅ Target tercapai!"
-            st.metric("📊 Estimasi TOEFL", str(latest), delta=delta,
-                      delta_color="inverse" if gap > 0 else "normal")
+            st.metric("📊 Estimasi TOEFL", str(latest), delta=delta, delta_color="inverse" if gap > 0 else "normal")
         elif latest:
             st.metric("📊 Estimasi TOEFL", str(latest))
         else:
-            st.metric("📊 Estimasi TOEFL", "—",
-                      help="Belum ada simulasi TOEFL")
+            st.metric("📊 Estimasi TOEFL", "—", help="Belum ada simulasi TOEFL")
 
     with col3:
         coverage = d.get("grammar_coverage", 0.0)
@@ -410,37 +390,26 @@ def _render_layer2(d: dict):
     st.markdown("---")
     st.markdown("### 🗂️ Ringkasan Per Mode")
 
-    tab_vocab, tab_quiz, tab_speaking, tab_toefl = st.tabs(
-        ["📚 Vocab", "📝 Quiz", "🎤 Speaking", "📊 TOEFL"]
-    )
+    tab_vocab, tab_quiz, tab_speaking, tab_toefl = st.tabs(["📚 Vocab", "📝 Quiz", "🎤 Speaking", "📊 TOEFL"])
 
     # ---- Vocab tab ----
     with tab_vocab:
         vocab = d.get("vocab", {}) or {}
         total = vocab.get("total_tracked", 0)
         if total == 0:
-            st.info(
-                "Belum ada data Vocab.\n\n"
-                "Setelah sesi pertama selesai, kamu akan melihat:\n"
-                "- Jumlah kata yang sudah dikuasai (mastery ≥ 80%)\n"
-                "- Daftar kata lemah yang perlu di-review"
-            )
+            st.info("Belum ada data Vocab.\n\n" "Setelah sesi pertama selesai, kamu akan melihat:\n" "- Jumlah kata yang sudah dikuasai (mastery ≥ 80%)\n" "- Daftar kata lemah yang perlu di-review")
         else:
             mastered = vocab.get("mastered", 0)
             col1, col2 = st.columns(2)
             col1.metric("Kata Terlacak", total)
-            col2.metric("Dikuasai (≥80%)", mastered,
-                        help="Mastery score ≥ 80% dianggap dikuasai")
+            col2.metric("Dikuasai (≥80%)", mastered, help="Mastery score ≥ 80% dianggap dikuasai")
 
             weak = vocab.get("weak_words", [])
             if weak:
                 st.markdown("**5 Kata Paling Lemah:**")
                 for w in weak:
                     score = w.get("mastery_score", 0)
-                    st.markdown(
-                        f"- `{w['word']}` — mastery **{score:.0f}%** "
-                        f"*(topik: {w.get('topic', '—')})*"
-                    )
+                    st.markdown(f"- `{w['word']}` — mastery **{score:.0f}%** " f"*(topik: {w.get('topic', '—')})*")
             else:
                 st.success("Tidak ada kata dengan mastery di bawah 60%! 🎉")
 
@@ -449,12 +418,7 @@ def _render_layer2(d: dict):
         quiz = d.get("quiz", {}) or {}
         total = quiz.get("total_sessions", 0)
         if total == 0:
-            st.info(
-                "Belum ada data Quiz.\n\n"
-                "Setelah sesi pertama selesai, kamu akan melihat:\n"
-                "- Topik grammar terkuat dan terlemah\n"
-                "- Persentase penguasaan per topik"
-            )
+            st.info("Belum ada data Quiz.\n\n" "Setelah sesi pertama selesai, kamu akan melihat:\n" "- Topik grammar terkuat dan terlemah\n" "- Persentase penguasaan per topik")
         else:
             st.metric("Total Sesi Quiz", total)
             col1, col2 = st.columns(2)
@@ -462,36 +426,27 @@ def _render_layer2(d: dict):
             with col1:
                 st.markdown("**🏆 Topik Terkuat:**")
                 for t in quiz.get("strongest", []):
-                    st.markdown(
-                        f"- {t['topic']} — **{t['avg_score_pct']:.0f}%**"
-                    )
+                    st.markdown(f"- {t['topic']} — **{t['avg_score_pct']:.0f}%**")
 
             with col2:
                 st.markdown("**⚠️ Topik Terlemah:**")
                 for t in quiz.get("weakest", []):
-                    st.markdown(
-                        f"- {t['topic']} — **{t['avg_score_pct']:.0f}%**"
-                    )
+                    st.markdown(f"- {t['topic']} — **{t['avg_score_pct']:.0f}%**")
 
     # ---- Speaking tab ----
     with tab_speaking:
         speaking = d.get("speaking", {}) or {}
-        total    = speaking.get("total_sessions", 0)
+        total = speaking.get("total_sessions", 0)
         if total == 0:
-            st.info(
-                "Belum ada data Speaking.\n\n"
-                "Setelah sesi pertama selesai, kamu akan melihat:\n"
-                "- Rata-rata skor Grammar dan Relevance\n"
-                "- Perbandingan performa per sub-mode"
-            )
+            st.info("Belum ada data Speaking.\n\n" "Setelah sesi pertama selesai, kamu akan melihat:\n" "- Rata-rata skor Grammar dan Relevance\n" "- Perbandingan performa per sub-mode")
         else:
             st.metric("Total Sesi Speaking", total)
             by_mode = speaking.get("by_mode", [])
             if by_mode:
                 sub_mode_labels = {
-                    "prompted_response"   : "Prompted Response",
+                    "prompted_response": "Prompted Response",
                     "conversation_practice": "Conversation Practice",
-                    "oral_presentation"   : "Oral Presentation",
+                    "oral_presentation": "Oral Presentation",
                 }
                 for row in by_mode:
                     sub = row.get("sub_mode", "")
@@ -502,9 +457,9 @@ def _render_layer2(d: dict):
                         g = row.get("avg_grammar")
                         r = row.get("avg_relevance")
                         f = row.get("avg_final")
-                        c1.metric("Grammar",   f"{g:.1f}" if g else "—")
+                        c1.metric("Grammar", f"{g:.1f}" if g else "—")
                         c2.metric("Relevance", f"{r:.1f}" if r else "—")
-                        c3.metric("Final",     f"{f:.1f}" if f else "—")
+                        c3.metric("Final", f"{f:.1f}" if f else "—")
 
     # ---- TOEFL tab ----
     with tab_toefl:
@@ -523,17 +478,13 @@ def _render_layer2(d: dict):
             if recent:
                 st.markdown("**Trend 5 Simulasi Terakhir:**")
                 for i, sim in enumerate(recent, 1):
-                    est   = sim.get("estimated_score", "—")
-                    mode  = sim.get("mode", "—")
-                    l_sc  = sim.get("listening_scaled", "—")
-                    s_sc  = sim.get("structure_scaled", "—")
-                    r_sc  = sim.get("reading_scaled", "—")
-                    date  = (sim.get("completed_at") or "")[:10]
-                    st.markdown(
-                        f"**Sim {i}** ({date}, mode {mode}) — "
-                        f"Estimasi: **{est}** | "
-                        f"L: {l_sc} · S: {s_sc} · R: {r_sc}"
-                    )
+                    est = sim.get("estimated_score", "—")
+                    mode = sim.get("mode", "—")
+                    l_sc = sim.get("listening_scaled", "—")
+                    s_sc = sim.get("structure_scaled", "—")
+                    r_sc = sim.get("reading_scaled", "—")
+                    date = (sim.get("completed_at") or "")[:10]
+                    st.markdown(f"**Sim {i}** ({date}, mode {mode}) — " f"Estimasi: **{est}** | " f"L: {l_sc} · S: {s_sc} · R: {r_sc}")
 
 
 # ===================================================
@@ -542,10 +493,7 @@ def _render_layer2(d: dict):
 def _render_layer3(target_toefl: int):
     st.markdown("---")
     st.markdown("### 🤖 Analisis Mendalam — Tutor AI")
-    st.caption(
-        "Layer ini memanggil AI untuk analisis lintas semua mode latihan. "
-        "Membutuhkan beberapa detik."
-    )
+    st.caption("Layer ini memanggil AI untuk analisis lintas semua mode latihan. " "Membutuhkan beberapa detik.")
 
     # Tampilkan hasil analisis sebelumnya jika ada di session state
     cached = _get("master_analytics_result")
@@ -564,6 +512,7 @@ def _render_layer3(target_toefl: int):
         with st.spinner("Menganalisis semua data latihan kamu... (10–20 detik)"):
             try:
                 from agents.orchestrator.master_analytics import run_master_analytics
+
                 result = run_master_analytics(target_toefl=target_toefl)
                 _set("master_analytics_result", result)
                 st.rerun()
@@ -577,10 +526,10 @@ def _render_master_analytics_result(result: dict):
     # Overall trend badge
     trend = result.get("overall_trend", "insufficient_data")
     trend_display = {
-        "improving"        : ("📈", "Meningkat",  "success"),
-        "stable"           : ("➡️", "Stabil",     "info"),
-        "declining"        : ("📉", "Menurun",    "warning"),
-        "mixed"            : ("🔀", "Beragam",    "info"),
+        "improving": ("📈", "Meningkat", "success"),
+        "stable": ("➡️", "Stabil", "info"),
+        "declining": ("📉", "Menurun", "warning"),
+        "mixed": ("🔀", "Beragam", "info"),
         "insufficient_data": ("📊", "Data Kurang", "info"),
     }
     icon, label, msg_type = trend_display.get(trend, ("📊", trend, "info"))
@@ -603,9 +552,9 @@ def _render_master_analytics_result(result: dict):
     if correlations:
         st.markdown("#### 🔗 Korelasi Lintas Mode")
         for corr in correlations:
-            modes   = " + ".join(corr.get("modes", []))
+            modes = " + ".join(corr.get("modes", []))
             finding = corr.get("finding", "")
-            action  = corr.get("action", "")
+            action = corr.get("action", "")
             with st.container(border=True):
                 st.markdown(f"**{modes.upper()}**")
                 st.markdown(finding)
@@ -618,26 +567,25 @@ def _render_master_analytics_result(result: dict):
     readiness = result.get("toefl_readiness", {})
     if readiness:
         st.markdown("#### 🎯 TOEFL Readiness")
-        target    = readiness.get("target_score")
-        best      = readiness.get("best_estimated_score")
-        gap       = readiness.get("gap")
+        target = readiness.get("target_score")
+        best = readiness.get("best_estimated_score")
+        gap = readiness.get("gap")
         est_weeks = readiness.get("estimated_weeks")
-        level     = readiness.get("readiness_level", "no_data")
-        rec       = readiness.get("recommendation", "")
+        level = readiness.get("readiness_level", "no_data")
+        rec = readiness.get("recommendation", "")
 
         level_display = {
-            "on_track"  : ("🟢", "On Track"),
+            "on_track": ("🟢", "On Track"),
             "approaching": ("🟡", "Mendekati Target"),
             "needs_work": ("🔴", "Perlu Kerja Keras"),
-            "no_data"   : ("⚪", "Belum Ada Data"),
+            "no_data": ("⚪", "Belum Ada Data"),
         }
         r_icon, r_label = level_display.get(level, ("⚪", level))
 
         col1, col2, col3 = st.columns(3)
         col1.metric("Target", str(target) if target else "—")
         col2.metric("Estimasi Terbaik", str(best) if best else "—")
-        col3.metric("Gap", str(gap) if gap is not None else "—",
-                    delta_color="inverse")
+        col3.metric("Gap", str(gap) if gap is not None else "—", delta_color="inverse")
 
         st.markdown(f"{r_icon} Status: **{r_label}**")
         if est_weeks:
@@ -646,18 +594,12 @@ def _render_master_analytics_result(result: dict):
             st.info(rec)
 
     # Modes summary
-    modes_with    = result.get("modes_with_data", [])
+    modes_with = result.get("modes_with_data", [])
     modes_without = result.get("modes_without_data", [])
     if modes_without:
-        st.caption(
-            f"⚠️ Analisis berdasarkan data dari: **{', '.join(modes_with)}**. "
-            f"Mode belum ada data: {', '.join(modes_without)}."
-        )
+        st.caption(f"⚠️ Analisis berdasarkan data dari: **{', '.join(modes_with)}**. " f"Mode belum ada data: {', '.join(modes_without)}.")
 
-    st.caption(
-        "ℹ️ Analisis ini berdasarkan data latihan yang tersedia dan "
-        "dapat berubah seiring bertambahnya sesi."
-    )
+    st.caption("ℹ️ Analisis ini berdasarkan data latihan yang tersedia dan " "dapat berubah seiring bertambahnya sesi.")
 
 
 # ===================================================
@@ -665,18 +607,19 @@ def _render_master_analytics_result(result: dict):
 # ===================================================
 def _render_onboarding_step1():
     st.title("👋 Selamat Datang!")
-    st.markdown(
-        "Sebelum mulai, kami perlu tahu sedikit tentang kamu "
-        "agar latihan bisa dipersonalisasi."
-    )
+    st.markdown("Sebelum mulai, kami perlu tahu sedikit tentang kamu " "agar latihan bisa dipersonalisasi.")
     st.markdown("---")
     st.markdown("### Step 1 dari 3 — Target Skor TOEFL ITP")
     st.caption("Berapa skor TOEFL ITP yang ingin kamu capai?")
 
     target = st.slider(
-        label="Target Skor", min_value=310, max_value=677,
-        value=_get("ob_target", 500), step=10,
-        key="ob_slider_target", label_visibility="collapsed",
+        label="Target Skor",
+        min_value=310,
+        max_value=677,
+        value=_get("ob_target", 500),
+        step=10,
+        key="ob_slider_target",
+        label_visibility="collapsed",
     )
     if target < 450:
         hint = "🟡 Cukup untuk persyaratan umum."
@@ -702,17 +645,14 @@ def _render_onboarding_step2():
 
     selected_level = _get("ob_level", GRAMMAR_LEVELS[0])
     for level in GRAMMAR_LEVELS:
-        hint   = GRAMMAR_LEVEL_HINTS[level]
+        hint = GRAMMAR_LEVEL_HINTS[level]
         is_sel = selected_level == level
         border = "2px solid #1f77b4" if is_sel else "1px solid #ddd"
         st.markdown(
-            f"<div style='padding:12px; border-radius:8px; border:{border}; "
-            f"margin-bottom:8px;'><strong>{level}</strong><br/>"
-            f"<small style='color:gray;'>{hint}</small></div>",
+            f"<div style='padding:12px; border-radius:8px; border:{border}; " f"margin-bottom:8px;'><strong>{level}</strong><br/>" f"<small style='color:gray;'>{hint}</small></div>",
             unsafe_allow_html=True,
         )
-        if st.button(f"{'✅ ' if is_sel else ''}Pilih {level}",
-                     key=f"ob_level_{level}", use_container_width=True):
+        if st.button(f"{'✅ ' if is_sel else ''}Pilih {level}", key=f"ob_level_{level}", use_container_width=True):
             _set("ob_level", level)
             st.rerun()
 
@@ -720,13 +660,15 @@ def _render_onboarding_step2():
     col1, col2 = st.columns(2)
     with col1:
         if st.button("← Kembali", use_container_width=True):
-            _set("ob_step", 1); st.rerun()
+            _set("ob_step", 1)
+            st.rerun()
     with col2:
         if st.button("Lanjut →", type="primary", use_container_width=True):
             if not _get("ob_level"):
                 st.warning("Pilih level terlebih dahulu.")
             else:
-                _set("ob_step", 3); st.rerun()
+                _set("ob_step", 3)
+                st.rerun()
 
 
 def _render_onboarding_step3():
@@ -735,33 +677,33 @@ def _render_onboarding_step3():
     st.markdown("### Step 3 dari 3 — Topik Vocab Pertama")
     st.caption("Pilih topik yang ingin kamu pelajari di sesi Vocab pertama.")
 
-    topic_labels   = [VOCAB_TOPIC_LABELS.get(t, t) for t in VOCAB_TOPICS]
-    default_idx    = VOCAB_TOPICS.index(_get("ob_topic", "sehari_hari"))
+    topic_labels = [VOCAB_TOPIC_LABELS.get(t, t) for t in VOCAB_TOPICS]
+    default_idx = VOCAB_TOPICS.index(_get("ob_topic", "sehari_hari"))
     selected_label = st.selectbox(
-        label="Pilih Topik:", options=topic_labels, index=default_idx,
-        key="ob_topic_select", label_visibility="collapsed",
+        label="Pilih Topik:",
+        options=topic_labels,
+        index=default_idx,
+        key="ob_topic_select",
+        label_visibility="collapsed",
     )
     selected_topic = VOCAB_TOPICS[topic_labels.index(selected_label)]
     _set("ob_topic", selected_topic)
     st.markdown("")
 
     target = _get("ob_target", 500)
-    level  = _get("ob_level", "Pemula")
-    st.success(
-        f"**Ringkasan:**\n\n"
-        f"🎯 Target skor: **{target}**\n\n"
-        f"📚 Grammar level: **{level}**\n\n"
-        f"🔤 Topik vocab pertama: **{selected_label}**"
-    )
+    level = _get("ob_level", "Pemula")
+    st.success(f"**Ringkasan:**\n\n" f"🎯 Target skor: **{target}**\n\n" f"📚 Grammar level: **{level}**\n\n" f"🔤 Topik vocab pertama: **{selected_label}**")
 
     col1, col2 = st.columns(2)
     with col1:
         if st.button("← Kembali", use_container_width=True):
-            _set("ob_step", 2); st.rerun()
+            _set("ob_step", 2)
+            st.rerun()
     with col2:
         if st.button("✅ Mulai Belajar!", type="primary", use_container_width=True):
             success = save_onboarding_data(
-                target_toefl=target, grammar_level=level,
+                target_toefl=target,
+                grammar_level=level,
                 first_vocab_topic=selected_topic,
             )
             if success:
@@ -818,9 +760,9 @@ def _render_home(ctx: RoutingContext):
     st.markdown("### 🚀 Mulai Latihan")
     col1, col2, col3, col4 = st.columns(4)
     nav_map = {
-        "📚 Vocab Agent"    : col1,
-        "📝 Quiz Agent"     : col2,
-        "🎤 Speaking Agent" : col3,
+        "📚 Vocab Agent": col1,
+        "📝 Quiz Agent": col2,
+        "🎤 Speaking Agent": col3,
         "📊 TOEFL Simulator": col4,
     }
     for mode_key, col in nav_map.items():
@@ -833,26 +775,33 @@ def _render_home(ctx: RoutingContext):
 def _render_profile_editor(ctx: RoutingContext):
     st.markdown("**Ubah Target & Profil**")
     new_target = st.slider(
-        "Target Skor TOEFL ITP", min_value=310, max_value=677,
-        value=ctx.target_toefl or 500, step=10, key="profile_target",
+        "Target Skor TOEFL ITP",
+        min_value=310,
+        max_value=677,
+        value=ctx.target_toefl or 500,
+        step=10,
+        key="profile_target",
     )
     new_level = st.selectbox(
-        "Grammar Level", options=GRAMMAR_LEVELS,
-        index=GRAMMAR_LEVELS.index(ctx.grammar_level)
-        if ctx.grammar_level in GRAMMAR_LEVELS else 0,
+        "Grammar Level",
+        options=GRAMMAR_LEVELS,
+        index=GRAMMAR_LEVELS.index(ctx.grammar_level) if ctx.grammar_level in GRAMMAR_LEVELS else 0,
         key="profile_level",
     )
-    topic_labels    = [VOCAB_TOPIC_LABELS.get(t, t) for t in VOCAB_TOPICS]
-    current_topic   = ctx.first_vocab_topic or "sehari_hari"
-    default_idx     = VOCAB_TOPICS.index(current_topic) if current_topic in VOCAB_TOPICS else 0
+    topic_labels = [VOCAB_TOPIC_LABELS.get(t, t) for t in VOCAB_TOPICS]
+    current_topic = ctx.first_vocab_topic or "sehari_hari"
+    default_idx = VOCAB_TOPICS.index(current_topic) if current_topic in VOCAB_TOPICS else 0
     new_topic_label = st.selectbox(
-        "Topik Vocab Default", options=topic_labels,
-        index=default_idx, key="profile_topic",
+        "Topik Vocab Default",
+        options=topic_labels,
+        index=default_idx,
+        key="profile_topic",
     )
     new_topic = VOCAB_TOPICS[topic_labels.index(new_topic_label)]
 
     if st.button("💾 Simpan Perubahan", type="primary"):
         from agents.orchestrator.router import update_user_profile
+
         success = update_user_profile(
             target_toefl=new_target,
             grammar_level=new_level,

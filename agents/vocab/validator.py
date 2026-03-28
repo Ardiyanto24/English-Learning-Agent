@@ -130,21 +130,13 @@ def _apply_adjustments(
             if not replaced:
                 # Tidak ada format yang over-distributed — kata di-skip
                 skipped += 1
-                logger.warning(
-                    f"[vocab_validator] Adjustment skipped for word='{adj_word.get('word')}' "
-                    f"fmt='{adj_fmt}' — no over-distributed format found to replace"
-                )
+                logger.warning(f"[vocab_validator] Adjustment skipped for word='{adj_word.get('word')}' " f"fmt='{adj_fmt}' — no over-distributed format found to replace")
         else:
             # Format sudah cukup — kata ini tidak perlu di-insert
             skipped += 1
-            logger.debug(
-                f"[vocab_validator] Adjustment not needed for word='{adj_word.get('word')}' "
-                f"fmt='{adj_fmt}' already at target count"
-            )
+            logger.debug(f"[vocab_validator] Adjustment not needed for word='{adj_word.get('word')}' " f"fmt='{adj_fmt}' already at target count")
 
-    logger.info(
-        f"[vocab_validator] Adjustments — applied={applied} skipped={skipped}"
-    )
+    logger.info(f"[vocab_validator] Adjustments — applied={applied} skipped={skipped}")
 
     return {"words": words}
 
@@ -173,9 +165,7 @@ def run_validator(
     last_validation = None
 
     for attempt in range(MAX_REGENERATE_ATTEMPTS):
-        logger.info(
-            f"[vocab_validator] Validation attempt {attempt + 1}/{MAX_REGENERATE_ATTEMPTS}"
-        )
+        logger.info(f"[vocab_validator] Validation attempt {attempt + 1}/{MAX_REGENERATE_ATTEMPTS}")
 
         try:
             validation = _call_validator_llm(planner_output, current_generator_output)
@@ -183,9 +173,7 @@ def run_validator(
 
             if validation.get("match_score", 0) >= 0.8:
                 # ✅ Valid
-                logger.info(
-                    f"[vocab_validator] Valid — match_score={validation['match_score']}"
-                )
+                logger.info(f"[vocab_validator] Valid — match_score={validation['match_score']}")
                 return {
                     "is_valid": True,
                     "match_score": validation["match_score"],
@@ -195,10 +183,7 @@ def run_validator(
                 }
 
             # ❌ Tidak valid — log issues dan coba regenerate
-            logger.warning(
-                f"[vocab_validator] Invalid (score={validation['match_score']}) "
-                f"— issues: {validation.get('issues', [])}"
-            )
+            logger.warning(f"[vocab_validator] Invalid (score={validation['match_score']}) " f"— issues: {validation.get('issues', [])}")
 
             if attempt < MAX_REGENERATE_ATTEMPTS - 1:
                 # Regenerate menggunakan generator
@@ -220,9 +205,7 @@ def run_validator(
                 break
 
     # ⚠️ Semua attempt habis → adjust paksa + flag
-    logger.warning(
-        "[vocab_validator] All attempts failed — forcing adjustment and flagging"
-    )
+    logger.warning("[vocab_validator] All attempts failed — forcing adjustment and flagging")
 
     validator_unavailable = last_validation is None
 
@@ -230,9 +213,7 @@ def run_validator(
     if last_validation:
         adjusted_words = last_validation.get("adjusted_words", [])
 
-    final_output = _apply_adjustments(
-        current_generator_output, adjusted_words, planner_output
-    )
+    final_output = _apply_adjustments(current_generator_output, adjusted_words, planner_output)
 
     log_error(
         error_type="validator_unavailable" if validator_unavailable else "validation_failed",

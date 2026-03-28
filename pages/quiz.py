@@ -13,11 +13,11 @@ State machine (satu state lebih banyak dari Vocab karena Human in the Loop):
 
 import streamlit as st
 
-from agents.quiz.planner    import run_planner
-from agents.quiz.generator  import run_generator
-from agents.quiz.validator  import run_validator
-from agents.quiz.corrector  import run_corrector
-from agents.quiz.analytics  import run_analytics
+from agents.quiz.planner import run_planner
+from agents.quiz.generator import run_generator
+from agents.quiz.validator import run_validator
+from agents.quiz.corrector import run_corrector
+from agents.quiz.analytics import run_analytics
 from database.repositories.session_repository import (
     create_session,
     update_session_status,
@@ -39,8 +39,10 @@ from utils.logger import logger
 def _get(key, default=None):
     return st.session_state.get(f"quiz_{key}", default)
 
+
 def _set(key, value):
     st.session_state[f"quiz_{key}"] = value
+
 
 def _reset():
     keys = [k for k in st.session_state if k.startswith("quiz_")]
@@ -56,16 +58,12 @@ def _render_question(q: dict, index: int, total: int) -> str:
     Tampilkan soal sesuai format dan return jawaban user.
     Setiap format punya widget berbeda.
     """
-    fmt           = q.get("format", "multiple_choice")
+    fmt = q.get("format", "multiple_choice")
     question_text = q.get("question_text", "")
-    options       = q.get("options", [])
+    options = q.get("options", [])
 
     st.markdown(f"**Soal {index + 1} dari {total}**")
-    st.caption(
-        f"Topik: **{q.get('topic')}** | "
-        f"Format: *{fmt.replace('_', ' ').title()}* | "
-        f"Level: *{q.get('difficulty', '').title()}*"
-    )
+    st.caption(f"Topik: **{q.get('topic')}** | " f"Format: *{fmt.replace('_', ' ').title()}* | " f"Level: *{q.get('difficulty', '').title()}*")
     st.markdown(f"### {question_text}")
 
     # ── multiple_choice & fill_blank → Radio button ──
@@ -87,13 +85,7 @@ def _render_question(q: dict, index: int, total: int) -> str:
     # ── error_id → Pilih bagian yang salah ──
     elif fmt == "error_id":
         st.markdown("**Pilih bagian kalimat yang mengandung error:**")
-        choice = st.radio(
-            "Bagian yang salah:",
-            options=options,
-            key=f"quiz_error_{index}",
-            index=None,
-            help="Pilih salah satu dari (A), (B), (C), (D)"
-        )
+        choice = st.radio("Bagian yang salah:", options=options, key=f"quiz_error_{index}", index=None, help="Pilih salah satu dari (A), (B), (C), (D)")
         if choice:
             return choice.split(".")[0].strip()
         return ""
@@ -108,8 +100,8 @@ def _render_question(q: dict, index: int, total: int) -> str:
 def _render_feedback(correction: dict, question: dict):
     """Tampilkan 4 lapisan feedback dalam expander yang tersusun."""
     is_correct = correction.get("is_correct", False)
-    is_graded  = correction.get("is_graded", True)
-    feedback   = correction.get("feedback", {})
+    is_graded = correction.get("is_graded", True)
+    feedback = correction.get("feedback", {})
 
     if not is_graded:
         st.warning(f"⚠️ {feedback.get('verdict', 'Soal belum dinilai.')}")
@@ -145,14 +137,14 @@ def _render_feedback(correction: dict, question: dict):
 # Render: summary akhir sesi
 # ===================================================
 def _render_summary():
-    questions  = _get("questions", [])
-    results    = _get("results", [])
-    planner    = _get("planner_output", {})
-    analytics  = _get("analytics")
+    questions = _get("questions", [])
+    results = _get("results", [])
+    planner = _get("planner_output", {})
+    analytics = _get("analytics")
 
     correct_count = sum(1 for r in results if r.get("is_correct"))
-    total         = len(questions)
-    score_pct     = calculate_score_pct(correct_count, total)
+    total = len(questions)
+    score_pct = calculate_score_pct(correct_count, total)
 
     st.markdown("## 🎉 Sesi Selesai!")
 
@@ -201,8 +193,8 @@ def _start_session(confirmed_topics: list[str], planner_output: dict):
 
         with st.spinner("🔍 Memvalidasi soal..."):
             validator_result = run_validator(planner_output, generator_output)
-            final_questions  = validator_result.get("final_questions", [])
-            is_adjusted      = validator_result.get("is_adjusted", False)
+            final_questions = validator_result.get("final_questions", [])
+            is_adjusted = validator_result.get("is_adjusted", False)
 
         if not final_questions:
             st.error("Gagal membuat soal. Silakan coba lagi.")
@@ -222,6 +214,7 @@ def _start_session(confirmed_topics: list[str], planner_output: dict):
         question_ids = []
         for q in final_questions:
             import json
+
             q_id = save_quiz_question(
                 session_id=session_id,
                 topic=q["topic"],
@@ -234,14 +227,14 @@ def _start_session(confirmed_topics: list[str], planner_output: dict):
             )
             question_ids.append(q_id)
 
-        _set("session_id",      session_id)
-        _set("planner_output",  planner_output)
-        _set("questions",       final_questions)
-        _set("question_ids",    question_ids)
-        _set("is_adjusted",     is_adjusted)
-        _set("current_index",   0)
-        _set("results",         [])
-        _set("page_state",      "answering")
+        _set("session_id", session_id)
+        _set("planner_output", planner_output)
+        _set("questions", final_questions)
+        _set("question_ids", question_ids)
+        _set("is_adjusted", is_adjusted)
+        _set("current_index", 0)
+        _set("results", [])
+        _set("page_state", "answering")
 
         if is_adjusted:
             st.warning("⚠️ Soal disesuaikan otomatis karena validasi tidak sempurna.")
@@ -262,59 +255,59 @@ def _start_session(confirmed_topics: list[str], planner_output: dict):
 # ===================================================
 def _handle_answer(user_answer: str):
     """Koreksi jawaban, simpan ke DB."""
-    index        = _get("current_index", 0)
-    questions    = _get("questions", [])
+    index = _get("current_index", 0)
+    questions = _get("questions", [])
     question_ids = _get("question_ids", [])
-    session_id   = _get("session_id")
-    results      = _get("results", [])
+    session_id = _get("session_id")
+    results = _get("results", [])
 
-    q    = questions[index]
+    q = questions[index]
     q_id = question_ids[index]
 
     with st.spinner("Menilai jawaban..."):
         correction = run_corrector(
-            topic          = q["topic"],
-            format         = q["format"],
-            question_text  = q["question_text"],
-            options        = q.get("options", []),
-            correct_answer = q["correct_answer"],
-            user_answer    = user_answer,
-            session_id     = session_id,
+            topic=q["topic"],
+            format=q["format"],
+            question_text=q["question_text"],
+            options=q.get("options", []),
+            correct_answer=q["correct_answer"],
+            user_answer=user_answer,
+            session_id=session_id,
         )
 
     # Simpan ke DB
     update_quiz_answer(
-        question_id  = q_id,
-        user_answer  = user_answer,
-        is_correct   = correction.get("is_correct", False),
-        is_graded    = correction.get("is_graded", True),
-        feedback     = correction.get("feedback", {}),
+        question_id=q_id,
+        user_answer=user_answer,
+        is_correct=correction.get("is_correct", False),
+        is_graded=correction.get("is_graded", True),
+        feedback=correction.get("feedback", {}),
     )
 
     results.append({**correction, "user_answer": user_answer})
-    _set("results",       results)
+    _set("results", results)
     _set("last_correction", correction)
-    _set("last_question",   q)
+    _set("last_question", q)
 
 
 # ===================================================
 # Flow: selesaikan sesi
 # ===================================================
 def _complete_session():
-    session_id   = _get("session_id")
-    questions    = _get("questions", [])
-    results      = _get("results", [])
-    planner      = _get("planner_output", {})
-    is_adjusted  = _get("is_adjusted", False)
+    session_id = _get("session_id")
+    questions = _get("questions", [])
+    results = _get("results", [])
+    planner = _get("planner_output", {})
+    is_adjusted = _get("is_adjusted", False)
 
     correct_count = sum(1 for r in results if r.get("is_correct"))
-    score_pct     = calculate_score_pct(correct_count, len(questions))
+    score_pct = calculate_score_pct(correct_count, len(questions))
 
     update_quiz_session_scores(
-        session_id    = session_id,
-        correct_count = correct_count,
-        wrong_count   = len(questions) - correct_count,
-        score_pct     = score_pct,
+        session_id=session_id,
+        correct_count=correct_count,
+        wrong_count=len(questions) - correct_count,
+        score_pct=score_pct,
     )
 
     # Update topic tracking per topik — hitung skor per topik dulu
@@ -325,32 +318,32 @@ def _complete_session():
         t = q["topic"]
         if t not in topic_stats:
             topic_stats[t] = {
-                "cluster":   q.get("cluster", planner.get("cluster", "")),
-                "total":     0,
-                "correct":   0,
+                "cluster": q.get("cluster", planner.get("cluster", "")),
+                "total": 0,
+                "correct": 0,
             }
-        topic_stats[t]["total"]   += 1
+        topic_stats[t]["total"] += 1
         topic_stats[t]["correct"] += 1 if r.get("is_correct") else 0
 
     for topic, stats in topic_stats.items():
         score = calculate_score_pct(stats["correct"], stats["total"])
         update_topic_tracking(
-            topic           = topic,
-            cluster         = stats["cluster"],
-            score_pct       = score,
-            total_questions = stats["total"],
-            correct_count   = stats["correct"],
+            topic=topic,
+            cluster=stats["cluster"],
+            score_pct=score,
+            total_questions=stats["total"],
+            correct_count=stats["correct"],
         )
 
     update_session_status(
-        session_id  = session_id,
-        status      = "completed",
-        is_adjusted = is_adjusted,
+        session_id=session_id,
+        status="completed",
+        is_adjusted=is_adjusted,
     )
 
     analytics = run_analytics()
-    _set("analytics",   analytics)
-    _set("page_state",  "completed")
+    _set("analytics", analytics)
+    _set("page_state", "completed")
 
 
 # ===================================================
@@ -375,21 +368,18 @@ def main():
 
     # ── STATE: recommending — Human in the Loop ──
     elif page_state == "recommending":
-        planner_output   = _get("planner_output", {})
-        recommended      = planner_output.get("topics", [])
-        accessible       = planner_output.get("accessible_topics", [])
-        is_cold_start    = planner_output.get("is_cold_start", False)
-        difficulty       = planner_output.get("difficulty_target", "medium")
+        planner_output = _get("planner_output", {})
+        recommended = planner_output.get("topics", [])
+        accessible = planner_output.get("accessible_topics", [])
+        is_cold_start = planner_output.get("is_cold_start", False)
+        difficulty = planner_output.get("difficulty_target", "medium")
 
         st.markdown("### 🎯 Rekomendasi Topik")
 
         if is_cold_start:
             st.info("Selamat datang! Ini sesi pertamamu. Pilih topik untuk memulai.")
         else:
-            st.markdown(
-                f"Berdasarkan progress kamu, sistem merekomendasikan topik berikut "
-                f"dengan level **{difficulty}**:"
-            )
+            st.markdown(f"Berdasarkan progress kamu, sistem merekomendasikan topik berikut " f"dengan level **{difficulty}**:")
             for t in recommended:
                 new_tag = " 🆕" if t in planner_output.get("new_topics", []) else ""
                 st.markdown(f"- **{t}**{new_tag}")
@@ -405,9 +395,7 @@ def main():
         confirmed_topics = recommended
 
         if use_recommendation == "🔧 Pilih topik sendiri":
-            st.caption(
-                "Hanya topik yang prerequisite-nya sudah terpenuhi yang bisa dipilih."
-            )
+            st.caption("Hanya topik yang prerequisite-nya sudah terpenuhi yang bisa dipilih.")
             selected = st.multiselect(
                 "Pilih 1–2 topik:",
                 options=accessible,
@@ -434,26 +422,25 @@ def main():
 
     # ── STATE: answering ──
     elif page_state == "answering":
-        questions     = _get("questions", [])
+        questions = _get("questions", [])
         current_index = _get("current_index", 0)
-        results       = _get("results", [])
-        total         = len(questions)
+        results = _get("results", [])
+        total = len(questions)
 
         # Progress bar
-        st.progress(current_index / total,
-                    text=f"Soal {current_index + 1} dari {total}")
+        st.progress(current_index / total, text=f"Soal {current_index + 1} dari {total}")
         st.markdown("---")
 
         # Feedback soal sebelumnya
         last_correction = _get("last_correction")
-        last_question   = _get("last_question")
+        last_question = _get("last_question")
         if last_correction and last_question and current_index > 0:
             _render_feedback(last_correction, last_question)
             st.markdown("---")
 
         # Soal saat ini
         if current_index < total:
-            q           = questions[current_index]
+            q = questions[current_index]
             user_answer = _render_question(q, current_index, total)
 
             col1, col2 = st.columns([1, 4])

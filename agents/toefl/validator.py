@@ -28,15 +28,15 @@ from prompts.toefl.validator_prompt import (
 )
 from agents.toefl.listening_generator import run_generator as regen_listening
 from agents.toefl.structure_generator import run_generator as regen_structure
-from agents.toefl.reading_generator   import run_generator as regen_reading
+from agents.toefl.reading_generator import run_generator as regen_reading
 from utils.logger import log_error, logger
-from utils.retry  import retry_llm
+from utils.retry import retry_llm
 from config.settings import SONNET_MODEL
 
 load_dotenv()
 
-QUALITY_THRESHOLD = 0.8   # 80% toleransi
-MAX_REGEN_ATTEMPTS = 3    # Max retry regenerasi per section
+QUALITY_THRESHOLD = 0.8  # 80% toleransi
+MAX_REGEN_ATTEMPTS = 3  # Max retry regenerasi per section
 
 _client: Optional[anthropic.Anthropic] = None
 
@@ -53,7 +53,7 @@ def _parse_validation_response(raw: str) -> dict:
     text = raw.strip()
     if text.startswith("```"):
         parts = text.split("```")
-        text  = parts[1] if len(parts) > 1 else text
+        text = parts[1] if len(parts) > 1 else text
         if text.startswith("json"):
             text = text[4:]
     text = text.strip()
@@ -62,41 +62,39 @@ def _parse_validation_response(raw: str) -> dict:
 
     # Pastikan field wajib ada
     required = {"overall_quality_score", "is_acceptable", "quality_check"}
-    missing  = required - set(parsed.keys())
+    missing = required - set(parsed.keys())
     if missing:
         raise ValueError(f"Validator response missing fields: {missing}")
 
     # Clamp score ke range valid
     score = float(parsed.get("overall_quality_score", 0))
     parsed["overall_quality_score"] = max(0.0, min(1.0, score))
-    parsed["is_acceptable"] = (
-        parsed["overall_quality_score"] >= QUALITY_THRESHOLD
-    )
+    parsed["is_acceptable"] = parsed["overall_quality_score"] >= QUALITY_THRESHOLD
 
     return parsed
 
 
 @retry_llm
 def _call_validator(
-    planner_output:    dict,
+    planner_output: dict,
     listening_content: dict,
     structure_content: dict,
-    reading_content:   dict,
+    reading_content: dict,
 ) -> dict:
     """Panggil Claude Sonnet untuk quality check."""
     user_prompt = build_validator_prompt(
-        planner_output    = planner_output,
-        listening_content = listening_content,
-        structure_content = structure_content,
-        reading_content   = reading_content,
+        planner_output=planner_output,
+        listening_content=listening_content,
+        structure_content=structure_content,
+        reading_content=reading_content,
     )
 
     client = _get_client()
     response = client.messages.create(
-        model      = SONNET_MODEL,
-        max_tokens = 2048,
-        system     = TOEFL_VALIDATOR_SYSTEM_PROMPT,
-        messages   = [{"role": "user", "content": user_prompt}],
+        model=SONNET_MODEL,
+        max_tokens=2048,
+        system=TOEFL_VALIDATOR_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_prompt}],
     )
 
     return _parse_validation_response(response.content[0].text)
@@ -108,7 +106,7 @@ def _identify_weak_sections(validation_result: dict) -> list[str]:
     berdasarkan quality check per section.
     """
     weak = []
-    qc   = validation_result.get("quality_check", {})
+    qc = validation_result.get("quality_check", {})
 
     for section in ("listening", "structure", "reading"):
         section_score = qc.get(section, {}).get("score", 1.0)
@@ -129,41 +127,31 @@ def _adjust_content(
     """
     adjusted = dict(content)
     adjusted["is_adjusted"] = True
-    adjusted["adjustment_reason"] = (
-        f"Quality check score below threshold after {MAX_REGEN_ATTEMPTS} "
-        f"regeneration attempts. Flags: "
-        + str(
-            validation_result.get("quality_check", {})
-            .get(section, {})
-            .get("flags", [])
-        )
+    adjusted["adjustment_reason"] = f"Quality check score below threshold after {MAX_REGEN_ATTEMPTS} " f"regeneration attempts. Flags: " + str(
+        validation_result.get("quality_check", {}).get(section, {}).get("flags", [])
     )
 
     log_error(
-        error_type    = "quality_threshold",
-        agent_name    = "toefl_validator",
-        context       = {
-            "section":           section,
-            "final_score":       validation_result.get("overall_quality_score"),
-            "flags":             validation_result.get("quality_check", {})
-                                    .get(section, {}).get("flags", []),
+        error_type="quality_threshold",
+        agent_name="toefl_validator",
+        context={
+            "section": section,
+            "final_score": validation_result.get("overall_quality_score"),
+            "flags": validation_result.get("quality_check", {}).get(section, {}).get("flags", []),
         },
-        fallback_used = True,
+        fallback_used=True,
     )
-    logger.warning(
-        f"[toefl_validator] Section '{section}' adjusted and flagged "
-        f"after {MAX_REGEN_ATTEMPTS} regen attempts"
-    )
+    logger.warning(f"[toefl_validator] Section '{section}' adjusted and flagged " f"after {MAX_REGEN_ATTEMPTS} regen attempts")
 
     return adjusted
 
 
 def run_validator(
-    planner_output:    dict,
+    planner_output: dict,
     listening_content: dict,
     structure_content: dict,
-    reading_content:   dict,
-    session_id:        str,
+    reading_content: dict,
+    session_id: str,
 ) -> dict:
     """
     Jalankan TOEFL Validator Agent.
@@ -188,64 +176,55 @@ def run_validator(
     # State mutable selama proses
     final_listening = listening_content
     final_structure = structure_content
-    final_reading   = reading_content
-    adjusted        = []
+    final_reading = reading_content
+    adjusted = []
 
     # ── Pass pertama: quality check ──────────────────────────────────────
     try:
         validation = _call_validator(
-            planner_output    = planner_output,
-            listening_content = final_listening,
-            structure_content = final_structure,
-            reading_content   = final_reading,
+            planner_output=planner_output,
+            listening_content=final_listening,
+            structure_content=final_structure,
+            reading_content=final_reading,
         )
     except Exception as e:
         # Jika validator sendiri gagal → lolos semua, tapi flag eksplisit
         # overall_quality_score=None agar downstream tidak salah baca sebagai lolos
-        logger.warning(
-            f"[toefl_validator] Validator LLM failed: {e} — "
-            f"passing all content with validator_unavailable=True"
-        )
+        logger.warning(f"[toefl_validator] Validator LLM failed: {e} — " f"passing all content with validator_unavailable=True")
         log_error(
-            error_type    = "validator_unavailable",
-            agent_name    = "toefl_validator",
-            context       = {"error": str(e)},
-            fallback_used = True,
+            error_type="validator_unavailable",
+            agent_name="toefl_validator",
+            context={"error": str(e)},
+            fallback_used=True,
         )
         return {
             "validation": {
                 "overall_quality_score": None,
-                "is_acceptable":         True,
+                "is_acceptable": True,
                 "validator_unavailable": True,
             },
-            "listening":         final_listening,
-            "structure":         final_structure,
-            "reading":           final_reading,
-            "is_adjusted":       True,
+            "listening": final_listening,
+            "structure": final_structure,
+            "reading": final_reading,
+            "is_adjusted": True,
             "adjusted_sections": ["validator_unavailable"],
         }
 
-    logger.info(
-        f"[toefl_validator] Initial quality score: "
-        f"{validation.get('overall_quality_score', 0):.2f}"
-    )
+    logger.info(f"[toefl_validator] Initial quality score: " f"{validation.get('overall_quality_score', 0):.2f}")
 
     if validation.get("is_acceptable"):
         return {
-            "validation":        validation,
-            "listening":         final_listening,
-            "structure":         final_structure,
-            "reading":           final_reading,
-            "is_adjusted":       False,
+            "validation": validation,
+            "listening": final_listening,
+            "structure": final_structure,
+            "reading": final_reading,
+            "is_adjusted": False,
             "adjusted_sections": [],
         }
 
     # ── Regenerasi section yang lemah ────────────────────────────────────
     weak_sections = _identify_weak_sections(validation)
-    logger.info(
-        f"[toefl_validator] Weak sections: {weak_sections} — "
-        f"attempting regeneration (max {MAX_REGEN_ATTEMPTS}x per section)"
-    )
+    logger.info(f"[toefl_validator] Weak sections: {weak_sections} — " f"attempting regeneration (max {MAX_REGEN_ATTEMPTS}x per section)")
 
     regen_map = {
         "listening": (
@@ -267,26 +246,20 @@ def run_validator(
         success = False
 
         for attempt in range(1, MAX_REGEN_ATTEMPTS + 1):
-            logger.info(
-                f"[toefl_validator] Regen {section} attempt {attempt}/{MAX_REGEN_ATTEMPTS}"
-            )
+            logger.info(f"[toefl_validator] Regen {section} attempt {attempt}/{MAX_REGEN_ATTEMPTS}")
             try:
                 args = args_fn()
                 new_content = regen_fn(*args)
 
                 # Re-validate section ini
                 new_validation = _call_validator(
-                    planner_output    = planner_output,
-                    listening_content = new_content if section == "listening" else final_listening,
-                    structure_content = new_content if section == "structure" else final_structure,
-                    reading_content   = new_content if section == "reading"   else final_reading,
+                    planner_output=planner_output,
+                    listening_content=new_content if section == "listening" else final_listening,
+                    structure_content=new_content if section == "structure" else final_structure,
+                    reading_content=new_content if section == "reading" else final_reading,
                 )
 
-                sec_score = (
-                    new_validation.get("quality_check", {})
-                    .get(section, {})
-                    .get("score", 0)
-                )
+                sec_score = new_validation.get("quality_check", {}).get(section, {}).get("score", 0)
 
                 if sec_score >= QUALITY_THRESHOLD:
                     # Terima konten baru
@@ -295,43 +268,31 @@ def run_validator(
                     elif section == "structure":
                         final_structure = new_content
                     elif section == "reading":
-                        final_reading   = new_content
+                        final_reading = new_content
 
                     validation = new_validation
-                    logger.info(
-                        f"[toefl_validator] Section '{section}' passed "
-                        f"on attempt {attempt} (score={sec_score:.2f})"
-                    )
+                    logger.info(f"[toefl_validator] Section '{section}' passed " f"on attempt {attempt} (score={sec_score:.2f})")
                     success = True
                     break
 
             except Exception as e:
-                logger.warning(
-                    f"[toefl_validator] Regen attempt {attempt} failed "
-                    f"for '{section}': {e}"
-                )
+                logger.warning(f"[toefl_validator] Regen attempt {attempt} failed " f"for '{section}': {e}")
 
         if not success:
             # Adjust & flag — sesi tetap lanjut
             if section == "listening":
-                final_listening = _adjust_content(
-                    final_listening, section, validation
-                )
+                final_listening = _adjust_content(final_listening, section, validation)
             elif section == "structure":
-                final_structure = _adjust_content(
-                    final_structure, section, validation
-                )
+                final_structure = _adjust_content(final_structure, section, validation)
             elif section == "reading":
-                final_reading = _adjust_content(
-                    final_reading, section, validation
-                )
+                final_reading = _adjust_content(final_reading, section, validation)
             adjusted.append(section)
 
     return {
-        "validation":        validation,
-        "listening":         final_listening,
-        "structure":         final_structure,
-        "reading":           final_reading,
-        "is_adjusted":       len(adjusted) > 0,
+        "validation": validation,
+        "listening": final_listening,
+        "structure": final_structure,
+        "reading": final_reading,
+        "is_adjusted": len(adjusted) > 0,
         "adjusted_sections": adjusted,
     }

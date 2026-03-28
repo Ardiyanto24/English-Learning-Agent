@@ -32,6 +32,7 @@ else:
 print("\n[TEST 2] Google Text-to-Speech...")
 try:
     from modules.audio.tts import generate_speech
+
     audio = generate_speech("Hello, this is a test.")
     if audio:
         print(f"  OK — Audio generated ({len(audio)} bytes)")
@@ -46,6 +47,7 @@ except Exception as e:
 print("\n[TEST 3] Google Speech-to-Text...")
 try:
     from modules.audio.stt import transcribe_audio_bytes
+
     transcribe_audio_bytes(b"", filename="test.wav")
     print("  OK — STT client berhasil diinisialisasi")
 except Exception as e:
@@ -57,12 +59,9 @@ except Exception as e:
 print("\n[TEST 4] Anthropic API...")
 try:
     import anthropic
+
     client = anthropic.Anthropic()
-    response = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=20,
-        messages=[{"role": "user", "content": "Say exactly: connected"}]
-    )
+    response = client.messages.create(model="claude-haiku-4-5-20251001", max_tokens=20, messages=[{"role": "user", "content": "Say exactly: connected"}])
     print(f"  OK — Response: {response.content[0].text.strip()}")
 except Exception as e:
     print(f"  FAIL — {e}")

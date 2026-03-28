@@ -49,26 +49,20 @@ def _fetch_quiz_data() -> tuple[list, list, list]:
     """Ambil semua data quiz dari DB."""
     try:
         with get_db() as conn:
-            sessions = conn.execute(
-                """SELECT qs.*, s.created_at, s.completed_at
+            sessions = conn.execute("""SELECT qs.*, s.created_at, s.completed_at
                    FROM quiz_sessions qs
                    JOIN sessions s ON qs.session_id = s.session_id
                    WHERE s.status = 'completed'
-                   ORDER BY s.created_at ASC"""
-            ).fetchall()
+                   ORDER BY s.created_at ASC""").fetchall()
 
-            topic_tracking = conn.execute(
-                "SELECT * FROM quiz_topic_tracking ORDER BY avg_score_pct ASC LIMIT 46"
-            ).fetchall()
+            topic_tracking = conn.execute("SELECT * FROM quiz_topic_tracking ORDER BY avg_score_pct ASC LIMIT 46").fetchall()
 
-            questions = conn.execute(
-                """SELECT qq.topic, qq.cluster, qq.format,
+            questions = conn.execute("""SELECT qq.topic, qq.cluster, qq.format,
                           qq.difficulty, qq.is_correct, qq.is_graded
                    FROM quiz_questions qq
                    JOIN sessions s ON qq.session_id = s.session_id
                    WHERE qq.is_graded = 1
-                   ORDER BY s.created_at DESC LIMIT 500"""
-            ).fetchall()
+                   ORDER BY s.created_at DESC LIMIT 500""").fetchall()
 
         return (
             [dict(r) for r in sessions],
@@ -135,9 +129,7 @@ def _parse_response(raw: str) -> dict:
 
 
 @retry_llm
-def _call_analytics_llm(
-    sessions, topic_tracking, questions, prereq_rules
-) -> dict:
+def _call_analytics_llm(sessions, topic_tracking, questions, prereq_rules) -> dict:
     prompt = build_quiz_analytics_prompt(
         sessions_data=sessions,
         topic_tracking_data=topic_tracking,
@@ -164,18 +156,17 @@ def run_analytics() -> dict:
     sessions, topic_tracking, questions = _fetch_quiz_data()
 
     if len(sessions) < MIN_SESSIONS_FOR_ANALYTICS:
-        logger.info(
-            f"[quiz_analytics] Insufficient data: {len(sessions)} sessions "
-            f"(minimum: {MIN_SESSIONS_FOR_ANALYTICS})"
-        )
+        logger.info(f"[quiz_analytics] Insufficient data: {len(sessions)} sessions " f"(minimum: {MIN_SESSIONS_FOR_ANALYTICS})")
         return _empty_insight()
 
     prereq_rules = _load_prerequisite_rules()
 
     try:
         result = _call_analytics_llm(
-            sessions, topic_tracking,
-            questions, prereq_rules,
+            sessions,
+            topic_tracking,
+            questions,
+            prereq_rules,
         )
         _save_snapshot(result)
         logger.info(f"[quiz_analytics] Done — trend={result.get('trend')}")

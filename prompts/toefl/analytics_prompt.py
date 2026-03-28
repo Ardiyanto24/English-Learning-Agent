@@ -77,16 +77,10 @@ def build_toefl_analytics_prompt(sessions_data: list[dict]) -> str:
     total = len(sessions_data)
 
     # Score trend — estimated_score tiap sesi (untuk grafik UI)
-    score_trend = [
-        s["estimated_score"] for s in sessions_data
-        if s.get("estimated_score")
-    ]
+    score_trend = [s["estimated_score"] for s in sessions_data if s.get("estimated_score")]
 
     # Avg estimated score keseluruhan
-    avg_estimated = (
-        round(sum(score_trend) / len(score_trend), 1)
-        if score_trend else None
-    )
+    avg_estimated = round(sum(score_trend) / len(score_trend), 1) if score_trend else None
 
     # Avg scaled per section
     def _avg_scaled(key: str) -> float | None:
@@ -96,7 +90,7 @@ def build_toefl_analytics_prompt(sessions_data: list[dict]) -> str:
     section_avgs = {
         "listening": _avg_scaled("listening_scaled"),
         "structure": _avg_scaled("structure_scaled"),
-        "reading":   _avg_scaled("reading_scaled"),
+        "reading": _avg_scaled("reading_scaled"),
     }
 
     # Mode distribution — berapa sesi per mode

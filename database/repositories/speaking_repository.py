@@ -9,9 +9,7 @@ from typing import Optional
 from database.connection import get_db
 
 
-def save_speaking_session(
-    session_id: str, sub_mode: str, topic: str, category: str
-) -> bool:
+def save_speaking_session(session_id: str, sub_mode: str, topic: str, category: str) -> bool:
     """Simpan metadata sesi speaking baru."""
     with get_db() as conn:
         conn.execute(
@@ -60,9 +58,7 @@ def save_exchange(
     return cursor.lastrowid
 
 
-def update_exchange_transcript(
-    exchange_id: int, user_transcript: str, assessor_decision: Optional[str] = None
-) -> bool:
+def update_exchange_transcript(exchange_id: int, user_transcript: str, assessor_decision: Optional[str] = None) -> bool:
     """Update transkrip user dan keputusan assessor setelah user menjawab."""
     with get_db() as conn:
         conn.execute(
@@ -145,9 +141,7 @@ def get_speaking_session(session_id: str) -> Optional[dict]:
     }
 
 
-def get_recent_speaking_sessions(
-    sub_mode: Optional[str] = None, limit: int = 10
-) -> list[dict]:
+def get_recent_speaking_sessions(sub_mode: Optional[str] = None, limit: int = 10) -> list[dict]:
     """Ambil sesi speaking terbaru, opsional filter by sub_mode."""
     with get_db() as conn:
         if sub_mode:
@@ -204,10 +198,7 @@ def rebuild_transcript_from_db(session_id: str) -> Optional[dict]:
     # Sesi tanpa satu pun exchange → tidak bisa di-recover
     if not exchanges:
         return {
-            **{
-                k: session_data[k]
-                for k in ("session_id", "sub_mode", "topic", "category")
-            },
+            **{k: session_data[k] for k in ("session_id", "sub_mode", "topic", "category")},
             "prompt_text": "",
             "full_history": [],
             "exchange_count": 0,

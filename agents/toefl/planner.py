@@ -35,28 +35,28 @@ from utils.logger import logger
 # Full test reference (100%) — dasar semua perhitungan
 _FULL_TEST = {
     "listening": {
-        "total":  50,
-        "part_a": 30,   # Short conversations (2 speaker)
-        "part_b":  8,   # Longer conversations (2 speaker, 3-4 soal/konversasi)
-        "part_c": 12,   # Talks/monologues (1 speaker, 4-5 soal/talk)
+        "total": 50,
+        "part_a": 30,  # Short conversations (2 speaker)
+        "part_b": 8,  # Longer conversations (2 speaker, 3-4 soal/konversasi)
+        "part_c": 12,  # Talks/monologues (1 speaker, 4-5 soal/talk)
     },
     "structure": {
-        "total":  40,
-        "part_a": 15,   # Sentence completion
-        "part_b": 25,   # Error identification
+        "total": 40,
+        "part_a": 15,  # Sentence completion
+        "part_b": 25,  # Error identification
     },
     "reading": {
-        "total":    50,
-        "passages":  5,
+        "total": 50,
+        "passages": 5,
         "per_passage": 10,
     },
 }
 
 # Timer full test dalam detik
 _FULL_TIMER = {
-    "listening": 2100,   # 35 menit
-    "structure": 1500,   # 25 menit
-    "reading":   3300,   # 55 menit
+    "listening": 2100,  # 35 menit
+    "structure": 1500,  # 25 menit
+    "reading": 3300,  # 55 menit
 }
 
 # Distribusi eksplisit per mode (bukan sekadar proporsi, karena
@@ -64,71 +64,71 @@ _FULL_TIMER = {
 _DISTRIBUTIONS = {
     "50%": {
         "listening": {
-            "total":  25,
+            "total": 25,
             "part_a": 15,
-            "part_b":  4,   # ~2 konversasi × 2 soal
-            "part_c":  6,   # ~2 talk × 3 soal
+            "part_b": 4,  # ~2 konversasi × 2 soal
+            "part_c": 6,  # ~2 talk × 3 soal
         },
         "structure": {
-            "total":  20,
-            "part_a":  8,
+            "total": 20,
+            "part_a": 8,
             "part_b": 12,
         },
         "reading": {
-            "total":    25,
-            "passages":  3,
-            "per_passage": 8,   # 3×8=24 soal aktual (total=25 adalah label, bukan enforcement)
+            "total": 25,
+            "passages": 3,
+            "per_passage": 8,  # 3×8=24 soal aktual (total=25 adalah label, bukan enforcement)
         },
         "timers": {
-            "listening": 1050,   # 17.5 menit → dibulatkan ke 17 menit 30 detik
-            "structure":  750,   # 12.5 menit
-            "reading":   1650,   # 27.5 menit
+            "listening": 1050,  # 17.5 menit → dibulatkan ke 17 menit 30 detik
+            "structure": 750,  # 12.5 menit
+            "reading": 1650,  # 27.5 menit
         },
     },
     "75%": {
         "listening": {
-            "total":  38,
+            "total": 38,
             "part_a": 23,
-            "part_b":  6,   # ~3 konversasi × 2 soal
-            "part_c":  9,   # ~3 talk × 3 soal
+            "part_b": 6,  # ~3 konversasi × 2 soal
+            "part_c": 9,  # ~3 talk × 3 soal
         },
         "structure": {
-            "total":  30,
+            "total": 30,
             "part_a": 11,
             "part_b": 19,
         },
         "reading": {
-            "total":    37,
-            "passages":  4,
-            "per_passage": 9,   # 4×9=36 soal aktual (total=37 adalah label, bukan enforcement)
+            "total": 37,
+            "passages": 4,
+            "per_passage": 9,  # 4×9=36 soal aktual (total=37 adalah label, bukan enforcement)
         },
         "timers": {
-            "listening": 1575,   # ~26 menit
-            "structure": 1125,   # ~19 menit
-            "reading":   2475,   # ~41 menit
+            "listening": 1575,  # ~26 menit
+            "structure": 1125,  # ~19 menit
+            "reading": 2475,  # ~41 menit
         },
     },
     "100%": {
         "listening": {
-            "total":  50,
+            "total": 50,
             "part_a": 30,
-            "part_b":  8,
+            "part_b": 8,
             "part_c": 12,
         },
         "structure": {
-            "total":  40,
+            "total": 40,
             "part_a": 15,
             "part_b": 25,
         },
         "reading": {
-            "total":    50,
-            "passages":  5,
+            "total": 50,
+            "passages": 5,
             "per_passage": 10,
         },
         "timers": {
             "listening": 2100,
             "structure": 1500,
-            "reading":   3300,
+            "reading": 3300,
         },
     },
 }
@@ -192,39 +192,26 @@ def run_planner(mode: str) -> dict:
     is_fallback = False
 
     if mode not in _DISTRIBUTIONS:
-        logger.warning(
-            f"[toefl_planner] Unknown mode '{mode}' — "
-            f"falling back to {_FALLBACK_MODE}"
-        )
-        mode        = _FALLBACK_MODE
+        logger.warning(f"[toefl_planner] Unknown mode '{mode}' — " f"falling back to {_FALLBACK_MODE}")
+        mode = _FALLBACK_MODE
         is_fallback = True
 
     dist = _DISTRIBUTIONS[mode]
 
-    total_questions = (
-        dist["listening"]["total"]
-        + dist["structure"]["total"]
-        + dist["reading"]["total"]
-    )
+    total_questions = dist["listening"]["total"] + dist["structure"]["total"] + dist["reading"]["total"]
 
     result = {
-        "mode":             mode,
-        "listening":        dict(dist["listening"]),
-        "structure":        dict(dist["structure"]),
-        "reading":          dict(dist["reading"]),
-        "timers":           dict(dist["timers"]),
-        "total_questions":  total_questions,
+        "mode": mode,
+        "listening": dict(dist["listening"]),
+        "structure": dict(dist["structure"]),
+        "reading": dict(dist["reading"]),
+        "timers": dict(dist["timers"]),
+        "total_questions": total_questions,
         "score_conversion": SCORE_CONVERSION,
-        "is_fallback":      is_fallback,
+        "is_fallback": is_fallback,
     }
 
-    logger.info(
-        f"[toefl_planner] Mode={mode} — "
-        f"L:{dist['listening']['total']} "
-        f"S:{dist['structure']['total']} "
-        f"R:{dist['reading']['total']} "
-        f"Total:{total_questions} soal"
-    )
+    logger.info(f"[toefl_planner] Mode={mode} — " f"L:{dist['listening']['total']} " f"S:{dist['structure']['total']} " f"R:{dist['reading']['total']} " f"Total:{total_questions} soal")
 
     return result
 
@@ -239,7 +226,7 @@ def format_timer(seconds: int) -> str:
     Contoh: 2100 → "35:00", 1575 → "26:15"
     """
     minutes = seconds // 60
-    secs    = seconds % 60
+    secs = seconds % 60
     return f"{minutes:02d}:{secs:02d}"
 
 
@@ -254,11 +241,11 @@ def get_section_info(plan: dict, section: str) -> dict:
     Returns:
         dict: {total, timer_seconds, timer_str, ...part details}
     """
-    dist  = plan.get(section, {})
+    dist = plan.get(section, {})
     timer = plan.get("timers", {}).get(section, 0)
 
     return {
         **dist,
         "timer_seconds": timer,
-        "timer_str":     format_timer(timer),
+        "timer_str": format_timer(timer),
     }

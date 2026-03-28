@@ -80,10 +80,7 @@ def build_vocab_analytics_prompt(
 
     # Hitung ringkasan statistik untuk membantu LLM
     total_sessions = len(sessions_data)
-    avg_score = (
-        sum(s.get("score_pct", 0) for s in sessions_data) / total_sessions
-        if total_sessions > 0 else 0
-    )
+    avg_score = sum(s.get("score_pct", 0) for s in sessions_data) / total_sessions if total_sessions > 0 else 0
 
     # Trend: bandingkan 3 sesi terakhir vs 3 sesi sebelumnya
     scores = [s.get("score_pct", 0) for s in sessions_data]
@@ -113,11 +110,7 @@ def build_vocab_analytics_prompt(
         if q.get("is_correct"):
             format_stats[fmt]["correct"] += 1
 
-    format_accuracy = {
-        fmt: round(v["correct"] / v["total"] * 100, 1)
-        for fmt, v in format_stats.items()
-        if v["total"] > 0
-    }
+    format_accuracy = {fmt: round(v["correct"] / v["total"] * 100, 1) for fmt, v in format_stats.items() if v["total"] > 0}
 
     return f"""Analyze this student's vocabulary learning data and generate insights.
 

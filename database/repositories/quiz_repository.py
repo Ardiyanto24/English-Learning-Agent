@@ -9,8 +9,7 @@ from typing import Optional
 from database.connection import get_db
 
 
-def save_quiz_session(session_id: str, topics: str,
-                      total_questions: int) -> bool:
+def save_quiz_session(session_id: str, topics: str, total_questions: int) -> bool:
     """
     Simpan metadata sesi quiz baru.
 
@@ -28,8 +27,7 @@ def save_quiz_session(session_id: str, topics: str,
     return True
 
 
-def update_quiz_session_scores(session_id: str, correct_count: int,
-                               wrong_count: int, score_pct: float) -> bool:
+def update_quiz_session_scores(session_id: str, correct_count: int, wrong_count: int, score_pct: float) -> bool:
     """Update skor akhir sesi quiz."""
     with get_db() as conn:
         conn.execute(
@@ -43,10 +41,7 @@ def update_quiz_session_scores(session_id: str, correct_count: int,
     return True
 
 
-def save_quiz_question(session_id: str, topic: str, cluster: str,
-                       format: str, difficulty: str, question_text: str,
-                       correct_answer: str,
-                       options: Optional[str] = None) -> int:
+def save_quiz_question(session_id: str, topic: str, cluster: str, format: str, difficulty: str, question_text: str, correct_answer: str, options: Optional[str] = None) -> int:
     """
     Simpan soal quiz (incremental save, sebelum user menjawab).
 
@@ -61,17 +56,21 @@ def save_quiz_question(session_id: str, topic: str, cluster: str,
                  question_text, correct_answer, options)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (session_id, topic, cluster, format, difficulty,
-             question_text, correct_answer, options),
+            (session_id, topic, cluster, format, difficulty, question_text, correct_answer, options),
         )
     return cursor.lastrowid
 
 
-def update_quiz_answer(question_id: int, user_answer: str, is_correct: bool,
-                       is_graded: bool = True, feedback_verdict: str = None,
-                       feedback_explanation: str = None,
-                       feedback_concept: str = None,
-                       feedback_example: str = None) -> bool:
+def update_quiz_answer(
+    question_id: int,
+    user_answer: str,
+    is_correct: bool,
+    is_graded: bool = True,
+    feedback_verdict: str = None,
+    feedback_explanation: str = None,
+    feedback_concept: str = None,
+    feedback_example: str = None,
+) -> bool:
     """Update jawaban dan 4 lapisan feedback setelah soal dijawab."""
     with get_db() as conn:
         conn.execute(
@@ -82,9 +81,7 @@ def update_quiz_answer(question_id: int, user_answer: str, is_correct: bool,
                 feedback_concept = ?, feedback_example = ?
             WHERE id = ?
             """,
-            (user_answer, is_correct, is_graded, feedback_verdict,
-             feedback_explanation, feedback_concept,
-             feedback_example, question_id),
+            (user_answer, is_correct, is_graded, feedback_verdict, feedback_explanation, feedback_concept, feedback_example, question_id),
         )
     return True
 
@@ -102,8 +99,7 @@ def get_topic_tracking(topic: str) -> Optional[dict]:
     return dict(row) if row else None
 
 
-def update_topic_tracking(topic: str, cluster: str, score_pct: float,
-                          total_questions: int, correct_count: int) -> bool:
+def update_topic_tracking(topic: str, cluster: str, score_pct: float, total_questions: int, correct_count: int) -> bool:
     """
     Update atau buat tracking topik setelah sesi selesai.
     avg_score_pct dihitung sebagai rata-rata semua sesi.
@@ -115,10 +111,8 @@ def update_topic_tracking(topic: str, cluster: str, score_pct: float,
             new_total_sessions = existing["total_sessions"] + 1
             new_total_questions = existing["total_questions"] + total_questions
             new_total_correct = existing["total_correct"] + correct_count
-            new_total_wrong = (existing["total_wrong"] +
-                               (total_questions - correct_count))
-            new_avg = (existing["avg_score_pct"] * existing["total_sessions"]
-                       + score_pct) / new_total_sessions
+            new_total_wrong = existing["total_wrong"] + (total_questions - correct_count)
+            new_avg = (existing["avg_score_pct"] * existing["total_sessions"] + score_pct) / new_total_sessions
 
             conn.execute(
                 """
@@ -130,8 +124,7 @@ def update_topic_tracking(topic: str, cluster: str, score_pct: float,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE topic = ?
                 """,
-                (new_total_sessions, new_total_questions, new_total_correct,
-                 new_total_wrong, new_avg, score_pct, topic),
+                (new_total_sessions, new_total_questions, new_total_correct, new_total_wrong, new_avg, score_pct, topic),
             )
         else:
             wrong_count = total_questions - correct_count
@@ -143,8 +136,7 @@ def update_topic_tracking(topic: str, cluster: str, score_pct: float,
                      last_score_pct, last_practiced_at)
                 VALUES (?, ?, 1, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
                 """,
-                (topic, cluster, total_questions, correct_count,
-                 wrong_count, score_pct, score_pct),
+                (topic, cluster, total_questions, correct_count, wrong_count, score_pct, score_pct),
             )
     return True
 
@@ -184,7 +176,5 @@ def get_weak_topics(threshold: float = 70.0, limit: int = 10) -> list[dict]:
 def get_all_topic_tracking() -> list[dict]:
     """Ambil semua data tracking topik — untuk Planner dan Analytics."""
     with get_db() as conn:
-        rows = conn.execute(
-            "SELECT * FROM quiz_topic_tracking ORDER BY topic ASC"
-        ).fetchall()
+        rows = conn.execute("SELECT * FROM quiz_topic_tracking ORDER BY topic ASC").fetchall()
     return [dict(row) for row in rows]
