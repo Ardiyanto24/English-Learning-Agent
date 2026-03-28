@@ -77,7 +77,10 @@ def _fetch_quiz_data() -> tuple[list, list, list]:
         )
     except Exception as e:
         log_error(
-            "db_error", "quiz_analytics", context={"error": str(e)}, fallback_used=True
+            "db_error",
+            "quiz_analytics",
+            context={"error": str(e)},
+            fallback_used=True,
         )
         return [], [], []
 
@@ -132,7 +135,9 @@ def _parse_response(raw: str) -> dict:
 
 
 @retry_llm
-def _call_analytics_llm(sessions, topic_tracking, questions, prereq_rules) -> dict:
+def _call_analytics_llm(
+    sessions, topic_tracking, questions, prereq_rules
+) -> dict:
     prompt = build_quiz_analytics_prompt(
         sessions_data=sessions,
         topic_tracking_data=topic_tracking,
@@ -168,7 +173,10 @@ def run_analytics() -> dict:
     prereq_rules = _load_prerequisite_rules()
 
     try:
-        result = _call_analytics_llm(sessions, topic_tracking, questions, prereq_rules)
+        result = _call_analytics_llm(
+            sessions, topic_tracking,
+            questions, prereq_rules,
+        )
         _save_snapshot(result)
         logger.info(f"[quiz_analytics] Done — trend={result.get('trend')}")
         return result
@@ -180,4 +188,3 @@ def run_analytics() -> dict:
             fallback_used=True,
         )
         return _empty_insight()
-

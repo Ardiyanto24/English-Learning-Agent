@@ -21,8 +21,6 @@ Generator dipanggil (Human in the Loop).
 
 import json
 from pathlib import Path
-from typing import Optional
-
 from database.connection import get_db
 from utils.logger import log_error, logger
 from config.settings import (
@@ -36,14 +34,16 @@ from config.settings import (
 # ===================================================
 _CONFIG_DIR = Path("config")
 
+
 def _load_json(filename: str) -> dict:
     path = _CONFIG_DIR / filename
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
+
 try:
     PREREQUISITE_RULES = _load_json("prerequisite_rules.json")
-    CLUSTER_METADATA   = _load_json("cluster_metadata.json")
+    CLUSTER_METADATA = _load_json("cluster_metadata.json")
 except Exception as e:
     logger.error(f"[quiz_planner] Gagal load config: {e} — blocking all topics as safe fallback")
     # INTENTIONAL: dict kosong akan menyebabkan semua topik dianggap
@@ -51,7 +51,7 @@ except Exception as e:
     # tidak pernah kosong. Kita gunakan sentinel khusus agar semua
     # topik advance diblokir.
     PREREQUISITE_RULES = None   # ← None, bukan {} — sinyal "data tidak tersedia"
-    CLUSTER_METADATA   = {"clusters": {}}
+    CLUSTER_METADATA = {"clusters": {}}
 
 # Default format distribution (60/20/20)
 DEFAULT_FORMAT_DISTRIBUTION = {
@@ -153,7 +153,7 @@ def _apply_cognitive_load(
     Returns:
         (new_topics, review_topics)
     """
-    new_topics    = [t for t in accessible_topics if t not in practiced_topics]
+    new_topics = [t for t in accessible_topics if t not in practiced_topics]
     review_topics = [t for t in accessible_topics if t in practiced_topics]
 
     # Max 1 topik baru per sesi
@@ -240,7 +240,7 @@ def _apply_clustering(
         return selected_topics
 
     # Temukan cluster dari topik pertama
-    primary_topic   = selected_topics[0]
+    primary_topic = selected_topics[0]
     primary_cluster = PREREQUISITE_RULES.get(primary_topic, {}).get("cluster")
 
     if not primary_cluster:
@@ -267,9 +267,9 @@ def _build_format_distribution(total_questions: int) -> dict:
     Hitung distribusi format soal berdasarkan total_questions.
     Rasio: multiple_choice 60%, error_id 20%, fill_blank 20%.
     """
-    mc    = max(1, round(total_questions * 0.6))
-    ei    = max(1, round(total_questions * 0.2))
-    fb    = total_questions - mc - ei
+    mc = max(1, round(total_questions * 0.6))
+    ei = max(1, round(total_questions * 0.2))
+    fb = total_questions - mc - ei
 
     # Pastikan tidak ada yang negatif
     if fb < 0:
@@ -313,19 +313,24 @@ def run_planner(total_questions: int = DEFAULT_TOTAL_QUESTIONS) -> dict:
     logger.info("[quiz_planner] Starting planner run...")
 
     # Ambil semua data dari DB dan config
-    topic_tracking  = _get_all_topic_tracking()
+    topic_tracking = _get_all_topic_tracking()
     practiced_topics = _get_practiced_topics_this_session_pool()
-    all_topics      = list(PREREQUISITE_RULES.keys())
+    all_topics = list(PREREQUISITE_RULES.keys())
 
     # Deteksi cold start
     is_cold_start = len(practiced_topics) == 0
 
     # ── Logic 1: Prerequisite Awareness ──────────────────
     accessible = _filter_by_prerequisite(all_topics, topic_tracking)
-    logger.info(f"[quiz_planner] Accessible topics after prereq filter: {len(accessible)}")
+    logger.info(
+        "[quiz_planner] Accessible topics after "
+        f"prereq filter: {len(accessible)}"
+    )
 
     # ── Logic 2: Cognitive Load ───────────────────────────
-    new_topics, review_topics = _apply_cognitive_load(accessible, practiced_topics)
+    new_topics, review_topics = _apply_cognitive_load(
+        accessible, practiced_topics
+    )
 
     # ── Logic 3: Difficulty Progression ──────────────────
     difficulty = _determine_difficulty(review_topics, topic_tracking)
@@ -336,9 +341,9 @@ def run_planner(total_questions: int = DEFAULT_TOTAL_QUESTIONS) -> dict:
     # Gabung: new + review (prioritized)
     # Komposisi: max 1 new topic + max 1 review topic
     # Tidak boleh new_topics mendominasi dan memotong review topics
-    selected_new    = new_topics[:1]
+    selected_new = new_topics[:1]
     selected_review = prioritized_review[:1]
-    selected        = selected_new + selected_review
+    selected = selected_new + selected_review
 
     # Fallback jika tidak ada topik sama sekali
     if not selected and accessible:

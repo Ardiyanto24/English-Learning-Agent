@@ -38,7 +38,7 @@ from utils.retry import retry_llm
 load_dotenv()
 
 _client: Optional[anthropic.Anthropic] = None
-_rag_cache: dict[str, str] = {}  # cache RAG context per topik dalam satu proses
+_rag_cache: dict[str, str] = {}  # Cache RAG: satu proses per topik
 
 
 def _get_client() -> anthropic.Anthropic:
@@ -92,7 +92,10 @@ def _parse_corrector_response(raw: str) -> dict:
     required_top = {"is_correct", "is_graded", "feedback"}
     missing = required_top - set(parsed.keys())
     if missing:
-        raise ValueError(f"Corrector response missing top-level fields: {missing}")
+        raise ValueError(
+            f"Corrector response missing top-level fields: "
+            f"{missing}"
+        )
 
     # Validasi 4 lapisan feedback
     feedback = parsed.get("feedback", {})
@@ -104,7 +107,10 @@ def _parse_corrector_response(raw: str) -> dict:
     # Validasi example adalah list dengan 2 item
     example = feedback.get("example", [])
     if not isinstance(example, list) or len(example) < 2:
-        raise ValueError(f"'example' must be a list with 2 items, got: {example}")
+        raise ValueError(
+            f"'example' must be a list with 2 items, got: "
+            f"{example}"
+        )
 
     return parsed
 
@@ -194,7 +200,10 @@ def run_corrector(
             rag_context=rag_context,
         )
 
-        logger.info(f"[quiz_corrector] Done — is_correct={result.get('is_correct')}")
+        logger.info(
+            f"[quiz_corrector] Done — is_correct= "
+            f"{result.get('is_correct')}"
+        )
         return result
 
     except Exception as e:

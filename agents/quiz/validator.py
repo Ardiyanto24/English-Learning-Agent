@@ -171,11 +171,13 @@ def run_validator(
                     f"[quiz_validator] Valid — match_score={score}"
                 )
                 return {
-                    "is_valid":        True,
-                    "match_score":     score,
-                    "issues":          validation.get("issues", []),
-                    "final_questions": current_generator_output.get("questions", []),
-                    "is_adjusted":     False,
+                    "is_valid": True,
+                    "match_score": score,
+                    "issues": validation.get("issues", []),
+                    "final_questions": current_generator_output.get(
+                        "questions", []
+                    ),
+                    "is_adjusted": False,
                 }
 
             # ❌ Tidak valid — log dan coba regenerate
@@ -220,18 +222,18 @@ def run_validator(
         error_type="validator_unavailable" if validator_unavailable else "validation_failed",
         agent_name="quiz_validator",
         context={
-            "final_score":          last_validation.get("match_score", 0) if last_validation else 0,
-            "issues":               last_validation.get("issues", []) if last_validation else [],
+            "final_score": last_validation.get("match_score", 0) if last_validation else 0,
+            "issues": last_validation.get("issues", []) if last_validation else [],
             "validator_unavailable": validator_unavailable,
         },
         fallback_used=True,
     )
 
     return {
-        "is_valid":                  False,
-        "match_score":               last_validation.get("match_score", 0) if last_validation else 0,
-        "issues":                    last_validation.get("issues", []) if last_validation else [],
-        "final_questions":           final_output.get("questions", []),
-        "is_adjusted":               not validator_unavailable,
-        "is_validator_unavailable":  validator_unavailable,
+        "is_valid": False,
+        "match_score": last_validation.get("match_score", 0) if last_validation else 0,
+        "issues": last_validation.get("issues", []) if last_validation else [],
+        "final_questions": final_output.get("questions", []),
+        "is_adjusted": not validator_unavailable,
+        "is_validator_unavailable": validator_unavailable,
     }
