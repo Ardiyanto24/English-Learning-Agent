@@ -56,8 +56,8 @@ except Exception as e:
 # Default format distribution (60/20/20)
 DEFAULT_FORMAT_DISTRIBUTION = {
     "multiple_choice": 7,
-    "error_id":        1,
-    "fill_blank":      2,
+    "error_id": 1,
+    "fill_blank": 2,
 }
 DEFAULT_TOTAL_QUESTIONS = 10
 
@@ -278,8 +278,8 @@ def _build_format_distribution(total_questions: int) -> dict:
 
     return {
         "multiple_choice": mc,
-        "error_id":        ei,
-        "fill_blank":      max(0, fb),
+        "error_id": ei,
+        "fill_blank": max(0, fb),
     }
 
 
@@ -363,15 +363,15 @@ def run_planner(total_questions: int = DEFAULT_TOTAL_QUESTIONS) -> dict:
     format_dist = _build_format_distribution(total_questions)
 
     result = {
-        "topics":               selected,
-        "cluster":              primary_cluster,
-        "total_questions":      total_questions,
-        "difficulty_target":    difficulty,
-        "format_distribution":  format_dist,
-        "new_topics":           new_topics,
-        "review_topics":        [t for t in selected if t in review_topics],
-        "is_cold_start":        is_cold_start,
-        "accessible_topics":    accessible,
+        "topics": selected,
+        "cluster": primary_cluster,
+        "total_questions": total_questions,
+        "difficulty_target": difficulty,
+        "format_distribution": format_dist,
+        "new_topics": new_topics,
+        "review_topics": [t for t in selected if t in review_topics],
+        "is_cold_start": is_cold_start,
+        "accessible_topics": accessible,
     }
 
     logger.info(
