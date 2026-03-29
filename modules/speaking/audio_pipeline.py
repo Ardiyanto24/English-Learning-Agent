@@ -28,7 +28,6 @@ from typing import Optional
 import streamlit as st
 
 from modules.audio.tts import generate_speech
-from modules.audio.stt import transcribe_audio_bytes
 from modules.audio.recorder import record_audio
 from utils.logger import log_error, logger
 
