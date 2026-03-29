@@ -27,6 +27,9 @@ Context passing:
 
 import streamlit as st
 
+from database.connection import init_database
+from agents.orchestrator.router import RoutingContext, get_routing_context
+
 # ===================================================
 # Konfigurasi halaman — HARUS paling pertama
 # ===================================================
@@ -55,7 +58,6 @@ st.markdown(
 # ===================================================
 # Init DB — sekali saja saat app start
 # ===================================================
-from database.connection import init_database
 
 init_database()
 
@@ -64,7 +66,6 @@ init_database()
 # Di-refresh setiap navigasi agar stats per mode up-to-date.
 # DB query ringan (bukan LLM), aman dipanggil setiap rerun.
 # ===================================================
-from agents.orchestrator.router import RoutingContext, get_routing_context
 
 ctx: RoutingContext = get_routing_context()
 st.session_state["routing_ctx"] = ctx
