@@ -15,7 +15,6 @@ Yang ditest:
 Semua test TIDAK memanggil LLM atau DB sungguhan — semua di-mock.
 """
 
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest
