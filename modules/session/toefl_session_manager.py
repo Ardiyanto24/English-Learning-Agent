@@ -31,19 +31,16 @@ Konstanta:
     SECTION_ORDER     = [1, 2, 3]   — 1=Listening, 2=Structure, 3=Reading
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Optional
 
 from database.repositories.session_repository import (
     check_and_resume_toefl_session,
-    get_abandoned_sessions,
     pause_toefl_session,
-    update_session_status,
 )
 from database.repositories.toefl_repository import (
     get_toefl_session,
-    update_current_section,
 )
 from utils.logger import log_error, logger
 
