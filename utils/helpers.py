@@ -8,7 +8,7 @@ tidak ada DB call, tidak ada LLM call.
 """
 
 import uuid
-from typing import Optional, Any
+from typing import Any
 
 
 def generate_session_id() -> str:
