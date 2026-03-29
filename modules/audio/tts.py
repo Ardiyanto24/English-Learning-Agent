@@ -13,7 +13,6 @@ Voice mapping:
 - NARRATOR  : en-US-Neural2-J (male, authoritative)
 """
 
-import os
 import time
 from typing import Optional
 
@@ -21,8 +20,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DEFAULT_VOICE  = "en-US-Neural2-D"
-VALID_VOICES   = {
+DEFAULT_VOICE = "en-US-Neural2-D"
+VALID_VOICES = {
     "alloy"    : "en-US-Neural2-D",
     "nova"     : "en-US-Neural2-F",
     "onyx"     : "en-US-Neural2-J",
@@ -63,16 +62,16 @@ def generate_speech(
         return None
 
     google_voice = VALID_VOICES.get(voice, DEFAULT_VOICE)
-    last_error   = None
+    last_error = None
 
     for attempt in range(2):
         try:
             client = _get_client()
 
             synthesis_input = texttospeech.SynthesisInput(text=text.strip())
-            voice_params    = texttospeech.VoiceSelectionParams(
-                language_code = "en-US",
-                name          = google_voice,
+            voice_params = texttospeech.VoiceSelectionParams(
+                language_code="en-US",
+                name=google_voice,
             )
             audio_config = texttospeech.AudioConfig(
                 audio_encoding=texttospeech.AudioEncoding.MP3
@@ -123,7 +122,7 @@ def generate_speech_multivoice(script: str) -> Optional[bytes]:
     audio_parts = []
     for speaker_tag, text in matches:
         voice = voice_map.get(speaker_tag, "alloy")
-        text  = text.strip()
+        text = text.strip()
         if not text:
             continue
 

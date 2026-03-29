@@ -9,8 +9,6 @@ Digunakan oleh:
 Fallback: return None setelah gagal → UI tampilkan text input manual.
 """
 
-import io
-import os
 import time
 from pathlib import Path
 from typing import Optional, Union
@@ -117,7 +115,7 @@ def transcribe_audio_bytes(
         except Exception as e:
             last_error = e
             wait_time = 2 ** attempt
-            print(f"[STT] Attempt {attempt+1} gagal: {e}. "
+            print(f"[STT] Attempt {attempt + 1} gagal: {e}. "
                   f"Retry dalam {wait_time}s...")
             if attempt < 2:
                 time.sleep(wait_time)

@@ -15,10 +15,8 @@ File disimpan di folder temp_audio/ di root project.
 Folder ini ada di .gitignore dan tidak di-commit.
 """
 
-import os
 import wave
 import time
-import tempfile
 from pathlib import Path
 from typing import Optional
 
