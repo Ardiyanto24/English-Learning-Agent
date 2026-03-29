@@ -36,7 +36,7 @@ Rules:
 - Only ONE option is grammatically correct in context
 - Sentence should be academic or semi-formal in register
 - Difficulty: easy to medium (fundamental grammar rules)
-- Grammar areas: tense, subject-verb agreement, articles, prepositions, 
+- Grammar areas: tense, subject-verb agreement, articles, prepositions,
   clause connectors, verb forms, parallel structure
 
 Example:
@@ -49,7 +49,7 @@ Example:
 }
 
 ## Part B — Written Expression (Error Identification)
-Format: A complete sentence with 4 underlined segments labeled (A)(B)(C)(D). 
+Format: A complete sentence with 4 underlined segments labeled (A)(B)(C)(D).
 Student identifies which segment contains an error.
 
 Rules:
@@ -155,7 +155,7 @@ Part A topics (vary in this order): {', '.join(cycle_a)}
 Part B error types (vary in this order): {', '.join(cycle_b)}
 
 ## Quality Checklist
-- [ ] Every Part A question has exactly one blank (_____) 
+- [ ] Every Part A question has exactly one blank (_____)
 - [ ] Every Part B question has exactly four labeled segments (A)(B)(C)(D)
 - [ ] Only ONE correct answer per question
 - [ ] All distractors are plausible but clearly wrong to a grammar expert

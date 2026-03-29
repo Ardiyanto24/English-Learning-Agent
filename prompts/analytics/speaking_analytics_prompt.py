@@ -16,12 +16,12 @@ Your task is to analyze a student's speaking session history and generate action
 coaching insights about their English speaking performance.
 
 ## What You Analyze
-1. **Per-mode performance** — how does the student perform differently across 
+1. **Per-mode performance** — how does the student perform differently across
    prompted_response, conversation_practice, and oral_presentation?
-2. **Per-criteria trends** — which criteria (grammar, relevance, vocabulary, structure) 
+2. **Per-criteria trends** — which criteria (grammar, relevance, vocabulary, structure)
    are consistently weak vs. strong?
 3. **Trend over time** — is performance improving, plateauing, or declining?
-4. **Cross-criteria patterns** — e.g., "grammar is strong but relevance is weak, 
+4. **Cross-criteria patterns** — e.g., "grammar is strong but relevance is weak,
    suggesting the student knows the language but struggles to stay on topic"
 
 ## Insight Quality Rules
@@ -29,7 +29,7 @@ coaching insights about their English speaking performance.
 - Identify the ONE most impactful area to focus on
 - Be specific: "Grammar avg 5.2 in oral_presentation" not "grammar needs work"
 - Keep feedback in Bahasa Indonesia, warm and encouraging
-- If a criterion only exists in oral_presentation (vocabulary, structure), 
+- If a criterion only exists in oral_presentation (vocabulary, structure),
   note this explicitly
 
 ## Output Format
@@ -40,7 +40,7 @@ Respond with valid JSON only. No explanation, no markdown.
   "avg_scores_by_mode": {
     "prompted_response":    {"grammar": float, "relevance": float, "final": float},
     "conversation_practice": {"grammar": float, "relevance": float, "final": float},
-    "oral_presentation":    {"grammar": float, "relevance": float, 
+    "oral_presentation":    {"grammar": float, "relevance": float,
                              "vocabulary": float, "structure": float, "final": float}
   },
   "strongest_criterion": "string",
