@@ -22,7 +22,7 @@ Cara jalankan:
 """
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -34,8 +34,8 @@ def _make_transcript(n_exchanges: int = 3) -> list[dict]:
     """Buat full_history speaking dengan n exchange pasang AI-user."""
     h = []
     for i in range(n_exchanges):
-        h.append({"role": "ai", "text": f"AI prompt {i+1}: Tell me about topic {i+1}."})
-        h.append({"role": "user", "text": f"User answer {i+1}: I think that is very important."})
+        h.append({"role": "ai", "text": f"AI prompt {i + 1}: Tell me about topic {i + 1}."})
+        h.append({"role": "user", "text": f"User answer {i + 1}: I think that is very important."})
     return h
 
 

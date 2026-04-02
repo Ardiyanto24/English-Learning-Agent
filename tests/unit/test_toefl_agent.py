@@ -29,7 +29,7 @@ Semua test TIDAK memanggil LLM atau DB sungguhan — semua di-mock.
 
 import pytest
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 
 # ===================================================

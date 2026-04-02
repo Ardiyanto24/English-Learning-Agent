@@ -17,7 +17,6 @@ Yang ditest:
 Semua test TIDAK memanggil LLM sungguhan — semua di-mock.
 """
 
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -36,8 +35,8 @@ def _history(n_exchanges: int) -> list[dict]:
     """Buat n pasang AI-user exchange."""
     h = []
     for i in range(n_exchanges):
-        h.append({"role": "ai", "text": f"AI turn {i+1}"})
-        h.append({"role": "user", "text": f"User response {i+1}"})
+        h.append({"role": "ai", "text": f"AI turn {i + 1}"})
+        h.append({"role": "user", "text": f"User response {i + 1}"})
     return h
 
 
@@ -52,7 +51,7 @@ class TestSpeakingAssessor:
         History <= WINDOW_SIZE dikembalikan utuh tanpa dipotong.
         Tidak ada informasi yang hilang pada history pendek.
         """
-        from agents.speaking.assessor import WINDOW_SIZE, _build_sliding_window
+        from agents.speaking.assessor import _build_sliding_window
 
         short = _history(2)  # 4 entries < WINDOW_SIZE (5)
         result = _build_sliding_window(short)
@@ -263,7 +262,6 @@ class TestSpeakingAssessor:
             mock_llm.side_effect = Exception("API down")
 
             from agents.speaking.assessor import (
-                CONVERSATION_PHASE2_MIN,
                 run_assessor,
             )
 

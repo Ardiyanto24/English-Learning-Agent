@@ -22,7 +22,7 @@ Cara jalankan:
 """
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -40,7 +40,7 @@ def _make_questions(n: int = 5, topic: str = "Present Tenses") -> list[dict]:
             "cluster": "Tense System",
             "format": formats[i % len(formats)],
             "difficulty": "easy",
-            "question_text": f"Sample question {i+1} about {topic}.",
+            "question_text": f"Sample question {i + 1} about {topic}.",
             "options": ["A. Option A", "B. Option B", "C. Option C", "D. Option D"],
             "correct_answer": "A",
         }

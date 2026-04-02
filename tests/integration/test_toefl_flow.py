@@ -22,9 +22,7 @@ Cara jalankan:
 
 import json
 from datetime import datetime, timedelta
-from unittest.mock import patch
 
-import pytest
 
 # ===================================================
 # Konstanta mode 50%
@@ -46,7 +44,7 @@ def _make_questions(session_id: str, section: str, part: str, count: int, correc
             "section": section,
             "part": part,
             "question_number": i + 1,
-            "question_text": f"{section.title()} question {i+1}.",
+            "question_text": f"{section.title()} question {i + 1}.",
             "options": json.dumps(["A. opt A", "B. opt B", "C. opt C", "D. opt D"]),
             "correct_answer": correct_answer,
             "difficulty": "easy",

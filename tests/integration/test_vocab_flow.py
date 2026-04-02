@@ -23,7 +23,6 @@ Cara jalankan:
     pytest tests/integration/test_vocab_flow.py -v
 """
 
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -275,7 +274,6 @@ class TestVocabFullFlow:
         """
         from database.connection import get_db
         from database.repositories.vocab_repository import update_word_tracking
-        from utils.helpers import generate_session_id
 
         words = _make_words(n=3)
 

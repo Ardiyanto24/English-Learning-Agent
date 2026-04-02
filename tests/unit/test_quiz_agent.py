@@ -15,7 +15,6 @@ Yang ditest:
 Semua test TIDAK memanggil LLM atau DB sungguhan — semua di-mock.
 """
 
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -56,7 +55,7 @@ GENERATOR_OUTPUT = {
             "format": "multiple_choice" if i < 7 else ("error_id" if i == 7 else "fill_blank"),
             "topic": "Present Tenses",
             "difficulty": "easy",
-            "question_text": f"Sample question {i+1}",
+            "question_text": f"Sample question {i + 1}",
             "options": ["A. opt A", "B. opt B", "C. opt C", "D. opt D"],
             "correct_answer": "A",
         }
@@ -186,7 +185,6 @@ class TestQuizPlanner:
         sudah dikuasai (avg_score_pct >= MASTERY_THRESHOLD * 100).
         """
         from agents.quiz.planner import (
-            MASTERY_THRESHOLD,
             _filter_by_prerequisite,
             PREREQUISITE_RULES,
         )
