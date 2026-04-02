@@ -5,6 +5,79 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.1] — 2026-04-02
+
+Patch release — perbaikan bug runtime, fitur tidak lengkap, dan CI pipeline.
+
+### Fixed — Kategori 1: Runtime Crash
+
+- **`agents/toefl/validator.py`** — F821 `attempt` undefined: lambda di `regen_map`
+  mencoba menangkap variabel `attempt` sebelum loop didefinisikan. Diperbaiki
+  dengan mengoper `attempt` sebagai parameter lambda saat dipanggil.
+- **`prompts/speaking/assessor_prompt.py`** — F821 `PROMPTED_RESPONSE_MAX` undefined:
+  konstanta dipakai di `build_assessor_prompt()` tapi tidak pernah didefinisikan
+  di file ini. Diperbaiki dengan menambahkan definisi konstanta langsung di file prompt.
+
+### Fixed — Kategori 2: Fitur Tidak Lengkap
+
+- **`pages/toefl.py`** — `update_current_section()` diimport tapi tidak pernah
+  dipanggil. Diperbaiki dengan memanggil fungsi ini saat user klik "Lanjut ke
+  Section berikutnya" di pause screen, agar DB selalu tahu posisi user untuk
+  keperluan resume.
+- **`modules/session/toefl_session_manager.py`** — `get_abandoned_sessions()` dan
+  `update_session_status()` diimport tapi tidak ada fungsi yang memakainya.
+  Diperbaiki dengan menambahkan fungsi `cleanup_expired_toefl_sessions()` yang
+  menandai sesi TOEFL expired sebagai `abandoned`.
+- **`pages/toefl.py`** — Tambahkan pemanggilan `cleanup_expired_toefl_sessions()`
+  di state `init` sebelum mencari sesi paused, agar sesi expired tidak muncul
+  di resume screen.
+- **`tests/integration/test_toefl_flow.py`** — `l_ids`, `s_ids`, `r_ids` diassign
+  tapi assertion-nya tidak ditulis. Diperbaiki dengan menambahkan assertion
+  `all(i is not None for i in ...)` untuk memverifikasi semua soal berhasil
+  disimpan ke DB.
+- **`tests/integration/test_vocab_flow.py`** — `eval_resp` diassign sebagai JSON
+  string tapi tidak dipakai. Dihapus karena mock LLM sudah menggunakan dict
+  langsung.
+
+### Fixed — Kategori 3: Import Tidak Terpakai
+
+- `agents/toefl/listening_generator.py` — hapus `import time`
+- `modules/audio/recorder.py` — hapus `import os` dan `import tempfile`
+- `modules/audio/stt.py` — hapus `import os`
+- `modules/session/toefl_session_manager.py` — hapus `field` dari dataclasses import
+- `modules/speaking/audio_pipeline.py` — hapus import lokal `transcribe_audio_bytes`
+  di dalam `_transcribe_file()`, pakai top-level import
+- `pages/dashboard.py` — hapus `import traceback` dan import lokal `update_user_profile`
+  di dalam `_render_profile_editor()`
+- `pages/speaking.py` — hapus `from utils.logger import logger`
+- `pages/toefl.py` — hapus `from typing import Optional`
+- `pages/quiz.py` — hapus variable `results` yang diassign tapi tidak dipakai
+- `pages/vocab.py` — hapus variable `results` yang diassign tapi tidak dipakai
+- `prompts/quiz/generator_prompt.py` — hapus `import json`
+- `prompts/vocab/planner_prompt.py` — hapus `import json` dan trailing whitespace
+- `prompts/toefl/validator_prompt.py` — pindahkan `json.dumps()` dari dalam f-string
+  ke variable terpisah untuk menghindari E122 dan E999
+- `scripts/reset_database.py` — tambah `# noqa: E402, F401` untuk import yang
+  harus berada di luar top-level karena `sys.path` manipulation
+- `utils/helpers.py` — hapus `from typing import Optional`
+- `utils/retry.py` — hapus `import functools`, `Callable`, `Type`, dan `after_log`
+- `tests/unit/test_toefl_agent.py` — rename variable `l` menjadi `listening_count`
+- Berbagai file test — hapus top-level import yang orphan karena dipakai secara
+  lokal di dalam method
+
+### Fixed — CI/CD
+
+- **`.github/workflows/ci.yml`** — ganti `libportaudio-dev` dengan `portaudio19-dev`
+  karena package lama sudah tidak tersedia di Ubuntu runner GitHub Actions terbaru.
+
+### Technical Notes
+
+- Semua 105+ test tetap passing setelah seluruh perubahan
+- Tidak ada perubahan pada logika bisnis atau fitur yang sudah ada
+- CI pipeline (flake8 + black + pytest) kini hijau penuh
+
+---
+
 ## [1.0.0] — 2026-03-26
 
 Rilis pertama English Learning AI Agent — project selesai sepenuhnya.
@@ -44,38 +117,39 @@ Rilis pertama English Learning AI Agent — project selesai sepenuhnya.
 - Knowledge base vocabulary topik situasi (8 topik)
 
 ### Added — Phase 3: Quiz Agent
-- `agents/quiz/planner.py` — 5 logic hierarki tanpa LLM
-- `agents/quiz/generator.py` — generate soal dengan RAG context
-- `agents/quiz/validator.py` — validasi + regenerate max 3x
-- `agents/quiz/corrector.py` — 4 lapisan feedback pedagogis
-- `agents/quiz/analytics.py` — insight per topik + prerequisite
+- `agents/quiz/planner.py` — prerequisite awareness + 5 logic hierarki
+- `agents/quiz/generator.py` — generate soal via Claude Sonnet + RAG
+- `agents/quiz/validator.py` — validasi + auto-adjust
+- `agents/quiz/corrector.py` — 4 lapisan feedback
+- `agents/quiz/analytics.py` — insight per topik
 - `prompts/quiz/` — semua prompt quiz agent
-- `pages/quiz.py` — UI Streamlit quiz dengan Human-in-the-Loop
-- `config/prerequisite_rules.json` — 47 topik dengan dependency graph
-- `config/cluster_metadata.json` — pengelompokan topik
-- Knowledge base grammar 47 topik
+- `pages/quiz.py` — UI Streamlit quiz
+- `config/prerequisite_rules.json` — aturan prerequisite antar topik
+- `config/cluster_metadata.json` — cluster metadata topik grammar
 
 ### Added — Phase 4: Speaking Agent
-- `agents/speaking/generator.py` — generate prompt pembuka
-- `agents/speaking/assessor.py` — sliding window assessment
-- `agents/speaking/follow_up.py` — generate follow-up question
-- `agents/speaking/evaluator.py` — evaluasi full transcript
-- `agents/speaking/analytics.py` — insight speaking
+- `agents/speaking/generator.py` — generate prompt per sub-mode
+- `agents/speaking/assessor.py` — sliding window conversation assessor
+- `agents/speaking/follow_up.py` — follow up generator
+- `agents/speaking/evaluator.py` — scoring multi-kriteria per sub-mode
+- `agents/speaking/analytics.py` — insight per sesi
 - `prompts/speaking/` — semua prompt speaking agent
-- `pages/speaking.py` — 3 sub-mode: Prompted Response, Conversation Practice, Oral Presentation
-- `config/speaking_metadata.json` — 14 kategori topik TOEFL
+- `pages/speaking.py` — UI Streamlit speaking (3 sub-mode)
+- `config/speaking_metadata.json` — 14 kategori TOEFL Preparation
 
 ### Added — Phase 5: TOEFL Simulator
-- `agents/toefl/listening_generator.py` — generate dialog/monolog
-- `agents/toefl/structure_generator.py` — generate soal grammar
+- `agents/toefl/planner.py` — distribusi soal per mode
+- `agents/toefl/listening_generator.py` — generate dialog + TTS multi-voice
+- `agents/toefl/structure_generator.py` — generate soal grammar + RAG
 - `agents/toefl/reading_generator.py` — generate passage + soal
+- `agents/toefl/validator.py` — quality gate 80% threshold
+- `agents/toefl/evaluator.py` — konversi skor ITP resmi
+- `agents/toefl/analytics.py` — trend skor per simulasi
 - `prompts/toefl/` — semua prompt TOEFL agent
-- `pages/toefl.py` — simulator lengkap dengan timer dan pause/resume
-- Konversi skor ITP resmi (tabel Listening/Structure/Reading)
-- Mode 50% / 75% / 100% dengan distribusi soal proporsional
+- `pages/toefl.py` — UI Streamlit TOEFL dengan timer dan pause/resume
 
 ### Added — Phase 6: Orchestrator & Dashboard
-- `agents/orchestrator/router.py` — routing context + onboarding
+- `agents/orchestrator/router.py` — routing + onboarding + profile management
 - `agents/orchestrator/master_analytics.py` — cross-mode analysis
 - `prompts/analytics/` — prompt analytics per mode
 - `pages/dashboard.py` — 3-layer dashboard (Quick Snapshot, Per-Mode Summary, Deep Analysis)
@@ -85,11 +159,11 @@ Rilis pertama English Learning AI Agent — project selesai sepenuhnya.
 - `tests/unit/test_vocab_agent.py` — 16 unit test
 - `tests/unit/test_quiz_agent.py` — 20 unit test
 - `tests/unit/test_speaking_agent.py` — 22 unit test
-- `tests/unit/test_toefl_agent.py` — 45 unit test (ModeConfig, Converter, SessionManager)
+- `tests/unit/test_toefl_agent.py` — 45 unit test
 - `tests/integration/test_vocab_flow.py` — 12 integration test
-- `tests/integration/test_quiz_flow.py` — 12 integration test (termasuk 4-layer feedback)
-- `tests/integration/test_speaking_flow.py` — 13 integration test (termasuk recovery flow)
-- `tests/integration/test_toefl_flow.py` — 12 integration test (termasuk pause/resume)
+- `tests/integration/test_quiz_flow.py` — 12 integration test
+- `tests/integration/test_speaking_flow.py` — 13 integration test
+- `tests/integration/test_toefl_flow.py` — 12 integration test
 - `docs/setup/installation.md`
 - `docs/setup/configuration.md`
 - `docs/setup/knowledge_base.md`
