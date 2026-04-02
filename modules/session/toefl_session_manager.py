@@ -295,3 +295,33 @@ def is_session_abandoned(session_id: str) -> bool:
 
     session = get_session(session_id)
     return session is not None and session.get("status") == "abandoned"
+
+
+def cleanup_expired_toefl_sessions() -> int:
+    """
+    Cek semua sesi TOEFL yang paused dan sudah melewati expires_at.
+    Tandai sebagai 'abandoned' agar tidak muncul di resume screen.
+
+    Dipanggil dari pages/toefl.py saat state 'init' —
+    sebelum mencari sesi paused yang bisa di-resume.
+
+    Returns:
+        Jumlah sesi yang berhasil di-mark abandoned.
+    """
+    expired = get_abandoned_sessions()
+    count = 0
+
+    for session in expired:
+        sid = session.get("session_id")
+        success = update_session_status(sid, status="abandoned")
+        if success:
+            count += 1
+            logger.info(
+                f"[toefl_session_manager] Session {sid} "
+                f"marked as abandoned (expired after {PAUSE_EXPIRY_DAYS} days)"
+            )
+
+    if count:
+        logger.info(f"[toefl_session_manager] Cleanup done — {count} expired session(s) abandoned")
+
+    return count

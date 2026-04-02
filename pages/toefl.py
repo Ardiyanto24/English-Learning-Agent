@@ -41,6 +41,7 @@ from modules.session.toefl_session_manager import (
     pause_session,
     resume_session,
     get_paused_session_info,
+    cleanup_expired_toefl_sessions,
     SECTION_NAMES,
 )
 from database.repositories.session_repository import (
@@ -157,6 +158,9 @@ def _render_init():
     st.title("📊 TOEFL Simulator")
     st.markdown("Simulasi TOEFL ITP dengan estimasi skor resmi.")
     st.markdown("---")
+    
+    # Bersihkan sesi expired sebelum tampilkan pilihan
+    cleanup_expired_toefl_sessions()
 
     # Cek apakah ada sesi paused yang bisa di-resume
     paused_sessions = get_sessions_by_mode("toefl", limit=5)
@@ -478,6 +482,9 @@ def _render_pause_screen(after_section: int):
     col1, col2 = st.columns(2)
     with col1:
         if st.button(f"▶️ Lanjut ke {next_section_name}", use_container_width=True, type="primary"):
+            session_id = _get("session_id")
+            if session_id:
+                update_current_section(session_id, after_section + 1)
             next_state = SECTION_STATE.get(after_section + 1, "scoring")
             _set("state", next_state)
             st.rerun()

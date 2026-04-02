@@ -412,14 +412,6 @@ class TestVocabFullFlow:
             q_ids.append(qid)
 
         # ── Step 6 & 7: Simulasi user jawab + Evaluator ──
-        eval_resp = json.dumps(
-            {
-                "is_correct": True,
-                "is_graded": True,
-                "feedback": "Benar!",
-            }
-        )
-
         correct_count = 0
         with patch("agents.vocab.evaluator._call_evaluator_llm") as mock_llm:
             mock_llm.return_value = {

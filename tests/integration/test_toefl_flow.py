@@ -149,6 +149,14 @@ class TestToeflFullFlow:
         s_ids = _save_section_questions(sid, "structure", "A", S_TOTAL)
         r_ids = _save_section_questions(sid, "reading", "A", R_TOTAL)
 
+        # Verifikasi semua soal berhasil disimpan (ID tidak None)
+        assert all(i is not None for i in l_ids), \
+            f"Listening: {l_ids.count(None)} soal gagal disimpan ke DB"
+        assert all(i is not None for i in s_ids), \
+            f"Structure: {s_ids.count(None)} soal gagal disimpan ke DB"
+        assert all(i is not None for i in r_ids), \
+            f"Reading: {r_ids.count(None)} soal gagal disimpan ke DB"
+
         with get_db() as conn:
             counts = conn.execute(
                 """
