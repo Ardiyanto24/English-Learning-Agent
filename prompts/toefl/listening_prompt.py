@@ -152,7 +152,7 @@ def build_listening_prompt(
 - Part               : {part}
 
 ## Critical Tag Reminder
-{"Use [SPEAKER_A] and [SPEAKER_B] alternating naturally." if part in ("A","B") else "Use [NARRATOR] for every line."}
+{"Use [SPEAKER_A] and [SPEAKER_B] alternating naturally." if part in ("A", "B") else "Use [NARRATOR] for every line."}
 
 Generate all {item_count} item(s) in a single JSON response.
 Vary the topics across items — do not repeat the same subject.
