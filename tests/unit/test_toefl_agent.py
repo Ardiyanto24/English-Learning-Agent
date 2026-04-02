@@ -316,9 +316,9 @@ class TestToeflConverter:
             (50, 45, 48),  # tipikal
             (35, 40, 38),  # bawah rata-rata
         ]
-        for l, s, r in test_cases:
-            result = calculate_estimated_toefl(l, s, r)
-            assert 310 <= result <= 677, f"Estimated {result} out of range for L={l} S={s} R={r}"
+        for listening_count, structure_count, reading_count in test_cases:
+            result = calculate_estimated_toefl(listening_count, structure_count, reading_count)
+            assert 310 <= result <= 677, f"Estimated {result} out of range for L={listening_count} S={structure_count} R={reading_count}"
 
     # ── process_full_score (end-to-end pipeline) ────
     def test_process_full_score_returns_all_fields(self):
