@@ -84,6 +84,7 @@ new_subtopic:
   "suggested_followup": "You've made great points about automation. What about AI in healthcare specifically — do you think it's a positive development?"
 }"""
 
+PROMPTED_RESPONSE_MAX = 3
 
 def build_assessor_prompt(
     sub_mode: str,

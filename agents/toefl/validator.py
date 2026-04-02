@@ -229,15 +229,15 @@ def run_validator(
     regen_map = {
         "listening": (
             regen_listening,
-            lambda attempt=attempt: (planner_output["listening"], session_id, attempt),
+            lambda a: (planner_output["listening"], session_id, a),
         ),
         "structure": (
             regen_structure,
-            lambda: (planner_output["structure"],),
+            lambda a: (planner_output["structure"],),
         ),
         "reading": (
             regen_reading,
-            lambda: (planner_output["reading"],),
+            lambda a: (planner_output["reading"],),
         ),
     }
 
@@ -248,7 +248,7 @@ def run_validator(
         for attempt in range(1, MAX_REGEN_ATTEMPTS + 1):
             logger.info(f"[toefl_validator] Regen {section} attempt {attempt}/{MAX_REGEN_ATTEMPTS}")
             try:
-                args = args_fn()
+                args = args_fn(attempt)
                 new_content = regen_fn(*args)
 
                 # Re-validate section ini
