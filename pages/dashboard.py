@@ -224,7 +224,6 @@ def _query_layer1() -> dict:
             data["grammar_coverage"] = round((practiced / TOTAL_GRAMMAR_TOPICS) * 100, 1)
 
     except Exception as e:
-        import traceback
 
         st.caption(f"⚠️ Gagal load Layer 1: {e}")
 
@@ -800,7 +799,6 @@ def _render_profile_editor(ctx: RoutingContext):
     new_topic = VOCAB_TOPICS[topic_labels.index(new_topic_label)]
 
     if st.button("💾 Simpan Perubahan", type="primary"):
-        from agents.orchestrator.router import update_user_profile
 
         success = update_user_profile(
             target_toefl=new_target,

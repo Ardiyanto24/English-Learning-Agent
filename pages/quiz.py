@@ -424,7 +424,6 @@ def main():
     elif page_state == "answering":
         questions = _get("questions", [])
         current_index = _get("current_index", 0)
-        results = _get("results", [])
         total = len(questions)
 
         # Progress bar
