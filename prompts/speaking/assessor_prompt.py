@@ -86,6 +86,7 @@ new_subtopic:
 
 PROMPTED_RESPONSE_MAX = 3
 
+
 def build_assessor_prompt(
     sub_mode: str,
     exchange_count: int,

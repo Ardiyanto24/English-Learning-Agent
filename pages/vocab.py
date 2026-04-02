@@ -360,7 +360,6 @@ def main():
     elif page_state == "answering":
         words = _get_state("words", [])
         current_index = _get_state("current_index", 0)
-        results = _get_state("results", [])
         waiting_next = _get_state("waiting_next", False)
         planner_output = _get_state("planner_output", {})
 

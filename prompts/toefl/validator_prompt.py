@@ -162,10 +162,10 @@ def build_validator_prompt(
 
 ## Target Distribution (from Planner)
 {json.dumps({
-    "listening": planner_output.get("listening", {}),
-    "structure":  planner_output.get("structure", {}),
-    "reading":    planner_output.get("reading", {}),
-}, ensure_ascii=False, indent=2)}
+    "listening" : planner_output.get("listening", {}),  # noqa: E122
+    "structure" : planner_output.get("structure", {}),  # noqa: E122
+    "reading" : planner_output.get("reading", {}),  # noqa: E122
+}, ensure_ascii=False, indent=2)}  # noqa: E122
 
 ## Actual Distribution Generated
 {json.dumps(actual, ensure_ascii=False, indent=2)}

@@ -27,7 +27,7 @@ that balances new learning with spaced repetition review.
 ### 1. Difficulty Progression
 - Start at "easy" for new users (cold start)
 - Upgrade to "medium" when: average mastery_score >= 80% for easy words
-- Upgrade to "hard" when: average mastery_score >= 80% for medium words  
+- Upgrade to "hard" when: average mastery_score >= 80% for medium words
 - Downgrade one level when: average mastery_score < 40% for current level
 
 ### 2. Cognitive Load Management
@@ -105,7 +105,6 @@ def build_planner_prompt(
         Jika cold start, kembalikan None — gunakan default config langsung
         tanpa LLM call untuk hemat token.
     """
-    import json
 
     # Cold start: tidak perlu LLM, langsung pakai default
     # Caller harus cek return None dan gunakan DEFAULT_PLANNER_CONFIG

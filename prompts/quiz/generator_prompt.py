@@ -103,7 +103,6 @@ def build_generator_prompt(planner_output: dict, rag_context: str) -> str:
     Returns:
         String user prompt siap dikirim ke LLM
     """
-    import json
 
     topics = planner_output.get("topics", [])
     total_questions = planner_output.get("total_questions", 5)
