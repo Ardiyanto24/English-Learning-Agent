@@ -47,7 +47,7 @@ Generate a related but new angle in `suggested_followup`.
 
 ## Sub-Mode Exchange Limits
 - prompted_response    : max 3 exchanges → then STOP
-- conversation_practice: 
+- conversation_practice:
   - fase 1 (< 10 exchanges): NEVER stop, always continue or new_subtopic
   - fase 2 (10-15 exchanges): may stop if topic naturally closed
 - oral_presentation    : no assessor needed (monologue, not dialogue)
