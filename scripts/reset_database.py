@@ -15,8 +15,8 @@ import os
 # Tambahkan root project ke Python path agar import berjalan
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from database.connection import get_db, init_database
-from database.models import CREATE_ALL_TABLES
+from database.connection import get_db, init_database  # noqa: E402
+from database.models import CREATE_ALL_TABLES  # noqa: E402, F401
 
 
 def drop_all_tables():

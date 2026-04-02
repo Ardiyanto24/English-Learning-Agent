@@ -15,10 +15,11 @@ Jalankan script ini:
 import sys
 import os
 import time
-from modules.rag.indexer import index_knowledge_base, GRAMMAR_KB_PATH
 
 # Tambahkan root project ke Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from modules.rag.indexer import index_knowledge_base, GRAMMAR_KB_PATH  # noqa: E402
 
 
 def main():
