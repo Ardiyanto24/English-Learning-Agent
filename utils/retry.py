@@ -19,8 +19,7 @@ Penggunaan:
         return repository.get_session(session_id)
 """
 
-import functools
-from typing import Callable, Optional, Type
+from typing import Optional
 
 from tenacity import (
     retry,
@@ -29,7 +28,6 @@ from tenacity import (
     wait_fixed,
     retry_if_exception_type,
     before_sleep_log,
-    after_log,
 )
 import logging
 
