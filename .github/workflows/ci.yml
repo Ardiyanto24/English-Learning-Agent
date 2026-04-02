@@ -58,7 +58,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install system dependencies untuk audio
-        run: sudo apt-get install -y libportaudio2 libportaudio-dev
+        run: sudo apt-get install -y libportaudio2 portaudio19-dev
 
       - name: Cache pip
         uses: actions/cache@v4
