@@ -158,25 +158,36 @@ def build_validator_prompt(
             }
         )
 
+    # ── Keluarkan JSON ke variable agar tidak error di dalam f-string ──
+    target_dist = json.dumps(
+        {
+            "listening": planner_output.get("listening", {}),
+            "structure": planner_output.get("structure", {}),
+            "reading": planner_output.get("reading", {}),
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+    actual_dist = json.dumps(actual, ensure_ascii=False, indent=2)
+    listening_sample_str = json.dumps(listening_samples, ensure_ascii=False, indent=2)
+    structure_sample_str = json.dumps(structure_samples, ensure_ascii=False, indent=2)
+    reading_sample_str = json.dumps(reading_samples, ensure_ascii=False, indent=2)
+
     return f"""Perform quality check on this generated TOEFL ITP content.
 
 ## Target Distribution (from Planner)
-{json.dumps({
-    "listening" : planner_output.get("listening", {}),  # noqa: E122
-    "structure" : planner_output.get("structure", {}),  # noqa: E122
-    "reading" : planner_output.get("reading", {}),  # noqa: E122
-}, ensure_ascii=False, indent=2)}  # noqa: E122
+{target_dist}
 
 ## Actual Distribution Generated
-{json.dumps(actual, ensure_ascii=False, indent=2)}
+{actual_dist}
 
 ## Listening Sample (for quality check)
-{json.dumps(listening_samples, ensure_ascii=False, indent=2)}
+{listening_sample_str}
 
 ## Structure Sample (for quality check)
-{json.dumps(structure_samples, ensure_ascii=False, indent=2)}
+{structure_sample_str}
 
 ## Reading Sample (for quality check)
-{json.dumps(reading_samples, ensure_ascii=False, indent=2)}
+{reading_sample_str}
 
 Evaluate quality and respond with JSON only."""
