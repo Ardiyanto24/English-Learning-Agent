@@ -160,7 +160,7 @@ def _render_summary():
     st.markdown("### Detail Jawaban")
     for i, (q, r) in enumerate(zip(questions, results)):
         icon = "✅" if r.get("is_correct") else "❌"
-        with st.expander(f"{icon} Soal {i+1}: {q.get('topic')} — {q.get('format')}"):
+        with st.expander(f"{icon} Soal {i + 1}: {q.get('topic')} — {q.get('format')}"):
             st.write(f"**Soal:** {q.get('question_text')}")
             st.write(f"**Jawaban kamu:** {r.get('user_answer', '-')}")
             st.write(f"**Jawaban benar:** {q.get('correct_answer')}")

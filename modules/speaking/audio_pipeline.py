@@ -269,8 +269,6 @@ def _transcribe_file(audio_path: str) -> Optional[str]:
         with open(audio_path, "rb") as f:
             audio_bytes = f.read()
 
-        from modules.audio.stt import transcribe_audio_bytes
-
         transcript = transcribe_audio_bytes(audio_bytes, filename="recording.wav")
         return transcript if transcript and transcript.strip() else None
 

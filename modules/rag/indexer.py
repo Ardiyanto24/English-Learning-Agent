@@ -119,7 +119,7 @@ def split_long_chunk(chunk: dict) -> list[dict]:
                 {
                     **chunk,
                     "text": "\n\n".join(current_paragraphs),
-                    "section_title": f"{chunk['section_title']} (part {len(result_chunks)+1})",
+                    "section_title": f"{chunk['section_title']} (part {len(result_chunks) + 1})",
                 }
             )
             overlap_start = max(0, len(current_paragraphs) - overlap_size)
@@ -130,7 +130,7 @@ def split_long_chunk(chunk: dict) -> list[dict]:
         current_tokens += para_tokens
 
     if current_paragraphs:
-        part_label = f" (part {len(result_chunks)+1})" if result_chunks else ""
+        part_label = f" (part {len(result_chunks) + 1})" if result_chunks else ""
         result_chunks.append(
             {
                 **chunk,
@@ -250,7 +250,7 @@ def index_knowledge_base(
         print(f"    ✓ Batch {batch_num}/{total_batches} selesai")
 
     # Simpan ke ChromaDB
-    print(f"\n  💾 Menyimpan ke ChromaDB...")
+    print("\n  💾 Menyimpan ke ChromaDB...")
     collection.upsert(
         ids=all_ids,
         embeddings=all_embeddings,

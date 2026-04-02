@@ -28,7 +28,6 @@ Pause screen:
 import json
 import time
 from datetime import datetime
-from typing import Optional
 
 import streamlit as st
 
@@ -158,7 +157,7 @@ def _render_init():
     st.title("📊 TOEFL Simulator")
     st.markdown("Simulasi TOEFL ITP dengan estimasi skor resmi.")
     st.markdown("---")
-    
+
     # Bersihkan sesi expired sebelum tampilkan pilihan
     cleanup_expired_toefl_sessions()
 

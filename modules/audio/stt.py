@@ -11,7 +11,7 @@ Retry policy: max 3x dengan exponential backoff (1s → 2s → 4s).
 Fallback: return None → UI tampilkan text input manual.
 """
 
-import os
+
 import time
 from pathlib import Path
 from typing import Optional, Union
@@ -100,7 +100,7 @@ def transcribe_audio_bytes(
         except Exception as e:
             last_error = e
             wait = 2**attempt
-            print(f"[STT] Attempt {attempt+1} gagal: {e}. " f"Retry dalam {wait}s...")
+            print(f"[STT] Attempt {attempt + 1} gagal: {e}. " f"Retry dalam {wait}s...")
             if attempt < 2:
                 time.sleep(wait)
 

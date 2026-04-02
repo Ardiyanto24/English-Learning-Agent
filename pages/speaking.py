@@ -45,7 +45,6 @@ from database.repositories.speaking_repository import (
     rebuild_transcript_from_db,
 )
 from utils.helpers import generate_session_id
-from utils.logger import logger
 
 # Konstanta
 ORAL_PRESENTATION_MAX_SECONDS = 180  # 3 menit
