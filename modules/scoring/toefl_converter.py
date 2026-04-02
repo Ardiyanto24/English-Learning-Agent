@@ -236,7 +236,10 @@ def convert_to_scaled(raw_score: int, section: str) -> int:
     """
     section = section.lower()
     if section not in _CONVERSION_TABLES:
-        raise ValueError(f"Section tidak valid: '{section}'. " f"Pilihan valid: {list(_CONVERSION_TABLES.keys())}")
+        raise ValueError(
+            f"Section tidak valid: '{section}'. "
+            f"Pilihan valid: {list(_CONVERSION_TABLES.keys())}"
+        )
 
     table = _CONVERSION_TABLES[section]
     max_raw = _MAX_RAW[section]

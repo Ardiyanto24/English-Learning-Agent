@@ -103,7 +103,10 @@ def _generate_audio(
     audio_bytes = generate_speech_multivoice(script)
 
     if not audio_bytes:
-        logger.warning(f"[listening_generator] TTS failed for " f"part={part} item={item_id} — UI will fallback to text")
+        logger.warning(
+            f"[listening_generator] TTS failed for "
+            f"part={part} item={item_id} — UI will fallback to text"
+        )
         log_error(
             error_type="tts_failure",
             agent_name="listening_generator",
@@ -166,7 +169,10 @@ def _parse_response(raw: str, part: str) -> list[dict]:
             if "[SPEAKER_A]" not in script:
                 raise ValueError(f"Item {i} Part {part} script missing [SPEAKER_A] tag")
             if part == "B" and "[SPEAKER_B]" not in script:
-                raise ValueError(f"Item {i} Part B script missing [SPEAKER_B] tag — " f"Part B must be a two-speaker dialogue")
+                raise ValueError(
+                    f"Item {i} Part B script missing [SPEAKER_B] tag — "
+                    f"Part B must be a two-speaker dialogue"
+                )
         elif part == "C":
             if "[NARRATOR]" not in script:
                 raise ValueError(f"Item {i} Part C script missing [NARRATOR] tag")
@@ -178,7 +184,9 @@ def _parse_response(raw: str, part: str) -> list[dict]:
             if missing:
                 raise ValueError(f"Item {i} Question {j} missing fields: {missing}")
             if q.get("correct_answer") not in ("A", "B", "C", "D"):
-                raise ValueError(f"Item {i} Question {j} invalid correct_answer: " f"{q.get('correct_answer')}")
+                raise ValueError(
+                    f"Item {i} Question {j} invalid correct_answer: " f"{q.get('correct_answer')}"
+                )
 
     return items
 
@@ -252,7 +260,10 @@ def run_generator(
         item_count = _item_count_from_distribution(part_label, listening_dist)
         questions_per_item = _questions_per_item(part_label)
 
-        logger.info(f"[listening_generator] Generating Part {part_label}: " f"{item_count} item(s) × {questions_per_item} question(s)")
+        logger.info(
+            f"[listening_generator] Generating Part {part_label}: "
+            f"{item_count} item(s) × {questions_per_item} question(s)"
+        )
 
         try:
             items = _call_llm(part_label, item_count, questions_per_item)
@@ -267,7 +278,9 @@ def run_generator(
                 },
                 fallback_used=False,
             )
-            raise RuntimeError(f"Listening Generator Part {part_label} gagal setelah 3x retry: {e}") from e
+            raise RuntimeError(
+                f"Listening Generator Part {part_label} gagal setelah 3x retry: {e}"
+            ) from e
 
         # Generate audio untuk setiap item
         enriched_items = []
@@ -299,11 +312,16 @@ def run_generator(
             total_q += len(item["questions"])
 
         result[part_key] = enriched_items
-        logger.info(f"[listening_generator] Part {part_label} done: " f"{len(enriched_items)} items, {total_q} questions so far")
+        logger.info(
+            f"[listening_generator] Part {part_label} done: "
+            f"{len(enriched_items)} items, {total_q} questions so far"
+        )
 
     result["total_questions"] = total_q
     result["tts_available"] = tts_success / tts_total >= 0.5 if tts_total > 0 else False
 
-    logger.info(f"[listening_generator] Complete — " f"total_q={total_q} " f"tts={tts_success}/{tts_total}")
+    logger.info(
+        f"[listening_generator] Complete — " f"total_q={total_q} " f"tts={tts_success}/{tts_total}"
+    )
 
     return result

@@ -127,8 +127,10 @@ def _adjust_content(
     """
     adjusted = dict(content)
     adjusted["is_adjusted"] = True
-    adjusted["adjustment_reason"] = f"Quality check score below threshold after {MAX_REGEN_ATTEMPTS} " f"regeneration attempts. Flags: " + str(
-        validation_result.get("quality_check", {}).get(section, {}).get("flags", [])
+    adjusted["adjustment_reason"] = (
+        f"Quality check score below threshold after {MAX_REGEN_ATTEMPTS} "
+        f"regeneration attempts. Flags: "
+        + str(validation_result.get("quality_check", {}).get(section, {}).get("flags", []))
     )
 
     log_error(
@@ -141,7 +143,10 @@ def _adjust_content(
         },
         fallback_used=True,
     )
-    logger.warning(f"[toefl_validator] Section '{section}' adjusted and flagged " f"after {MAX_REGEN_ATTEMPTS} regen attempts")
+    logger.warning(
+        f"[toefl_validator] Section '{section}' adjusted and flagged "
+        f"after {MAX_REGEN_ATTEMPTS} regen attempts"
+    )
 
     return adjusted
 
@@ -190,7 +195,10 @@ def run_validator(
     except Exception as e:
         # Jika validator sendiri gagal → lolos semua, tapi flag eksplisit
         # overall_quality_score=None agar downstream tidak salah baca sebagai lolos
-        logger.warning(f"[toefl_validator] Validator LLM failed: {e} — " f"passing all content with validator_unavailable=True")
+        logger.warning(
+            f"[toefl_validator] Validator LLM failed: {e} — "
+            f"passing all content with validator_unavailable=True"
+        )
         log_error(
             error_type="validator_unavailable",
             agent_name="toefl_validator",
@@ -210,7 +218,10 @@ def run_validator(
             "adjusted_sections": ["validator_unavailable"],
         }
 
-    logger.info(f"[toefl_validator] Initial quality score: " f"{validation.get('overall_quality_score', 0):.2f}")
+    logger.info(
+        f"[toefl_validator] Initial quality score: "
+        f"{validation.get('overall_quality_score', 0):.2f}"
+    )
 
     if validation.get("is_acceptable"):
         return {
@@ -224,7 +235,10 @@ def run_validator(
 
     # ── Regenerasi section yang lemah ────────────────────────────────────
     weak_sections = _identify_weak_sections(validation)
-    logger.info(f"[toefl_validator] Weak sections: {weak_sections} — " f"attempting regeneration (max {MAX_REGEN_ATTEMPTS}x per section)")
+    logger.info(
+        f"[toefl_validator] Weak sections: {weak_sections} — "
+        f"attempting regeneration (max {MAX_REGEN_ATTEMPTS}x per section)"
+    )
 
     regen_map = {
         "listening": (
@@ -271,12 +285,17 @@ def run_validator(
                         final_reading = new_content
 
                     validation = new_validation
-                    logger.info(f"[toefl_validator] Section '{section}' passed " f"on attempt {attempt} (score={sec_score:.2f})")
+                    logger.info(
+                        f"[toefl_validator] Section '{section}' passed "
+                        f"on attempt {attempt} (score={sec_score:.2f})"
+                    )
                     success = True
                     break
 
             except Exception as e:
-                logger.warning(f"[toefl_validator] Regen attempt {attempt} failed " f"for '{section}': {e}")
+                logger.warning(
+                    f"[toefl_validator] Regen attempt {attempt} failed " f"for '{section}': {e}"
+                )
 
         if not success:
             # Adjust & flag — sesi tetap lanjut

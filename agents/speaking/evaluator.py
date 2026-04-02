@@ -219,7 +219,11 @@ def run_evaluator(
     """
     exchange_count = len([t for t in full_transcript if t.get("role") == "user"])
 
-    logger.info(f"[speaking_evaluator] Evaluating — " f"sub_mode={sub_mode} exchanges={exchange_count} " f"topic='{main_topic}'")
+    logger.info(
+        f"[speaking_evaluator] Evaluating — "
+        f"sub_mode={sub_mode} exchanges={exchange_count} "
+        f"topic='{main_topic}'"
+    )
 
     # Minimal 1 exchange user untuk bisa dinilai
     user_turns = [t for t in full_transcript if t.get("role") == "user"]
@@ -235,7 +239,12 @@ def run_evaluator(
             full_transcript=full_transcript,
         )
 
-        logger.info(f"[speaking_evaluator] Done — " f"final_score={result.get('final_score')} " f"grammar={result.get('grammar_score')} " f"relevance={result.get('relevance_score')}")
+        logger.info(
+            f"[speaking_evaluator] Done — "
+            f"final_score={result.get('final_score')} "
+            f"grammar={result.get('grammar_score')} "
+            f"relevance={result.get('relevance_score')}"
+        )
         return result
 
     except Exception as e:

@@ -123,9 +123,15 @@ def _run_conversation_turn(
             _set("previous_angles", previous_angles)
     else:
         # continue — gunakan suggested_followup dari assessor jika ada
-        next_prompt = assessment.get("suggested_followup") or ("Could you elaborate more on that point?")
+        next_prompt = assessment.get("suggested_followup") or (
+            "Could you elaborate more on that point?"
+        )
 
-    return {"decision": decision, "next_prompt": next_prompt, "reason": assessment.get("reason", "")}
+    return {
+        "decision": decision,
+        "next_prompt": next_prompt,
+        "reason": assessment.get("reason", ""),
+    }
 
 
 # ===================================================
@@ -193,7 +199,9 @@ def _render_summary():
     is_graded = evaluation.get("is_graded", False)
 
     if not is_graded:
-        st.warning("⚠️ Sesi ini tidak bisa dinilai karena kendala teknis. Transcript tetap tersimpan.")
+        st.warning(
+            "⚠️ Sesi ini tidak bisa dinilai karena kendala teknis. Transcript tetap tersimpan."
+        )
     else:
         # Tampilkan skor
         def _fmt(val) -> str:
@@ -409,7 +417,10 @@ def _state_oral_timer():
 
     # Tampilkan topik
     st.info(f"**Topik presentasi kamu:**\n\n{prompt_text}")
-    st.markdown("Presentasikan pendapatmu selama **maksimal 3 menit**. " "Kamu bisa berhenti kapan saja atau tunggu timer habis.")
+    st.markdown(
+        "Presentasikan pendapatmu selama **maksimal 3 menit**. "
+        "Kamu bisa berhenti kapan saja atau tunggu timer habis."
+    )
 
     # Timer logic
     start_key = "sp_oral_start_time"
@@ -575,11 +586,19 @@ def _state_init():
 
     # Penjelasan singkat per mode
     desc = {
-        "prompted_response": ("AI akan memberikan satu pertanyaan. Jawab dengan lengkap. " "AI akan bertanya lanjutan maksimal 3 kali."),
-        "conversation_practice": (
-            "Percakapan natural dengan AI. Fase 1 (< 10 exchange): " "AI akan menjaga conversation tetap hidup. " "Fase 2 (10-15 exchange): percakapan bisa berakhir secara natural."
+        "prompted_response": (
+            "AI akan memberikan satu pertanyaan. Jawab dengan lengkap. "
+            "AI akan bertanya lanjutan maksimal 3 kali."
         ),
-        "oral_presentation": ("AI berikan topik, kamu presentasikan selama maksimal 3 menit. " "Dinilai dari grammar, relevance, vocabulary, dan struktur."),
+        "conversation_practice": (
+            "Percakapan natural dengan AI. Fase 1 (< 10 exchange): "
+            "AI akan menjaga conversation tetap hidup. "
+            "Fase 2 (10-15 exchange): percakapan bisa berakhir secara natural."
+        ),
+        "oral_presentation": (
+            "AI berikan topik, kamu presentasikan selama maksimal 3 menit. "
+            "Dinilai dari grammar, relevance, vocabulary, dan struktur."
+        ),
     }.get(sub_mode, "")
     st.caption(desc)
 

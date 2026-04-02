@@ -151,7 +151,9 @@ def user_response(
     ctx.markdown("🎙️ **Giliranmu berbicara**")
 
     if stt_fails > 0:
-        ctx.warning(f"⚠️ Percobaan {stt_fails}/3 gagal ditranskrip. " f"Coba bicara lebih keras dan jelas.")
+        ctx.warning(
+            f"⚠️ Percobaan {stt_fails}/3 gagal ditranskrip. " f"Coba bicara lebih keras dan jelas."
+        )
 
     col1, col2 = ctx.columns([2, 3])
     with col1:
@@ -196,7 +198,9 @@ def user_response(
         transcript = _transcribe_file(audio_path)
 
     if transcript:
-        logger.info(f"[audio_pipeline] STT success exchange={exchange_index} " f"— '{transcript[:60]}'")
+        logger.info(
+            f"[audio_pipeline] STT success exchange={exchange_index} " f"— '{transcript[:60]}'"
+        )
         st.session_state[key_answer] = transcript
         ctx.success("✅ Transkrip berhasil!")
         ctx.markdown(f'*"{transcript}"*')
@@ -216,7 +220,9 @@ def user_response(
         ctx.error("❌ Transkrip gagal 3x. Beralih ke input teks manual.")
         st.session_state[key_mode] = "text_fallback"
     else:
-        ctx.warning(f"Transkrip gagal (percobaan {stt_fails}/3). " "Klik 'Mulai Rekam' untuk coba lagi.")
+        ctx.warning(
+            f"Transkrip gagal (percobaan {stt_fails}/3). " "Klik 'Mulai Rekam' untuk coba lagi."
+        )
 
     st.rerun()
     return None
@@ -236,7 +242,10 @@ def _render_text_fallback(
     Dipanggil setelah 3x STT gagal atau user klik 'Ketik manual'.
     """
     if stt_fails >= 3:
-        ctx.info("⌨️ **Mode teks aktif** — Audio tidak berhasil ditranskrip " "setelah 3x percobaan. Ketik jawabanmu di bawah.")
+        ctx.info(
+            "⌨️ **Mode teks aktif** — Audio tidak berhasil ditranskrip "
+            "setelah 3x percobaan. Ketik jawabanmu di bawah."
+        )
     else:
         ctx.info("⌨️ **Mode teks aktif** — Ketik jawabanmu di bawah.")
 

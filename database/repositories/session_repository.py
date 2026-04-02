@@ -143,7 +143,9 @@ def set_session_expiry(session_id: str, expires_at: str) -> bool:
         return conn.execute("SELECT changes()").fetchone()[0] > 0
 
 
-def pause_toefl_session(session_id: str, current_section: int, paused_at: str, expires_at: str) -> bool:
+def pause_toefl_session(
+    session_id: str, current_section: int, paused_at: str, expires_at: str
+) -> bool:
     """
     Simpan state pause sesi TOEFL.
 

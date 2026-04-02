@@ -55,7 +55,9 @@ def _fetch_quiz_data() -> tuple[list, list, list]:
                    WHERE s.status = 'completed'
                    ORDER BY s.created_at ASC""").fetchall()
 
-            topic_tracking = conn.execute("SELECT * FROM quiz_topic_tracking ORDER BY avg_score_pct ASC LIMIT 46").fetchall()
+            topic_tracking = conn.execute(
+                "SELECT * FROM quiz_topic_tracking ORDER BY avg_score_pct ASC LIMIT 46"
+            ).fetchall()
 
             questions = conn.execute("""SELECT qq.topic, qq.cluster, qq.format,
                           qq.difficulty, qq.is_correct, qq.is_graded
@@ -156,7 +158,10 @@ def run_analytics() -> dict:
     sessions, topic_tracking, questions = _fetch_quiz_data()
 
     if len(sessions) < MIN_SESSIONS_FOR_ANALYTICS:
-        logger.info(f"[quiz_analytics] Insufficient data: {len(sessions)} sessions " f"(minimum: {MIN_SESSIONS_FOR_ANALYTICS})")
+        logger.info(
+            f"[quiz_analytics] Insufficient data: {len(sessions)} sessions "
+            f"(minimum: {MIN_SESSIONS_FOR_ANALYTICS})"
+        )
         return _empty_insight()
 
     prereq_rules = _load_prerequisite_rules()

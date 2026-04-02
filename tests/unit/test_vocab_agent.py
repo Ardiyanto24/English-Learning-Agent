@@ -75,7 +75,10 @@ class TestVocabPlanner:
         Saat cold start, _call_planner_llm tidak boleh dipanggil sama sekali.
         Ini penting untuk hemat token.
         """
-        with patch("agents.vocab.planner._build_history_summary") as mock_hist, patch("agents.vocab.planner._call_planner_llm") as mock_llm:
+        with (
+            patch("agents.vocab.planner._build_history_summary") as mock_hist,
+            patch("agents.vocab.planner._call_planner_llm") as mock_llm,
+        ):
 
             mock_hist.return_value = {"is_cold_start": True}
 
@@ -91,7 +94,10 @@ class TestVocabPlanner:
         Jika LLM gagal setelah 3x retry, Planner harus fallback
         ke default config — tidak boleh raise exception ke UI.
         """
-        with patch("agents.vocab.planner._build_history_summary") as mock_hist, patch("agents.vocab.planner._call_planner_llm") as mock_llm:
+        with (
+            patch("agents.vocab.planner._build_history_summary") as mock_hist,
+            patch("agents.vocab.planner._call_planner_llm") as mock_llm,
+        ):
 
             mock_hist.return_value = {
                 "is_cold_start": False,
@@ -260,7 +266,10 @@ class TestVocabValidator:
             "adjusted_words": [],
         }
 
-        with patch("agents.vocab.validator._call_validator_llm") as mock_llm, patch("agents.vocab.validator.run_generator") as mock_gen:
+        with (
+            patch("agents.vocab.validator._call_validator_llm") as mock_llm,
+            patch("agents.vocab.validator.run_generator") as mock_gen,
+        ):
 
             mock_llm.return_value = bad_resp
             mock_gen.return_value = self.GENERATOR
@@ -285,7 +294,10 @@ class TestVocabValidator:
             "adjusted_words": [],
         }
 
-        with patch("agents.vocab.validator._call_validator_llm") as mock_llm, patch("agents.vocab.validator.run_generator") as mock_gen:
+        with (
+            patch("agents.vocab.validator._call_validator_llm") as mock_llm,
+            patch("agents.vocab.validator.run_generator") as mock_gen,
+        ):
 
             mock_llm.return_value = bad_resp
             mock_gen.return_value = self.GENERATOR
@@ -301,7 +313,10 @@ class TestVocabValidator:
         Output Validator selalu punya 'final_words' — bahkan saat
         validasi gagal total. Ini memastikan UI tidak crash.
         """
-        with patch("agents.vocab.validator._call_validator_llm") as mock_llm, patch("agents.vocab.validator.run_generator") as mock_gen:
+        with (
+            patch("agents.vocab.validator._call_validator_llm") as mock_llm,
+            patch("agents.vocab.validator.run_generator") as mock_gen,
+        ):
 
             mock_llm.side_effect = Exception("LLM down")
             mock_gen.return_value = self.GENERATOR
@@ -325,7 +340,10 @@ class TestVocabValidator:
             "adjusted_words": [],
         }
 
-        with patch("agents.vocab.validator._call_validator_llm") as mock_llm, patch("agents.vocab.validator.run_generator") as mock_gen:
+        with (
+            patch("agents.vocab.validator._call_validator_llm") as mock_llm,
+            patch("agents.vocab.validator.run_generator") as mock_gen,
+        ):
 
             mock_llm.return_value = bad_resp
             mock_gen.side_effect = RuntimeError("Generator totally failed")

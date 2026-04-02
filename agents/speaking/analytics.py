@@ -92,7 +92,9 @@ def _save_snapshot(result: dict) -> None:
                 ),
             )
     except Exception as e:
-        log_error("db_error", "speaking_analytics", context={"error": str(e), "action": "save_snapshot"})
+        log_error(
+            "db_error", "speaking_analytics", context={"error": str(e), "action": "save_snapshot"}
+        )
 
 
 def _empty_insight() -> dict:
@@ -148,13 +150,19 @@ def run_analytics() -> dict:
     sessions, submode_stats = _fetch_speaking_data()
 
     if len(sessions) < MIN_SESSIONS_FOR_ANALYTICS:
-        logger.info(f"[speaking_analytics] Insufficient data: {len(sessions)} sessions " f"(minimum: {MIN_SESSIONS_FOR_ANALYTICS})")
+        logger.info(
+            f"[speaking_analytics] Insufficient data: {len(sessions)} sessions "
+            f"(minimum: {MIN_SESSIONS_FOR_ANALYTICS})"
+        )
         return _empty_insight()
 
     try:
         result = _call_analytics_llm(sessions, submode_stats)
         _save_snapshot(result)
-        logger.info(f"[speaking_analytics] Done — trend={result.get('trend')} " f"weakest={result.get('weakest_criterion')}")
+        logger.info(
+            f"[speaking_analytics] Done — trend={result.get('trend')} "
+            f"weakest={result.get('weakest_criterion')}"
+        )
         return result
     except Exception as e:
         log_error(

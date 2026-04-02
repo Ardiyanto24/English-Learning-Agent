@@ -156,7 +156,10 @@ def run_generator(planner_output: dict) -> dict:
                 }
             )
 
-        logger.info(f"[vocab_generator] Spaced repetition: " f"{len(review_words)}/{review_count} review words from DB")
+        logger.info(
+            f"[vocab_generator] Spaced repetition: "
+            f"{len(review_words)}/{review_count} review words from DB"
+        )
 
     # ── Step 2: LLM generate new words saja ──────────────────────────────
     try:
@@ -169,7 +172,12 @@ def run_generator(planner_output: dict) -> dict:
         # Gabung: new words dari LLM + review words dari DB
         result["words"] = result["words"] + review_words
 
-        logger.info(f"[vocab_generator] Done — " f"{len(result['words'])} total words " f"({len(result['words']) - len(review_words)} new, " f"{len(review_words)} review)")
+        logger.info(
+            f"[vocab_generator] Done — "
+            f"{len(result['words'])} total words "
+            f"({len(result['words']) - len(review_words)} new, "
+            f"{len(review_words)} review)"
+        )
         return result
 
     except Exception as e:

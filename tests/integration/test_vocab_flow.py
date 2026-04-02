@@ -112,7 +112,9 @@ class TestVocabFullFlow:
         )
 
         with get_db() as conn:
-            row = conn.execute("SELECT * FROM vocab_sessions WHERE session_id = ?", (sid,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM vocab_sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
 
         assert row is not None
         assert row["topic"] == "sehari_hari"
@@ -152,7 +154,9 @@ class TestVocabFullFlow:
             )
 
         with get_db() as conn:
-            count = conn.execute("SELECT COUNT(*) as cnt FROM vocab_questions WHERE session_id = ?", (sid,)).fetchone()["cnt"]
+            count = conn.execute(
+                "SELECT COUNT(*) as cnt FROM vocab_questions WHERE session_id = ?", (sid,)
+            ).fetchone()["cnt"]
 
         assert count == 5
 
@@ -199,7 +203,11 @@ class TestVocabFullFlow:
         # q_ids[2] sengaja tidak dijawab
 
         with get_db() as conn:
-            rows = conn.execute("SELECT id, user_answer, is_correct FROM vocab_questions " "WHERE session_id = ? ORDER BY id ASC", (sid,)).fetchall()
+            rows = conn.execute(
+                "SELECT id, user_answer, is_correct FROM vocab_questions "
+                "WHERE session_id = ? ORDER BY id ASC",
+                (sid,),
+            ).fetchall()
 
         # Soal 1 dan 2 sudah ada jawaban
         assert rows[0]["user_answer"] == "answer_accomplish"
@@ -230,7 +238,9 @@ class TestVocabFullFlow:
         update_session_status(sid, status="completed")
 
         with get_db() as conn:
-            row = conn.execute("SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)).fetchone()
+            row = conn.execute(
+                "SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
 
         assert row["status"] == "completed"
         assert row["completed_at"] is not None  # timestamp terisi
@@ -259,7 +269,11 @@ class TestVocabFullFlow:
         update_vocab_session_scores(sid, correct, wrong, score)
 
         with get_db() as conn:
-            row = conn.execute("SELECT correct_count, wrong_count, score_pct " "FROM vocab_sessions WHERE session_id = ?", (sid,)).fetchone()
+            row = conn.execute(
+                "SELECT correct_count, wrong_count, score_pct "
+                "FROM vocab_sessions WHERE session_id = ?",
+                (sid,),
+            ).fetchone()
 
         assert row["correct_count"] == 4
         assert row["wrong_count"] == 1
@@ -287,7 +301,9 @@ class TestVocabFullFlow:
             )
 
         with get_db() as conn:
-            count = conn.execute("SELECT COUNT(*) as cnt FROM vocab_word_tracking").fetchone()["cnt"]
+            count = conn.execute("SELECT COUNT(*) as cnt FROM vocab_word_tracking").fetchone()[
+                "cnt"
+            ]
 
         assert count == 3
 
@@ -304,7 +320,8 @@ class TestVocabFullFlow:
 
         with get_db() as conn:
             row = conn.execute(
-                "SELECT mastery_score, total_seen, total_correct " "FROM vocab_word_tracking WHERE word = ? AND topic = ?",
+                "SELECT mastery_score, total_seen, total_correct "
+                "FROM vocab_word_tracking WHERE word = ? AND topic = ?",
                 ("accomplish", "sehari_hari"),
             ).fetchone()
 
@@ -327,7 +344,8 @@ class TestVocabFullFlow:
 
         with get_db() as conn:
             row = conn.execute(
-                "SELECT mastery_score, total_seen, total_correct " "FROM vocab_word_tracking WHERE word = ? AND topic = ?",
+                "SELECT mastery_score, total_seen, total_correct "
+                "FROM vocab_word_tracking WHERE word = ? AND topic = ?",
                 ("adequate", "sehari_hari"),
             ).fetchone()
 
@@ -463,18 +481,29 @@ class TestVocabFullFlow:
         with get_db() as conn:
 
             # 1. sessions: status harus completed
-            session = conn.execute("SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)).fetchone()
+            session = conn.execute(
+                "SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
             assert session["status"] == "completed"
             assert session["completed_at"] is not None
 
             # 2. vocab_sessions: skor tersimpan
-            vs = conn.execute("SELECT correct_count, wrong_count, score_pct " "FROM vocab_sessions WHERE session_id = ?", (sid,)).fetchone()
+            vs = conn.execute(
+                "SELECT correct_count, wrong_count, score_pct "
+                "FROM vocab_sessions WHERE session_id = ?",
+                (sid,),
+            ).fetchone()
             assert vs["correct_count"] == 5  # jawab benar semua
             assert vs["wrong_count"] == 0
             assert vs["score_pct"] == pytest.approx(100.0, abs=0.01)
 
             # 3. vocab_questions: semua soal ada dan semua dijawab
-            qs = conn.execute("SELECT COUNT(*) as total, " "SUM(CASE WHEN user_answer IS NOT NULL THEN 1 ELSE 0 END) as answered " "FROM vocab_questions WHERE session_id = ?", (sid,)).fetchone()
+            qs = conn.execute(
+                "SELECT COUNT(*) as total, "
+                "SUM(CASE WHEN user_answer IS NOT NULL THEN 1 ELSE 0 END) as answered "
+                "FROM vocab_questions WHERE session_id = ?",
+                (sid,),
+            ).fetchone()
             assert qs["total"] == 5
             assert qs["answered"] == 5  # semua soal sudah dijawab
 
@@ -503,7 +532,9 @@ class TestVocabFullFlow:
         update_session_status(sid, status="abandoned")
 
         with get_db() as conn:
-            row = conn.execute("SELECT status FROM sessions WHERE session_id = ?", (sid,)).fetchone()
+            row = conn.execute(
+                "SELECT status FROM sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
 
         assert row["status"] == "abandoned"
 
@@ -528,6 +559,8 @@ class TestVocabFullFlow:
         update_session_status(sid, status="completed", is_adjusted=True)
 
         with get_db() as conn:
-            row = conn.execute("SELECT is_adjusted FROM sessions WHERE session_id = ?", (sid,)).fetchone()
+            row = conn.execute(
+                "SELECT is_adjusted FROM sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
 
         assert row["is_adjusted"] == 1  # True di SQLite disimpan sebagai 1

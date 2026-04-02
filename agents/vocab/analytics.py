@@ -205,10 +205,17 @@ def run_analytics() -> dict:
     # Cek threshold minimum
     total_sessions = len(sessions_data)
     if total_sessions < MIN_SESSIONS_FOR_ANALYTICS:
-        logger.info(f"[vocab_analytics] Insufficient data: {total_sessions} sessions " f"(minimum: {MIN_SESSIONS_FOR_ANALYTICS}) — returning empty insight")
+        logger.info(
+            f"[vocab_analytics] Insufficient data: {total_sessions} sessions "
+            f"(minimum: {MIN_SESSIONS_FOR_ANALYTICS}) — returning empty insight"
+        )
         return _empty_insight()
 
-    logger.info(f"[vocab_analytics] Analyzing {total_sessions} sessions, " f"{len(word_tracking_data)} words tracked, " f"{len(questions_data)} questions")
+    logger.info(
+        f"[vocab_analytics] Analyzing {total_sessions} sessions, "
+        f"{len(word_tracking_data)} words tracked, "
+        f"{len(questions_data)} questions"
+    )
 
     try:
         result = _call_analytics_llm(
@@ -220,7 +227,10 @@ def run_analytics() -> dict:
         # Simpan ke DB
         _save_analytics_snapshot(result)
 
-        logger.info(f"[vocab_analytics] Done — trend={result.get('trend')} " f"words_learned={result.get('total_words_learned')}")
+        logger.info(
+            f"[vocab_analytics] Done — trend={result.get('trend')} "
+            f"words_learned={result.get('total_words_learned')}"
+        )
         return result
 
     except Exception as e:

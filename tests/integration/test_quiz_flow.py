@@ -130,7 +130,9 @@ class TestQuizFullFlow:
         )
 
         with get_db() as conn:
-            row = conn.execute("SELECT * FROM quiz_sessions WHERE session_id = ?", (sid,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM quiz_sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
 
         assert row is not None
         assert row["total_questions"] == 5
@@ -167,7 +169,9 @@ class TestQuizFullFlow:
             )
 
         with get_db() as conn:
-            count = conn.execute("SELECT COUNT(*) as cnt FROM quiz_questions WHERE session_id = ?", (sid,)).fetchone()["cnt"]
+            count = conn.execute(
+                "SELECT COUNT(*) as cnt FROM quiz_questions WHERE session_id = ?", (sid,)
+            ).fetchone()["cnt"]
 
         assert count == 5
 
@@ -224,7 +228,12 @@ class TestQuizFullFlow:
         )
 
         with get_db() as conn:
-            row = conn.execute("SELECT feedback_verdict, feedback_explanation, " "feedback_concept, feedback_example " "FROM quiz_questions WHERE id = ?", (qid,)).fetchone()
+            row = conn.execute(
+                "SELECT feedback_verdict, feedback_explanation, "
+                "feedback_concept, feedback_example "
+                "FROM quiz_questions WHERE id = ?",
+                (qid,),
+            ).fetchone()
 
         # Verifikasi semua 4 lapisan tersimpan
         assert row["feedback_verdict"] == "✓ Benar!"
@@ -282,7 +291,9 @@ class TestQuizFullFlow:
         )
 
         with get_db() as conn:
-            row = conn.execute("SELECT is_correct, feedback_verdict FROM quiz_questions WHERE id = ?", (qid,)).fetchone()
+            row = conn.execute(
+                "SELECT is_correct, feedback_verdict FROM quiz_questions WHERE id = ?", (qid,)
+            ).fetchone()
 
         assert row["is_correct"] == 0  # False di SQLite = 0
         assert "Kurang tepat" in row["feedback_verdict"]
@@ -309,7 +320,9 @@ class TestQuizFullFlow:
         )
 
         with get_db() as conn:
-            row = conn.execute("SELECT * FROM quiz_topic_tracking WHERE topic = ?", ("Present Tenses",)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM quiz_topic_tracking WHERE topic = ?", ("Present Tenses",)
+            ).fetchone()
 
         assert row is not None
         assert row["topic"] == "Present Tenses"
@@ -335,7 +348,10 @@ class TestQuizFullFlow:
         update_topic_tracking("Present Tenses", "Tense System", 60.0, 5, 3)
 
         with get_db() as conn:
-            row = conn.execute("SELECT total_sessions, avg_score_pct FROM quiz_topic_tracking " "WHERE topic = ?", ("Present Tenses",)).fetchone()
+            row = conn.execute(
+                "SELECT total_sessions, avg_score_pct FROM quiz_topic_tracking " "WHERE topic = ?",
+                ("Present Tenses",),
+            ).fetchone()
 
         assert row["total_sessions"] == 2
         assert row["avg_score_pct"] == pytest.approx(70.0, abs=0.01)
@@ -357,7 +373,9 @@ class TestQuizFullFlow:
         update_session_status(sid, status="completed")
 
         with get_db() as conn:
-            row = conn.execute("SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)).fetchone()
+            row = conn.execute(
+                "SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
 
         assert row["status"] == "completed"
         assert row["completed_at"] is not None
@@ -383,7 +401,11 @@ class TestQuizFullFlow:
         update_quiz_session_scores(sid, 4, 1, calculate_score_pct(4, 5))
 
         with get_db() as conn:
-            row = conn.execute("SELECT correct_count, wrong_count, score_pct " "FROM quiz_sessions WHERE session_id = ?", (sid,)).fetchone()
+            row = conn.execute(
+                "SELECT correct_count, wrong_count, score_pct "
+                "FROM quiz_sessions WHERE session_id = ?",
+                (sid,),
+            ).fetchone()
 
         assert row["correct_count"] == 4
         assert row["wrong_count"] == 1
@@ -458,7 +480,10 @@ class TestQuizFullFlow:
         correct_count = 0
         topic_stats = {}
 
-        with patch("agents.quiz.corrector._call_corrector_llm") as mock_llm, patch("agents.quiz.corrector._get_rag_context_for_correction") as mock_rag:
+        with (
+            patch("agents.quiz.corrector._call_corrector_llm") as mock_llm,
+            patch("agents.quiz.corrector._get_rag_context_for_correction") as mock_rag,
+        ):
 
             mock_llm.return_value = mock_correction
             mock_rag.return_value = "[Topic: Present Tenses — RAG context mocked]"
@@ -515,7 +540,9 @@ class TestQuizFullFlow:
 
         # ── Step 10: Complete session ────────────────────
         score_pct = calculate_score_pct(correct_count, len(final_questions))
-        update_quiz_session_scores(sid, correct_count, len(final_questions) - correct_count, score_pct)
+        update_quiz_session_scores(
+            sid, correct_count, len(final_questions) - correct_count, score_pct
+        )
         update_session_status(sid, status="completed")
 
         # ════════════════════════════════════════════════
@@ -524,12 +551,18 @@ class TestQuizFullFlow:
         with get_db() as conn:
 
             # 1. sessions: status completed
-            session = conn.execute("SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)).fetchone()
+            session = conn.execute(
+                "SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
             assert session["status"] == "completed"
             assert session["completed_at"] is not None
 
             # 2. quiz_sessions: skor tersimpan
-            qs = conn.execute("SELECT correct_count, wrong_count, score_pct " "FROM quiz_sessions WHERE session_id = ?", (sid,)).fetchone()
+            qs = conn.execute(
+                "SELECT correct_count, wrong_count, score_pct "
+                "FROM quiz_sessions WHERE session_id = ?",
+                (sid,),
+            ).fetchone()
             assert qs["correct_count"] == 5
             assert qs["wrong_count"] == 0
             assert qs["score_pct"] == pytest.approx(100.0, abs=0.01)
@@ -554,7 +587,10 @@ class TestQuizFullFlow:
             assert questions_db["has_example"] == 5  # layer 4 ada di semua soal
 
             # 4. quiz_topic_tracking: topik ter-track
-            tracking = conn.execute("SELECT total_sessions, avg_score_pct " "FROM quiz_topic_tracking WHERE topic = ?", ("Present Tenses",)).fetchone()
+            tracking = conn.execute(
+                "SELECT total_sessions, avg_score_pct " "FROM quiz_topic_tracking WHERE topic = ?",
+                ("Present Tenses",),
+            ).fetchone()
             assert tracking is not None
             assert tracking["total_sessions"] == 1
             assert tracking["avg_score_pct"] == pytest.approx(100.0, abs=0.01)
@@ -564,7 +600,10 @@ class TestQuizFullFlow:
         Memastikan RAG context diambil dan dikirim ke Corrector LLM.
         RAG yang gagal harus di-fallback ke nama topik, bukan crash.
         """
-        with patch("agents.quiz.corrector._call_corrector_llm") as mock_llm, patch("agents.quiz.corrector.retrieve") as mock_retrieve:
+        with (
+            patch("agents.quiz.corrector._call_corrector_llm") as mock_llm,
+            patch("agents.quiz.corrector.retrieve") as mock_retrieve,
+        ):
 
             mock_llm.return_value = _make_correction(is_correct=True)
             mock_retrieve.side_effect = Exception("ChromaDB unavailable")
@@ -617,7 +656,10 @@ class TestQuizFullFlow:
             options=json.dumps(q["options"]),
         )
 
-        with patch("agents.quiz.corrector._call_corrector_llm") as mock_llm, patch("agents.quiz.corrector._get_rag_context_for_correction") as mock_rag:
+        with (
+            patch("agents.quiz.corrector._call_corrector_llm") as mock_llm,
+            patch("agents.quiz.corrector._get_rag_context_for_correction") as mock_rag,
+        ):
 
             mock_llm.side_effect = Exception("LLM totally down")
             mock_rag.return_value = "[Topic: Present Tenses]"
@@ -647,7 +689,9 @@ class TestQuizFullFlow:
         )
 
         with get_db() as conn:
-            row = conn.execute("SELECT is_graded, is_correct FROM quiz_questions WHERE id = ?", (qid,)).fetchone()
+            row = conn.execute(
+                "SELECT is_graded, is_correct FROM quiz_questions WHERE id = ?", (qid,)
+            ).fetchone()
 
         assert row["is_graded"] == 0  # False = ungraded
         assert row["is_correct"] == 0  # False saat ungraded

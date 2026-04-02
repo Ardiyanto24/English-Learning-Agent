@@ -23,7 +23,6 @@ Cara jalankan:
 import json
 from datetime import datetime, timedelta
 
-
 # ===================================================
 # Konstanta mode 50%
 # ===================================================
@@ -36,7 +35,9 @@ R_TOTAL = 25  # Reading
 # ===================================================
 # Helper
 # ===================================================
-def _make_questions(session_id: str, section: str, part: str, count: int, correct_answer: str = "A") -> list[dict]:
+def _make_questions(
+    session_id: str, section: str, part: str, count: int, correct_answer: str = "A"
+) -> list[dict]:
     """Buat list soal TOEFL untuk satu section."""
     return [
         {
@@ -119,7 +120,9 @@ class TestToeflFullFlow:
 
         with get_db() as conn:
             session = conn.execute("SELECT * FROM sessions WHERE session_id = ?", (sid,)).fetchone()
-            toefl = conn.execute("SELECT * FROM toefl_sessions WHERE session_id = ?", (sid,)).fetchone()
+            toefl = conn.execute(
+                "SELECT * FROM toefl_sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
 
         assert session is not None
         assert session["mode"] == "toefl"
@@ -148,12 +151,15 @@ class TestToeflFullFlow:
         r_ids = _save_section_questions(sid, "reading", "A", R_TOTAL)
 
         # Verifikasi semua soal berhasil disimpan (ID tidak None)
-        assert all(i is not None for i in l_ids), \
-            f"Listening: {l_ids.count(None)} soal gagal disimpan ke DB"
-        assert all(i is not None for i in s_ids), \
-            f"Structure: {s_ids.count(None)} soal gagal disimpan ke DB"
-        assert all(i is not None for i in r_ids), \
-            f"Reading: {r_ids.count(None)} soal gagal disimpan ke DB"
+        assert all(
+            i is not None for i in l_ids
+        ), f"Listening: {l_ids.count(None)} soal gagal disimpan ke DB"
+        assert all(
+            i is not None for i in s_ids
+        ), f"Structure: {s_ids.count(None)} soal gagal disimpan ke DB"
+        assert all(
+            i is not None for i in r_ids
+        ), f"Reading: {r_ids.count(None)} soal gagal disimpan ke DB"
 
         with get_db() as conn:
             counts = conn.execute(
@@ -196,7 +202,11 @@ class TestToeflFullFlow:
         # q_ids[2] sengaja belum dijawab
 
         with get_db() as conn:
-            rows = conn.execute("SELECT id, user_answer, is_correct FROM toefl_questions " "WHERE session_id = ? ORDER BY question_number ASC", (sid,)).fetchall()
+            rows = conn.execute(
+                "SELECT id, user_answer, is_correct FROM toefl_questions "
+                "WHERE session_id = ? ORDER BY question_number ASC",
+                (sid,),
+            ).fetchall()
 
         assert rows[0]["user_answer"] == "A"
         assert rows[0]["is_correct"] == 1
@@ -255,7 +265,9 @@ class TestToeflFullFlow:
         update_session_status(sid, status="completed")
 
         with get_db() as conn:
-            toefl = conn.execute("SELECT * FROM toefl_sessions WHERE session_id = ?", (sid,)).fetchone()
+            toefl = conn.execute(
+                "SELECT * FROM toefl_sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
 
         # Semua intermediate values tersimpan
         assert toefl["listening_raw"] == l_raw
@@ -326,7 +338,10 @@ class TestToeflFullFlow:
                 },
             )
 
-            assert 310 <= scores["estimated_score"] <= 677, f"Scenario L={l_raw} S={s_raw} R={r_raw}: " f"estimated={scores['estimated_score']} out of range"
+            assert 310 <= scores["estimated_score"] <= 677, (
+                f"Scenario L={l_raw} S={s_raw} R={r_raw}: "
+                f"estimated={scores['estimated_score']} out of range"
+            )
 
     def test_perfect_score_50pct_mode(self, tmp_db):
         """
@@ -400,8 +415,12 @@ class TestToeflFullFlow:
         )
 
         with get_db() as conn:
-            session = conn.execute("SELECT status, expires_at FROM sessions WHERE session_id = ?", (sid,)).fetchone()
-            toefl = conn.execute("SELECT current_section FROM toefl_sessions WHERE session_id = ?", (sid,)).fetchone()
+            session = conn.execute(
+                "SELECT status, expires_at FROM sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
+            toefl = conn.execute(
+                "SELECT current_section FROM toefl_sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
 
         assert session["status"] == "paused"
         assert session["expires_at"] is not None
@@ -490,7 +509,9 @@ class TestToeflFullFlow:
 
         # Status harus berubah ke 'abandoned'
         with get_db() as conn:
-            session = conn.execute("SELECT status FROM sessions WHERE session_id = ?", (sid,)).fetchone()
+            session = conn.execute(
+                "SELECT status FROM sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
 
         assert session["status"] == "abandoned"
 
@@ -575,12 +596,16 @@ class TestToeflFullFlow:
         with get_db() as conn:
 
             # 1. sessions: status completed
-            session = conn.execute("SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)).fetchone()
+            session = conn.execute(
+                "SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
             assert session["status"] == "completed"
             assert session["completed_at"] is not None
 
             # 2. toefl_sessions: semua skor tersimpan
-            toefl = conn.execute("SELECT * FROM toefl_sessions WHERE session_id = ?", (sid,)).fetchone()
+            toefl = conn.execute(
+                "SELECT * FROM toefl_sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
 
             assert toefl["listening_raw"] == l_correct
             assert toefl["structure_raw"] == s_correct

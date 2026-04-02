@@ -29,7 +29,6 @@ import streamlit as st
 from agents.orchestrator.router import RoutingContext, get_routing_context
 from database.connection import init_database
 
-
 # ===================================================
 # Konfigurasi halaman — HARUS paling pertama
 # ===================================================
@@ -94,7 +93,10 @@ with st.sidebar:
         level = ctx.grammar_level or "—"
         target = ctx.target_toefl or "—"
         st.markdown(
-            f"<div style='background:#1e2a3a; padding:10px; border-radius:8px; " f"margin-bottom:12px; font-size:0.85em;'>" f"📚 <b>{level}</b> &nbsp;|&nbsp; 🎯 Target: <b>{target}</b>" f"</div>",
+            f"<div style='background:#1e2a3a; padding:10px; border-radius:8px; "
+            f"margin-bottom:12px; font-size:0.85em;'>"
+            f"📚 <b>{level}</b> &nbsp;|&nbsp; 🎯 Target: <b>{target}</b>"
+            f"</div>",
             unsafe_allow_html=True,
         )
 
@@ -162,7 +164,10 @@ def _require_onboarding() -> bool:
     sudah menghentikan eksekusi saat ini.
     """
     if ctx.needs_onboarding:
-        st.info("👋 **Selamat datang!** Selesaikan setup profil singkat " "di Dashboard sebelum mulai latihan.")
+        st.info(
+            "👋 **Selamat datang!** Selesaikan setup profil singkat "
+            "di Dashboard sebelum mulai latihan."
+        )
         st.caption("Kamu akan diarahkan ke Dashboard secara otomatis.")
 
         # Redirect sidebar ke Dashboard

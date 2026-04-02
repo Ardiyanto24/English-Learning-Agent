@@ -207,7 +207,10 @@ def get_routing_context() -> RoutingContext:
 
     mode_stats = _get_mode_stats()
 
-    logger.info(f"[router] User loaded — target={user.get('target_toefl')}, " f"level={user.get('grammar_level')}")
+    logger.info(
+        f"[router] User loaded — target={user.get('target_toefl')}, "
+        f"level={user.get('grammar_level')}"
+    )
 
     return RoutingContext(
         needs_onboarding=False,
@@ -257,7 +260,10 @@ def save_onboarding_data(
                 """,
                 (target_toefl, grammar_level, first_vocab_topic),
             )
-        logger.info(f"[router] Onboarding saved — target={target_toefl}, " f"level={grammar_level}, topic={first_vocab_topic}")
+        logger.info(
+            f"[router] Onboarding saved — target={target_toefl}, "
+            f"level={grammar_level}, topic={first_vocab_topic}"
+        )
         return True
 
     except Exception as e:

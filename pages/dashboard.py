@@ -134,7 +134,9 @@ def _query_layer1() -> dict:
                 for row in rows:
                     row_date = datetime.strptime(row["day"], "%Y-%m-%d").date()
                     # Toleransi: hari ini atau kemarin (untuk user yang baru buka)
-                    if row_date == check_date or (streak == 0 and row_date == today - timedelta(days=1)):
+                    if row_date == check_date or (
+                        streak == 0 and row_date == today - timedelta(days=1)
+                    ):
                         streak += 1
                         check_date = row_date - timedelta(days=1)
                     else:
@@ -246,7 +248,9 @@ def _query_layer2() -> dict:
         with get_db() as conn:
 
             # --- Vocab ---
-            mastered_row = conn.execute("SELECT COUNT(*) as cnt FROM vocab_word_tracking WHERE mastery_score >= 80").fetchone()
+            mastered_row = conn.execute(
+                "SELECT COUNT(*) as cnt FROM vocab_word_tracking WHERE mastery_score >= 80"
+            ).fetchone()
             weak_rows = conn.execute("""SELECT word, topic, mastery_score
                    FROM vocab_word_tracking
                    WHERE mastery_score < 60
@@ -352,7 +356,12 @@ def _render_layer1(d: dict, target_toefl: Optional[int]):
         if latest and target_toefl:
             gap = target_toefl - latest
             delta = f"-{gap} dari target" if gap > 0 else "✅ Target tercapai!"
-            st.metric("📊 Estimasi TOEFL", str(latest), delta=delta, delta_color="inverse" if gap > 0 else "normal")
+            st.metric(
+                "📊 Estimasi TOEFL",
+                str(latest),
+                delta=delta,
+                delta_color="inverse" if gap > 0 else "normal",
+            )
         elif latest:
             st.metric("📊 Estimasi TOEFL", str(latest))
         else:
@@ -389,14 +398,21 @@ def _render_layer2(d: dict):
     st.markdown("---")
     st.markdown("### 🗂️ Ringkasan Per Mode")
 
-    tab_vocab, tab_quiz, tab_speaking, tab_toefl = st.tabs(["📚 Vocab", "📝 Quiz", "🎤 Speaking", "📊 TOEFL"])
+    tab_vocab, tab_quiz, tab_speaking, tab_toefl = st.tabs(
+        ["📚 Vocab", "📝 Quiz", "🎤 Speaking", "📊 TOEFL"]
+    )
 
     # ---- Vocab tab ----
     with tab_vocab:
         vocab = d.get("vocab", {}) or {}
         total = vocab.get("total_tracked", 0)
         if total == 0:
-            st.info("Belum ada data Vocab.\n\n" "Setelah sesi pertama selesai, kamu akan melihat:\n" "- Jumlah kata yang sudah dikuasai (mastery ≥ 80%)\n" "- Daftar kata lemah yang perlu di-review")
+            st.info(
+                "Belum ada data Vocab.\n\n"
+                "Setelah sesi pertama selesai, kamu akan melihat:\n"
+                "- Jumlah kata yang sudah dikuasai (mastery ≥ 80%)\n"
+                "- Daftar kata lemah yang perlu di-review"
+            )
         else:
             mastered = vocab.get("mastered", 0)
             col1, col2 = st.columns(2)
@@ -408,7 +424,10 @@ def _render_layer2(d: dict):
                 st.markdown("**5 Kata Paling Lemah:**")
                 for w in weak:
                     score = w.get("mastery_score", 0)
-                    st.markdown(f"- `{w['word']}` — mastery **{score:.0f}%** " f"*(topik: {w.get('topic', '—')})*")
+                    st.markdown(
+                        f"- `{w['word']}` — mastery **{score:.0f}%** "
+                        f"*(topik: {w.get('topic', '—')})*"
+                    )
             else:
                 st.success("Tidak ada kata dengan mastery di bawah 60%! 🎉")
 
@@ -417,7 +436,12 @@ def _render_layer2(d: dict):
         quiz = d.get("quiz", {}) or {}
         total = quiz.get("total_sessions", 0)
         if total == 0:
-            st.info("Belum ada data Quiz.\n\n" "Setelah sesi pertama selesai, kamu akan melihat:\n" "- Topik grammar terkuat dan terlemah\n" "- Persentase penguasaan per topik")
+            st.info(
+                "Belum ada data Quiz.\n\n"
+                "Setelah sesi pertama selesai, kamu akan melihat:\n"
+                "- Topik grammar terkuat dan terlemah\n"
+                "- Persentase penguasaan per topik"
+            )
         else:
             st.metric("Total Sesi Quiz", total)
             col1, col2 = st.columns(2)
@@ -437,7 +461,12 @@ def _render_layer2(d: dict):
         speaking = d.get("speaking", {}) or {}
         total = speaking.get("total_sessions", 0)
         if total == 0:
-            st.info("Belum ada data Speaking.\n\n" "Setelah sesi pertama selesai, kamu akan melihat:\n" "- Rata-rata skor Grammar dan Relevance\n" "- Perbandingan performa per sub-mode")
+            st.info(
+                "Belum ada data Speaking.\n\n"
+                "Setelah sesi pertama selesai, kamu akan melihat:\n"
+                "- Rata-rata skor Grammar dan Relevance\n"
+                "- Perbandingan performa per sub-mode"
+            )
         else:
             st.metric("Total Sesi Speaking", total)
             by_mode = speaking.get("by_mode", [])
@@ -483,7 +512,11 @@ def _render_layer2(d: dict):
                     s_sc = sim.get("structure_scaled", "—")
                     r_sc = sim.get("reading_scaled", "—")
                     date = (sim.get("completed_at") or "")[:10]
-                    st.markdown(f"**Sim {i}** ({date}, mode {mode}) — " f"Estimasi: **{est}** | " f"L: {l_sc} · S: {s_sc} · R: {r_sc}")
+                    st.markdown(
+                        f"**Sim {i}** ({date}, mode {mode}) — "
+                        f"Estimasi: **{est}** | "
+                        f"L: {l_sc} · S: {s_sc} · R: {r_sc}"
+                    )
 
 
 # ===================================================
@@ -492,7 +525,10 @@ def _render_layer2(d: dict):
 def _render_layer3(target_toefl: int):
     st.markdown("---")
     st.markdown("### 🤖 Analisis Mendalam — Tutor AI")
-    st.caption("Layer ini memanggil AI untuk analisis lintas semua mode latihan. " "Membutuhkan beberapa detik.")
+    st.caption(
+        "Layer ini memanggil AI untuk analisis lintas semua mode latihan. "
+        "Membutuhkan beberapa detik."
+    )
 
     # Tampilkan hasil analisis sebelumnya jika ada di session state
     cached = _get("master_analytics_result")
@@ -596,9 +632,15 @@ def _render_master_analytics_result(result: dict):
     modes_with = result.get("modes_with_data", [])
     modes_without = result.get("modes_without_data", [])
     if modes_without:
-        st.caption(f"⚠️ Analisis berdasarkan data dari: **{', '.join(modes_with)}**. " f"Mode belum ada data: {', '.join(modes_without)}.")
+        st.caption(
+            f"⚠️ Analisis berdasarkan data dari: **{', '.join(modes_with)}**. "
+            f"Mode belum ada data: {', '.join(modes_without)}."
+        )
 
-    st.caption("ℹ️ Analisis ini berdasarkan data latihan yang tersedia dan " "dapat berubah seiring bertambahnya sesi.")
+    st.caption(
+        "ℹ️ Analisis ini berdasarkan data latihan yang tersedia dan "
+        "dapat berubah seiring bertambahnya sesi."
+    )
 
 
 # ===================================================
@@ -606,7 +648,9 @@ def _render_master_analytics_result(result: dict):
 # ===================================================
 def _render_onboarding_step1():
     st.title("👋 Selamat Datang!")
-    st.markdown("Sebelum mulai, kami perlu tahu sedikit tentang kamu " "agar latihan bisa dipersonalisasi.")
+    st.markdown(
+        "Sebelum mulai, kami perlu tahu sedikit tentang kamu " "agar latihan bisa dipersonalisasi."
+    )
     st.markdown("---")
     st.markdown("### Step 1 dari 3 — Target Skor TOEFL ITP")
     st.caption("Berapa skor TOEFL ITP yang ingin kamu capai?")
@@ -648,10 +692,16 @@ def _render_onboarding_step2():
         is_sel = selected_level == level
         border = "2px solid #1f77b4" if is_sel else "1px solid #ddd"
         st.markdown(
-            f"<div style='padding:12px; border-radius:8px; border:{border}; " f"margin-bottom:8px;'><strong>{level}</strong><br/>" f"<small style='color:gray;'>{hint}</small></div>",
+            f"<div style='padding:12px; border-radius:8px; border:{border}; "
+            f"margin-bottom:8px;'><strong>{level}</strong><br/>"
+            f"<small style='color:gray;'>{hint}</small></div>",
             unsafe_allow_html=True,
         )
-        if st.button(f"{'✅ ' if is_sel else ''}Pilih {level}", key=f"ob_level_{level}", use_container_width=True):
+        if st.button(
+            f"{'✅ ' if is_sel else ''}Pilih {level}",
+            key=f"ob_level_{level}",
+            use_container_width=True,
+        ):
             _set("ob_level", level)
             st.rerun()
 
@@ -691,7 +741,12 @@ def _render_onboarding_step3():
 
     target = _get("ob_target", 500)
     level = _get("ob_level", "Pemula")
-    st.success(f"**Ringkasan:**\n\n" f"🎯 Target skor: **{target}**\n\n" f"📚 Grammar level: **{level}**\n\n" f"🔤 Topik vocab pertama: **{selected_label}**")
+    st.success(
+        f"**Ringkasan:**\n\n"
+        f"🎯 Target skor: **{target}**\n\n"
+        f"📚 Grammar level: **{level}**\n\n"
+        f"🔤 Topik vocab pertama: **{selected_label}**"
+    )
 
     col1, col2 = st.columns(2)
     with col1:

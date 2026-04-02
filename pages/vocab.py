@@ -202,7 +202,10 @@ def _start_new_session(topic: str):
 
     except RuntimeError as e:
         # Generator gagal total setelah 3x retry
-        st.error("😔 Gagal membuat soal setelah beberapa kali percobaan. " "Silakan coba lagi dalam beberapa saat.")
+        st.error(
+            "😔 Gagal membuat soal setelah beberapa kali percobaan. "
+            "Silakan coba lagi dalam beberapa saat."
+        )
         logger.error(f"[vocab_page] Session creation failed: {e}")
         _set_state("page_state", "init")
 
@@ -368,7 +371,10 @@ def main():
         # Progress bar
         progress = current_index / total
         st.progress(progress, text=f"Soal {current_index + 1} dari {total}")
-        st.caption(f"Topik: **{planner_output.get('topic', '-')}** | " f"Level: **{planner_output.get('difficulty_target', '-').title()}**")
+        st.caption(
+            f"Topik: **{planner_output.get('topic', '-')}** | "
+            f"Level: **{planner_output.get('difficulty_target', '-').title()}**"
+        )
         st.markdown("---")
 
         # Tampilkan feedback soal sebelumnya (jika ada)

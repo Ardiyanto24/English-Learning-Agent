@@ -66,7 +66,10 @@ def _get_rag_context_for_correction(topic: str) -> str:
         chunks = format_context_for_prompt(result)
         context = chunks if chunks else f"[Topic: {topic}]"
     except Exception as e:
-        logger.warning(f"[quiz_corrector] RAG retrieve failed for '{topic}': {e} " f"— using topic name as fallback")
+        logger.warning(
+            f"[quiz_corrector] RAG retrieve failed for '{topic}': {e} "
+            f"— using topic name as fallback"
+        )
         context = f"[Topic: {topic}]"
 
     _rag_cache[topic] = context
@@ -172,7 +175,10 @@ def run_corrector(
             }
         }
     """
-    logger.info(f"[quiz_corrector] Correcting topic='{topic}' " f"format={format} user_answer='{user_answer}'")
+    logger.info(
+        f"[quiz_corrector] Correcting topic='{topic}' "
+        f"format={format} user_answer='{user_answer}'"
+    )
 
     # Retrieve RAG context untuk topik ini
     rag_context = _get_rag_context_for_correction(topic)
@@ -203,7 +209,9 @@ def run_corrector(
             },
             fallback_used=True,
         )
-        logger.warning(f"[quiz_corrector] Failed after 3 retries for topic='{topic}' " f"— marking as ungraded")
+        logger.warning(
+            f"[quiz_corrector] Failed after 3 retries for topic='{topic}' " f"— marking as ungraded"
+        )
 
         # Sesi tetap jalan — tandai sebagai ungraded
         return {

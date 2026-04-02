@@ -86,7 +86,9 @@ def _get_practiced_topics_this_session_pool() -> set[str]:
     """
     try:
         with get_db() as conn:
-            rows = conn.execute("SELECT DISTINCT topic FROM quiz_topic_tracking " "WHERE total_sessions > 0").fetchall()
+            rows = conn.execute(
+                "SELECT DISTINCT topic FROM quiz_topic_tracking " "WHERE total_sessions > 0"
+            ).fetchall()
         return {row["topic"] for row in rows}
     except Exception:
         return set()
@@ -102,7 +104,10 @@ def _filter_by_prerequisite(
     # Jika config gagal load (None), blokir semua topik advance —
     # hanya topik tanpa prerequisite yang lolos via fallback list.
     if PREREQUISITE_RULES is None:
-        logger.warning("[quiz_planner] PREREQUISITE_RULES unavailable — " "blocking all topics as safe fallback")
+        logger.warning(
+            "[quiz_planner] PREREQUISITE_RULES unavailable — "
+            "blocking all topics as safe fallback"
+        )
         return []  # Tidak ada topik yang accessible → fallback di run_planner()
 
     accessible = []
@@ -358,5 +363,8 @@ def run_planner(total_questions: int = DEFAULT_TOTAL_QUESTIONS) -> dict:
         "accessible_topics": accessible,
     }
 
-    logger.info(f"[quiz_planner] Recommendation: topics={selected} " f"difficulty={difficulty} cluster={primary_cluster}")
+    logger.info(
+        f"[quiz_planner] Recommendation: topics={selected} "
+        f"difficulty={difficulty} cluster={primary_cluster}"
+    )
     return result

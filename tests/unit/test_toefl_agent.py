@@ -124,14 +124,18 @@ class TestModeConfig:
         from pages.toefl import MODE_CONFIG
 
         for section in ["listening", "structure", "reading"]:
-            assert MODE_CONFIG["75%"]["timers"][section] > MODE_CONFIG["50%"]["timers"][section], f"Timer 75% harus > 50% untuk section {section}"
+            assert (
+                MODE_CONFIG["75%"]["timers"][section] > MODE_CONFIG["50%"]["timers"][section]
+            ), f"Timer 75% harus > 50% untuk section {section}"
 
     def test_100pct_timer_greater_than_75pct(self):
         """Timer 100% harus lebih besar dari 75% untuk semua section."""
         from pages.toefl import MODE_CONFIG
 
         for section in ["listening", "structure", "reading"]:
-            assert MODE_CONFIG["100%"]["timers"][section] > MODE_CONFIG["75%"]["timers"][section], f"Timer 100% harus > 75% untuk section {section}"
+            assert (
+                MODE_CONFIG["100%"]["timers"][section] > MODE_CONFIG["75%"]["timers"][section]
+            ), f"Timer 100% harus > 75% untuk section {section}"
 
     def test_section_totals_match_mode_config(self):
         """
@@ -318,7 +322,9 @@ class TestToeflConverter:
         ]
         for listening_count, structure_count, reading_count in test_cases:
             result = calculate_estimated_toefl(listening_count, structure_count, reading_count)
-            assert 310 <= result <= 677, f"Estimated {result} out of range for L={listening_count} S={structure_count} R={reading_count}"
+            assert (
+                310 <= result <= 677
+            ), f"Estimated {result} out of range for L={listening_count} S={structure_count} R={reading_count}"
 
     # ── process_full_score (end-to-end pipeline) ────
     def test_process_full_score_returns_all_fields(self):
@@ -516,7 +522,10 @@ class TestToeflSessionManager:
         """
         from modules.session.toefl_session_manager import pause_session
 
-        with patch("modules.session.toefl_session_manager.is_section_complete") as mock_check, patch("modules.session.toefl_session_manager.pause_toefl_session") as mock_pause:
+        with (
+            patch("modules.session.toefl_session_manager.is_section_complete") as mock_check,
+            patch("modules.session.toefl_session_manager.pause_toefl_session") as mock_pause,
+        ):
 
             mock_check.return_value = True  # section sudah selesai
             mock_pause.return_value = True  # DB berhasil disimpan
@@ -534,7 +543,10 @@ class TestToeflSessionManager:
         """Pause setelah section 2 (Structure) yang sudah selesai → sukses."""
         from modules.session.toefl_session_manager import pause_session
 
-        with patch("modules.session.toefl_session_manager.is_section_complete") as mock_check, patch("modules.session.toefl_session_manager.pause_toefl_session") as mock_pause:
+        with (
+            patch("modules.session.toefl_session_manager.is_section_complete") as mock_check,
+            patch("modules.session.toefl_session_manager.pause_toefl_session") as mock_pause,
+        ):
 
             mock_check.return_value = True
             mock_pause.return_value = True
@@ -556,7 +568,9 @@ class TestToeflSessionManager:
         """
         from modules.session.toefl_session_manager import resume_session
 
-        with patch("modules.session.toefl_session_manager.check_and_resume_toefl_session") as mock_check:
+        with patch(
+            "modules.session.toefl_session_manager.check_and_resume_toefl_session"
+        ) as mock_check:
             mock_check.return_value = None  # None = expired atau tidak valid
 
             result = resume_session(session_id="expired-session")
@@ -578,7 +592,9 @@ class TestToeflSessionManager:
             "expires_at": "2025-12-31 10:00:00",
         }
 
-        with patch("modules.session.toefl_session_manager.check_and_resume_toefl_session") as mock_check:
+        with patch(
+            "modules.session.toefl_session_manager.check_and_resume_toefl_session"
+        ) as mock_check:
             mock_check.return_value = mock_state
 
             result = resume_session(session_id="valid-session")
@@ -594,7 +610,9 @@ class TestToeflSessionManager:
         """
         from modules.session.toefl_session_manager import resume_session
 
-        with patch("modules.session.toefl_session_manager.check_and_resume_toefl_session") as mock_check:
+        with patch(
+            "modules.session.toefl_session_manager.check_and_resume_toefl_session"
+        ) as mock_check:
             mock_check.side_effect = Exception("DB connection failed")
 
             result = resume_session(session_id="test-session")
@@ -616,7 +634,9 @@ class TestToeflSessionManager:
             "expires_at": "2025-12-31 10:00:00",
         }
 
-        with patch("modules.session.toefl_session_manager.check_and_resume_toefl_session") as mock_check:
+        with patch(
+            "modules.session.toefl_session_manager.check_and_resume_toefl_session"
+        ) as mock_check:
             mock_check.return_value = mock_state
 
             result = resume_session(session_id="test")

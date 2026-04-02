@@ -27,7 +27,9 @@ def save_quiz_session(session_id: str, topics: str, total_questions: int) -> boo
     return True
 
 
-def update_quiz_session_scores(session_id: str, correct_count: int, wrong_count: int, score_pct: float) -> bool:
+def update_quiz_session_scores(
+    session_id: str, correct_count: int, wrong_count: int, score_pct: float
+) -> bool:
     """Update skor akhir sesi quiz."""
     with get_db() as conn:
         conn.execute(
@@ -41,7 +43,16 @@ def update_quiz_session_scores(session_id: str, correct_count: int, wrong_count:
     return True
 
 
-def save_quiz_question(session_id: str, topic: str, cluster: str, format: str, difficulty: str, question_text: str, correct_answer: str, options: Optional[str] = None) -> int:
+def save_quiz_question(
+    session_id: str,
+    topic: str,
+    cluster: str,
+    format: str,
+    difficulty: str,
+    question_text: str,
+    correct_answer: str,
+    options: Optional[str] = None,
+) -> int:
     """
     Simpan soal quiz (incremental save, sebelum user menjawab).
 
@@ -56,7 +67,16 @@ def save_quiz_question(session_id: str, topic: str, cluster: str, format: str, d
                  question_text, correct_answer, options)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (session_id, topic, cluster, format, difficulty, question_text, correct_answer, options),
+            (
+                session_id,
+                topic,
+                cluster,
+                format,
+                difficulty,
+                question_text,
+                correct_answer,
+                options,
+            ),
         )
     return cursor.lastrowid
 
@@ -81,7 +101,16 @@ def update_quiz_answer(
                 feedback_concept = ?, feedback_example = ?
             WHERE id = ?
             """,
-            (user_answer, is_correct, is_graded, feedback_verdict, feedback_explanation, feedback_concept, feedback_example, question_id),
+            (
+                user_answer,
+                is_correct,
+                is_graded,
+                feedback_verdict,
+                feedback_explanation,
+                feedback_concept,
+                feedback_example,
+                question_id,
+            ),
         )
     return True
 
@@ -99,7 +128,9 @@ def get_topic_tracking(topic: str) -> Optional[dict]:
     return dict(row) if row else None
 
 
-def update_topic_tracking(topic: str, cluster: str, score_pct: float, total_questions: int, correct_count: int) -> bool:
+def update_topic_tracking(
+    topic: str, cluster: str, score_pct: float, total_questions: int, correct_count: int
+) -> bool:
     """
     Update atau buat tracking topik setelah sesi selesai.
     avg_score_pct dihitung sebagai rata-rata semua sesi.
@@ -112,7 +143,9 @@ def update_topic_tracking(topic: str, cluster: str, score_pct: float, total_ques
             new_total_questions = existing["total_questions"] + total_questions
             new_total_correct = existing["total_correct"] + correct_count
             new_total_wrong = existing["total_wrong"] + (total_questions - correct_count)
-            new_avg = (existing["avg_score_pct"] * existing["total_sessions"] + score_pct) / new_total_sessions
+            new_avg = (
+                existing["avg_score_pct"] * existing["total_sessions"] + score_pct
+            ) / new_total_sessions
 
             conn.execute(
                 """
@@ -124,7 +157,15 @@ def update_topic_tracking(topic: str, cluster: str, score_pct: float, total_ques
                     updated_at = CURRENT_TIMESTAMP
                 WHERE topic = ?
                 """,
-                (new_total_sessions, new_total_questions, new_total_correct, new_total_wrong, new_avg, score_pct, topic),
+                (
+                    new_total_sessions,
+                    new_total_questions,
+                    new_total_correct,
+                    new_total_wrong,
+                    new_avg,
+                    score_pct,
+                    topic,
+                ),
             )
         else:
             wrong_count = total_questions - correct_count

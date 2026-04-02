@@ -87,7 +87,10 @@ def record_audio(
 
         output_path = TEMP_AUDIO_DIR / attempt_filename
 
-        print(f"[Recorder] 🎙️ Attempt {attempt}/{max_attempts} — " f"merekam selama {duration_seconds} detik...")
+        print(
+            f"[Recorder] 🎙️ Attempt {attempt}/{max_attempts} — "
+            f"merekam selama {duration_seconds} detik..."
+        )
 
         pa = pyaudio.PyAudio()
         stream = None
@@ -148,7 +151,9 @@ def record_audio(
                 time.sleep(1)
 
     # Semua attempt habis
-    print(f"[Recorder] ❌ Gagal setelah {max_attempts}x percobaan. " f"Error terakhir: {last_error}")
+    print(
+        f"[Recorder] ❌ Gagal setelah {max_attempts}x percobaan. " f"Error terakhir: {last_error}"
+    )
     print("[Recorder] → UI harus fallback ke text input manual")
     return None
 
@@ -194,7 +199,10 @@ def record_audio_streaming(
             frames_per_buffer=CHUNK_SIZE,
         )
 
-        print(f"[Recorder] 🎙️ Merekam (max {max_duration_seconds}s, " f"auto-stop jika hening {silence_duration}s)...")
+        print(
+            f"[Recorder] 🎙️ Merekam (max {max_duration_seconds}s, "
+            f"auto-stop jika hening {silence_duration}s)..."
+        )
 
         frames = []
         silent_chunks = 0

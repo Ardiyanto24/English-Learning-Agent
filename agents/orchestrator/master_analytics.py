@@ -90,9 +90,14 @@ def _load_latest_snapshots() -> dict:
                 if row:
                     try:
                         results[mode] = json.loads(row["content"])
-                        logger.info(f"[master_analytics] Loaded {mode} snapshot " f"(generated: {row['generated_at']})")
+                        logger.info(
+                            f"[master_analytics] Loaded {mode} snapshot "
+                            f"(generated: {row['generated_at']})"
+                        )
                     except json.JSONDecodeError as e:
-                        logger.warning(f"[master_analytics] Failed to parse " f"{mode} snapshot: {e}")
+                        logger.warning(
+                            f"[master_analytics] Failed to parse " f"{mode} snapshot: {e}"
+                        )
 
     except Exception as e:
         log_error(
@@ -228,7 +233,10 @@ def run_master_analytics(target_toefl: int) -> dict:
     modes_with_data = [mode for mode, data in snapshots.items() if data and data.get("insight")]
 
     if not modes_with_data:
-        logger.info("[master_analytics] No snapshots available — user has not completed" "enough sessions in any mode.")
+        logger.info(
+            "[master_analytics] No snapshots available — user has not completed"
+            "enough sessions in any mode."
+        )
         result = _empty_insight("no_snapshots_available")
         result["toefl_readiness"]["target_score"] = target_toefl
         return result

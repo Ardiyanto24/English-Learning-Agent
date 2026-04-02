@@ -115,7 +115,9 @@ def run_evaluator(
             "feedback"  : str,   ← Feedback dalam Bahasa Indonesia
         }
     """
-    logger.info(f"[vocab_evaluator] Evaluating word='{word}' " f"format={format} answer='{user_answer}'")
+    logger.info(
+        f"[vocab_evaluator] Evaluating word='{word}' " f"format={format} answer='{user_answer}'"
+    )
 
     try:
         result = _call_evaluator_llm(
@@ -140,10 +142,16 @@ def run_evaluator(
             },
             fallback_used=True,
         )
-        logger.warning(f"[vocab_evaluator] Failed after 3 retries for word='{word}' " f"— marking as ungraded")
+        logger.warning(
+            f"[vocab_evaluator] Failed after 3 retries for word='{word}' " f"— marking as ungraded"
+        )
         # Sesi tetap jalan — tandai jawaban sebagai ungraded
         return {
             "is_correct": False,
             "is_graded": False,
-            "feedback": ("Maaf, terjadi kendala teknis saat menilai jawabanmu. " "Jawaban ini ditandai sebagai 'belum dinilai' dan tidak " "mempengaruhi skor akhirmu."),
+            "feedback": (
+                "Maaf, terjadi kendala teknis saat menilai jawabanmu. "
+                "Jawaban ini ditandai sebagai 'belum dinilai' dan tidak "
+                "mempengaruhi skor akhirmu."
+            ),
         }

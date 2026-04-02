@@ -72,7 +72,10 @@ def _get_rag_context(topics: list[str]) -> tuple[str, bool]:
                 all_chunks.append(f"## {topic}\n[Topic: {topic}]")
                 rag_failed = True
         except Exception as e:
-            logger.warning(f"[quiz_generator] RAG retrieve failed for '{topic}': {e} " f"— using topic name as fallback")
+            logger.warning(
+                f"[quiz_generator] RAG retrieve failed for '{topic}': {e} "
+                f"— using topic name as fallback"
+            )
             all_chunks.append(f"## {topic}\n[Topic: {topic}]")
             rag_failed = True
 
@@ -168,12 +171,17 @@ def run_generator(planner_output: dict) -> dict:
     rag_context, is_fallback = _get_rag_context(topics)
 
     if is_fallback:
-        logger.warning("[quiz_generator] Using fallback context " "(topic names only, no KB material)")
+        logger.warning(
+            "[quiz_generator] Using fallback context " "(topic names only, no KB material)"
+        )
 
     # Step 2: Call LLM
     try:
         result = _call_generator_llm(planner_output, rag_context)
-        logger.info(f"[quiz_generator] Generated {len(result.get('questions', []))} questions" f"{' (with RAG fallback)' if is_fallback else ''}")
+        logger.info(
+            f"[quiz_generator] Generated {len(result.get('questions', []))} questions"
+            f"{' (with RAG fallback)' if is_fallback else ''}"
+        )
         return result
 
     except Exception as e:

@@ -26,7 +26,12 @@ LOG_FILE = LOG_DIR / "app.log"
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 LOG_CONSOLE = os.getenv("LOG_CONSOLE", "true").lower() == "true"
 
-LOG_FORMAT = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | " "<level>{level: <8}</level> | " "<cyan>{name}</cyan>:<cyan>{line}</cyan> | " "{message}"
+LOG_FORMAT = (
+    "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+    "<level>{level: <8}</level> | "
+    "<cyan>{name}</cyan>:<cyan>{line}</cyan> | "
+    "{message}"
+)
 
 
 def _setup():
@@ -83,7 +88,12 @@ def log_error(
     import json
 
     context_str = json.dumps(context or {}, ensure_ascii=False)
-    log_msg = f"[{agent_name}] {error_type} | " f"session={session_id or 'N/A'} | " f"fallback={fallback_used} | " f"context={context_str}"
+    log_msg = (
+        f"[{agent_name}] {error_type} | "
+        f"session={session_id or 'N/A'} | "
+        f"fallback={fallback_used} | "
+        f"context={context_str}"
+    )
 
     if exception:
         logger.opt(exception=exception).error(log_msg)

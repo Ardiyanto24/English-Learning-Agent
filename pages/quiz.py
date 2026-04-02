@@ -63,7 +63,11 @@ def _render_question(q: dict, index: int, total: int) -> str:
     options = q.get("options", [])
 
     st.markdown(f"**Soal {index + 1} dari {total}**")
-    st.caption(f"Topik: **{q.get('topic')}** | " f"Format: *{fmt.replace('_', ' ').title()}* | " f"Level: *{q.get('difficulty', '').title()}*")
+    st.caption(
+        f"Topik: **{q.get('topic')}** | "
+        f"Format: *{fmt.replace('_', ' ').title()}* | "
+        f"Level: *{q.get('difficulty', '').title()}*"
+    )
     st.markdown(f"### {question_text}")
 
     # ── multiple_choice & fill_blank → Radio button ──
@@ -85,7 +89,13 @@ def _render_question(q: dict, index: int, total: int) -> str:
     # ── error_id → Pilih bagian yang salah ──
     elif fmt == "error_id":
         st.markdown("**Pilih bagian kalimat yang mengandung error:**")
-        choice = st.radio("Bagian yang salah:", options=options, key=f"quiz_error_{index}", index=None, help="Pilih salah satu dari (A), (B), (C), (D)")
+        choice = st.radio(
+            "Bagian yang salah:",
+            options=options,
+            key=f"quiz_error_{index}",
+            index=None,
+            help="Pilih salah satu dari (A), (B), (C), (D)",
+        )
         if choice:
             return choice.split(".")[0].strip()
         return ""
@@ -379,7 +389,10 @@ def main():
         if is_cold_start:
             st.info("Selamat datang! Ini sesi pertamamu. Pilih topik untuk memulai.")
         else:
-            st.markdown(f"Berdasarkan progress kamu, sistem merekomendasikan topik berikut " f"dengan level **{difficulty}**:")
+            st.markdown(
+                f"Berdasarkan progress kamu, sistem merekomendasikan topik berikut "
+                f"dengan level **{difficulty}**:"
+            )
             for t in recommended:
                 new_tag = " 🆕" if t in planner_output.get("new_topics", []) else ""
                 st.markdown(f"- **{t}**{new_tag}")

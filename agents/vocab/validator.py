@@ -130,11 +130,17 @@ def _apply_adjustments(
             if not replaced:
                 # Tidak ada format yang over-distributed — kata di-skip
                 skipped += 1
-                logger.warning(f"[vocab_validator] Adjustment skipped for word='{adj_word.get('word')}' " f"fmt='{adj_fmt}' — no over-distributed format found to replace")
+                logger.warning(
+                    f"[vocab_validator] Adjustment skipped for word='{adj_word.get('word')}' "
+                    f"fmt='{adj_fmt}' — no over-distributed format found to replace"
+                )
         else:
             # Format sudah cukup — kata ini tidak perlu di-insert
             skipped += 1
-            logger.debug(f"[vocab_validator] Adjustment not needed for word='{adj_word.get('word')}' " f"fmt='{adj_fmt}' already at target count")
+            logger.debug(
+                f"[vocab_validator] Adjustment not needed for word='{adj_word.get('word')}' "
+                f"fmt='{adj_fmt}' already at target count"
+            )
 
     logger.info(f"[vocab_validator] Adjustments — applied={applied} skipped={skipped}")
 
@@ -183,7 +189,10 @@ def run_validator(
                 }
 
             # ❌ Tidak valid — log issues dan coba regenerate
-            logger.warning(f"[vocab_validator] Invalid (score={validation['match_score']}) " f"— issues: {validation.get('issues', [])}")
+            logger.warning(
+                f"[vocab_validator] Invalid (score={validation['match_score']}) "
+                f"— issues: {validation.get('issues', [])}"
+            )
 
             if attempt < MAX_REGENERATE_ATTEMPTS - 1:
                 # Regenerate menggunakan generator

@@ -122,12 +122,20 @@ def build_evaluator_prompt(
         String user prompt siap dikirim ke LLM
     """
     # Format transcript
-    transcript_text = "\n".join(f"[{'AI' if ex.get('role') == 'ai' else 'Student'}]: {ex.get('text', '')}" for ex in full_transcript)
+    transcript_text = "\n".join(
+        f"[{'AI' if ex.get('role') == 'ai' else 'Student'}]: {ex.get('text', '')}"
+        for ex in full_transcript
+    )
 
     # Tentukan kriteria dan bobot berdasarkan sub-mode
     if sub_mode == "oral_presentation":
-        criteria_info = "Criteria: Grammar (25%) + Relevance (25%) + " "Vocabulary (25%) + Structure (25%)"
-        output_note = "Include grammar_score, relevance_score, vocabulary_score, " "structure_score, final_score, is_graded, feedback."
+        criteria_info = (
+            "Criteria: Grammar (25%) + Relevance (25%) + " "Vocabulary (25%) + Structure (25%)"
+        )
+        output_note = (
+            "Include grammar_score, relevance_score, vocabulary_score, "
+            "structure_score, final_score, is_graded, feedback."
+        )
     else:
         criteria_info = "Criteria: Grammar (50%) + Relevance (50%)"
         output_note = "Include grammar_score, relevance_score, " "final_score, is_graded, feedback."

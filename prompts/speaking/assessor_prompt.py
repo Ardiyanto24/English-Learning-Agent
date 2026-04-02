@@ -112,7 +112,10 @@ def build_assessor_prompt(
         String user prompt siap dikirim ke LLM
     """
     # Format conversation window menjadi teks yang readable
-    window_text = "\n".join(f"[{'AI' if ex.get('role') == 'ai' else 'Student'}]: {ex.get('text', '')}" for ex in conversation_window)
+    window_text = "\n".join(
+        f"[{'AI' if ex.get('role') == 'ai' else 'Student'}]: {ex.get('text', '')}"
+        for ex in conversation_window
+    )
 
     # Tentukan fase untuk conversation_practice
     phase_note = ""
@@ -123,7 +126,11 @@ def build_assessor_prompt(
             phase_note = "Phase 2 (10-15 exchanges): May stop if topic naturally closed."
     elif sub_mode == "prompted_response":
         remaining = max(0, PROMPTED_RESPONSE_MAX - exchange_count)
-        phase_note = f"Max {PROMPTED_RESPONSE_MAX} exchanges for prompted_response. " f"Exchanges used: {exchange_count}. " f"Remaining: {remaining}."
+        phase_note = (
+            f"Max {PROMPTED_RESPONSE_MAX} exchanges for prompted_response. "
+            f"Exchanges used: {exchange_count}. "
+            f"Remaining: {remaining}."
+        )
 
     return f"""Assess the conversation and decide whether to continue, stop, or move to a new subtopic.
 

@@ -9,7 +9,9 @@ from typing import Optional
 from database.connection import get_db
 
 
-def save_vocab_session(session_id: str, topic: str, total_words: int, new_words: int, review_words: int) -> bool:
+def save_vocab_session(
+    session_id: str, topic: str, total_words: int, new_words: int, review_words: int
+) -> bool:
     """Simpan metadata sesi vocab baru."""
     with get_db() as conn:
         conn.execute(
@@ -23,7 +25,9 @@ def save_vocab_session(session_id: str, topic: str, total_words: int, new_words:
     return True
 
 
-def update_vocab_session_scores(session_id: str, correct_count: int, wrong_count: int, score_pct: float) -> bool:
+def update_vocab_session_scores(
+    session_id: str, correct_count: int, wrong_count: int, score_pct: float
+) -> bool:
     """Update skor akhir sesi vocab setelah selesai."""
     with get_db() as conn:
         conn.execute(
@@ -37,7 +41,16 @@ def update_vocab_session_scores(session_id: str, correct_count: int, wrong_count
     return True
 
 
-def save_vocab_question(session_id: str, word: str, format: str, topic: str, difficulty: str, question_text: str, correct_answer: str, is_new_word: bool = True) -> int:
+def save_vocab_question(
+    session_id: str,
+    word: str,
+    format: str,
+    topic: str,
+    difficulty: str,
+    question_text: str,
+    correct_answer: str,
+    is_new_word: bool = True,
+) -> int:
     """
     Simpan satu soal vocab ke database (incremental save).
     Dipanggil segera setelah soal di-generate, sebelum user menjawab.
@@ -53,12 +66,23 @@ def save_vocab_question(session_id: str, word: str, format: str, topic: str, dif
                  question_text, correct_answer, is_new_word)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (session_id, word, format, topic, difficulty, question_text, correct_answer, is_new_word),
+            (
+                session_id,
+                word,
+                format,
+                topic,
+                difficulty,
+                question_text,
+                correct_answer,
+                is_new_word,
+            ),
         )
     return cursor.lastrowid
 
 
-def update_vocab_answer(question_id: int, user_answer: str, is_correct: bool, is_graded: bool = True) -> bool:
+def update_vocab_answer(
+    question_id: int, user_answer: str, is_correct: bool, is_graded: bool = True
+) -> bool:
     """Update jawaban user setelah soal dijawab."""
     with get_db() as conn:
         conn.execute(

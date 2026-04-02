@@ -205,7 +205,10 @@ def run_generator(reading_dist: dict) -> dict:
     passage_count = reading_dist.get("passages", 5)
     questions_per_passage = reading_dist.get("per_passage", 10)
 
-    logger.info(f"[reading_generator] Generating {passage_count} passages × " f"{questions_per_passage} questions each")
+    logger.info(
+        f"[reading_generator] Generating {passage_count} passages × "
+        f"{questions_per_passage} questions each"
+    )
 
     passages = []
     used_domains: list[str] = []
@@ -235,7 +238,10 @@ def run_generator(reading_dist: dict) -> dict:
         if domain:
             used_domains.append(domain)
 
-        logger.info(f"[reading_generator] Passage {p_num} Step 1 done — " f"'{passage_data.get('title')}' ({passage_data.get('word_count')} words)")
+        logger.info(
+            f"[reading_generator] Passage {p_num} Step 1 done — "
+            f"'{passage_data.get('title')}' ({passage_data.get('word_count')} words)"
+        )
 
         # ── Step 2: Generate questions ────────────────────────────────────
         logger.info(f"[reading_generator] Passage {p_num}/{passage_count} — Step 2: questions")
@@ -271,12 +277,17 @@ def run_generator(reading_dist: dict) -> dict:
         )
         total_q += len(questions)
 
-        logger.info(f"[reading_generator] Passage {p_num} complete — " f"{len(questions)} questions")
+        logger.info(
+            f"[reading_generator] Passage {p_num} complete — " f"{len(questions)} questions"
+        )
 
     if not passages:
         raise RuntimeError("Reading Generator gagal: tidak ada passage yang berhasil di-generate")
 
-    logger.info(f"[reading_generator] Done — " f"{len(passages)}/{passage_count} passages, {total_q} total questions")
+    logger.info(
+        f"[reading_generator] Done — "
+        f"{len(passages)}/{passage_count} passages, {total_q} total questions"
+    )
 
     return {
         "passages": passages,

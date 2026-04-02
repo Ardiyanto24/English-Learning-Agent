@@ -50,7 +50,18 @@ def save_toefl_question(
                  options, correct_answer, difficulty, passage_text, audio_script)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (session_id, section, part, question_number, question_text, options, correct_answer, difficulty, passage_text, audio_script),
+            (
+                session_id,
+                section,
+                part,
+                question_number,
+                question_text,
+                options,
+                correct_answer,
+                difficulty,
+                passage_text,
+                audio_script,
+            ),
         )
     return cursor.lastrowid
 

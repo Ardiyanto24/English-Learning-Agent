@@ -31,7 +31,11 @@ from utils.retry import retry_llm
 load_dotenv()
 
 _client: Optional[anthropic.Anthropic] = None
-_FALLBACK_FOLLOW_UP_PROMPT = "That's a really interesting perspective! " "What do you think would be the most significant challenge " "related to what you just described?"
+_FALLBACK_FOLLOW_UP_PROMPT = (
+    "That's a really interesting perspective! "
+    "What do you think would be the most significant challenge "
+    "related to what you just described?"
+)
 _FALLBACK_NEW_ANGLE = "challenge/difficulty angle (fallback)"
 
 # System prompt untuk Follow-up Generator
@@ -161,7 +165,9 @@ def run_follow_up(
         )
 
         result["source"] = "llm"
-        logger.info(f"[speaking_follow_up] Done — " f"'{result.get('follow_up_prompt', '')[:60]}...'")
+        logger.info(
+            f"[speaking_follow_up] Done — " f"'{result.get('follow_up_prompt', '')[:60]}...'"
+        )
         return result
 
     except Exception as e:

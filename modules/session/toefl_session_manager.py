@@ -124,14 +124,21 @@ def is_section_complete(session_id: str, section: int, mode: str) -> bool:
         return False
 
     # Hitung soal section ini yang sudah dijawab
-    answered = sum(1 for q in toefl_data.get("questions", []) if q.get("section") == str(section) and q.get("user_answer") is not None)
+    answered = sum(
+        1
+        for q in toefl_data.get("questions", [])
+        if q.get("section") == str(section) and q.get("user_answer") is not None
+    )
 
     expected = SECTION_TOTALS.get(mode, {}).get(section, 0)
 
     is_complete = answered >= expected
 
     if not is_complete:
-        logger.warning(f"[toefl_session_manager] Section {section} belum selesai: " f"{answered}/{expected} soal dijawab (session={session_id})")
+        logger.warning(
+            f"[toefl_session_manager] Section {section} belum selesai: "
+            f"{answered}/{expected} soal dijawab (session={session_id})"
+        )
 
     return is_complete
 
@@ -157,7 +164,9 @@ def pause_session(session_id: str, completed_section: int, mode: str) -> PauseRe
     if completed_section not in [1, 2]:
         return PauseResult(
             success=False,
-            reason=("Pause hanya bisa dilakukan setelah selesai Listening " "atau Structure section."),
+            reason=(
+                "Pause hanya bisa dilakukan setelah selesai Listening " "atau Structure section."
+            ),
         )
 
     # Validasi: section benar-benar sudah selesai
@@ -165,7 +174,9 @@ def pause_session(session_id: str, completed_section: int, mode: str) -> PauseRe
         section_name = SECTION_NAMES.get(completed_section, f"Section {completed_section}")
         return PauseResult(
             success=False,
-            reason=(f"{section_name} belum selesai. Selesaikan semua soal " f"sebelum melakukan pause."),
+            reason=(
+                f"{section_name} belum selesai. Selesaikan semua soal " f"sebelum melakukan pause."
+            ),
         )
 
     now_dt = datetime.now()
@@ -185,7 +196,11 @@ def pause_session(session_id: str, completed_section: int, mode: str) -> PauseRe
 
         if success:
             section_name = SECTION_NAMES.get(completed_section)
-            logger.info(f"[toefl_session_manager] Sesi di-pause setelah {section_name}. " f"Lanjut dari section {next_section} saat resume. " f"Expires: {expires_at} (session={session_id})")
+            logger.info(
+                f"[toefl_session_manager] Sesi di-pause setelah {section_name}. "
+                f"Lanjut dari section {next_section} saat resume. "
+                f"Expires: {expires_at} (session={session_id})"
+            )
             return PauseResult(success=True, expires_at=expires_at)
 
         return PauseResult(success=False, reason="Gagal menyimpan ke database.")
@@ -223,13 +238,24 @@ def resume_session(session_id: str) -> ResumeResult:
         state = check_and_resume_toefl_session(session_id=session_id, now=now)
 
         if state is None:
-            logger.info(f"[toefl_session_manager] Resume gagal — sesi expired " f"atau tidak valid (session={session_id})")
+            logger.info(
+                f"[toefl_session_manager] Resume gagal — sesi expired "
+                f"atau tidak valid (session={session_id})"
+            )
             return ResumeResult(
                 success=False,
-                reason=("Sesi tidak dapat dilanjutkan. " "Kemungkinan sudah melewati batas 7 hari atau " "tidak dalam kondisi pause."),
+                reason=(
+                    "Sesi tidak dapat dilanjutkan. "
+                    "Kemungkinan sudah melewati batas 7 hari atau "
+                    "tidak dalam kondisi pause."
+                ),
             )
 
-        logger.info(f"[toefl_session_manager] Resume berhasil. " f"Lanjut dari section {state.get('current_section')} " f"(session={session_id})")
+        logger.info(
+            f"[toefl_session_manager] Resume berhasil. "
+            f"Lanjut dari section {state.get('current_section')} "
+            f"(session={session_id})"
+        )
 
         return ResumeResult(
             success=True,

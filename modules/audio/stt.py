@@ -11,7 +11,6 @@ Retry policy: max 3x dengan exponential backoff (1s → 2s → 4s).
 Fallback: return None → UI tampilkan text input manual.
 """
 
-
 import time
 from pathlib import Path
 from typing import Optional, Union
@@ -88,7 +87,11 @@ def transcribe_audio_bytes(
     for attempt in range(3):
         try:
             response = client.recognize(config=config, audio=audio)
-            transcript = " ".join(result.alternatives[0].transcript for result in response.results if result.alternatives).strip()
+            transcript = " ".join(
+                result.alternatives[0].transcript
+                for result in response.results
+                if result.alternatives
+            ).strip()
 
             if not transcript:
                 last_error = "empty_transcript"

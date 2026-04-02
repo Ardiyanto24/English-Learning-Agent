@@ -152,7 +152,9 @@ def run_validator(
     last_validation = None
 
     for attempt in range(MAX_REGENERATE_ATTEMPTS):
-        logger.info(f"[quiz_validator] Validation attempt " f"{attempt + 1}/{MAX_REGENERATE_ATTEMPTS}")
+        logger.info(
+            f"[quiz_validator] Validation attempt " f"{attempt + 1}/{MAX_REGENERATE_ATTEMPTS}"
+        )
 
         try:
             validation = _call_validator_llm(planner_output, current_generator_output)
@@ -172,7 +174,10 @@ def run_validator(
                 }
 
             # ❌ Tidak valid — log dan coba regenerate
-            logger.warning(f"[quiz_validator] Invalid (score={score}) " f"— issues: {validation.get('issues', [])}")
+            logger.warning(
+                f"[quiz_validator] Invalid (score={score}) "
+                f"— issues: {validation.get('issues', [])}"
+            )
 
             if attempt < MAX_REGENERATE_ATTEMPTS - 1:
                 logger.info("[quiz_validator] Triggering regeneration...")
@@ -200,7 +205,9 @@ def run_validator(
     if last_validation:
         adjusted_questions = last_validation.get("adjusted_questions", [])
 
-    final_output = _apply_adjusted_questions(current_generator_output, adjusted_questions, planner_output)
+    final_output = _apply_adjusted_questions(
+        current_generator_output, adjusted_questions, planner_output
+    )
 
     log_error(
         error_type="validator_unavailable" if validator_unavailable else "validation_failed",

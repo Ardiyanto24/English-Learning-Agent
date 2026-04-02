@@ -88,7 +88,9 @@ def build_generator_prompt(
     total_words = new_words + review_words
 
     # Format distribusi menjadi string yang readable
-    format_lines = "\n".join(f"  - {fmt}: {count} soal" for fmt, count in format_distribution.items() if count > 0)
+    format_lines = "\n".join(
+        f"  - {fmt}: {count} soal" for fmt, count in format_distribution.items() if count > 0
+    )
 
     return f"""Generate vocabulary quiz questions with the following specifications:
 

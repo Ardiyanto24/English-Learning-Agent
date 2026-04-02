@@ -58,7 +58,9 @@ def save_exchange(
     return cursor.lastrowid
 
 
-def update_exchange_transcript(exchange_id: int, user_transcript: str, assessor_decision: Optional[str] = None) -> bool:
+def update_exchange_transcript(
+    exchange_id: int, user_transcript: str, assessor_decision: Optional[str] = None
+) -> bool:
     """Update transkrip user dan keputusan assessor setelah user menjawab."""
     with get_db() as conn:
         conn.execute(

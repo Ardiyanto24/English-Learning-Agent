@@ -110,7 +110,9 @@ def build_generator_prompt(planner_output: dict, rag_context: str) -> str:
     difficulty = planner_output.get("difficulty_target", "medium")
 
     # Format distribusi soal menjadi instruksi yang jelas
-    format_lines = "\n".join(f"  - {fmt}: {count} soal" for fmt, count in format_dist.items() if count > 0)
+    format_lines = "\n".join(
+        f"  - {fmt}: {count} soal" for fmt, count in format_dist.items() if count > 0
+    )
 
     return f"""Generate grammar questions based on the following instructions.
 

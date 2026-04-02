@@ -215,7 +215,11 @@ def _render_mode_select():
             col1, col2 = st.columns([3, 1])
             with col1:
                 st.markdown(f"**Mode {mode}** — {total} soal, {cfg['duration_hint']}")
-                st.caption(f"Listening: {cfg['listening']['total']} soal  |  " f"Structure: {cfg['structure']['total']} soal  |  " f"Reading: {cfg['reading']['total']} soal")
+                st.caption(
+                    f"Listening: {cfg['listening']['total']} soal  |  "
+                    f"Structure: {cfg['structure']['total']} soal  |  "
+                    f"Reading: {cfg['reading']['total']} soal"
+                )
             with col2:
                 if st.button(f"Pilih {mode}", key=f"mode_{mode}", use_container_width=True):
                     _set("mode", mode)
@@ -223,7 +227,10 @@ def _render_mode_select():
                     st.rerun()
 
     st.markdown("---")
-    st.info("💡 **Tips:** Mulai dengan mode **50%** jika ini simulasi pertamamu. " "Naikkan mode setelah estimasi skor stabil di atas targetmu.")
+    st.info(
+        "💡 **Tips:** Mulai dengan mode **50%** jika ini simulasi pertamamu. "
+        "Naikkan mode setelah estimasi skor stabil di atas targetmu."
+    )
 
 
 # ===================================================
@@ -407,7 +414,11 @@ def _render_listening():
     # Submit
     col1, col2 = st.columns([2, 1])
     with col1:
-        if st.button("✅ Selesai Listening — Lanjut ke Pause Screen", use_container_width=True, type="primary"):
+        if st.button(
+            "✅ Selesai Listening — Lanjut ke Pause Screen",
+            use_container_width=True,
+            type="primary",
+        ):
             _save_section_answers("listening", items, answers)
             _set("state", "pause_screen_1")
             st.rerun()
@@ -498,7 +509,11 @@ def _render_pause_screen(after_section: int):
                 mode=mode,
             )
             if result.success:
-                st.success(f"✅ Simulasi disimpan. Kamu bisa melanjutkan hingga:\n\n" f"**{result.expires_at}**\n\n" "Tutup halaman ini sekarang.")
+                st.success(
+                    f"✅ Simulasi disimpan. Kamu bisa melanjutkan hingga:\n\n"
+                    f"**{result.expires_at}**\n\n"
+                    "Tutup halaman ini sekarang."
+                )
                 _reset()
             else:
                 st.error(f"Gagal menyimpan: {result.reason}")
@@ -562,7 +577,11 @@ def _render_structure():
 
     col1, col2 = st.columns([2, 1])
     with col1:
-        if st.button("✅ Selesai Structure — Lanjut ke Pause Screen", use_container_width=True, type="primary"):
+        if st.button(
+            "✅ Selesai Structure — Lanjut ke Pause Screen",
+            use_container_width=True,
+            type="primary",
+        ):
             _save_section_answers("structure", questions, answers)
             _set("state", "pause_screen_2")
             st.rerun()
@@ -651,7 +670,11 @@ def _render_scoring():
         questions = toefl_data.get("questions", []) if toefl_data else []
 
         def _raw(section_num: str) -> int:
-            return sum(1 for q in questions if q.get("section") == section_num and q.get("is_correct") is True)
+            return sum(
+                1
+                for q in questions
+                if q.get("section") == section_num and q.get("is_correct") is True
+            )
 
         l_raw = _raw("1")
         s_raw = _raw("2")
@@ -771,7 +794,9 @@ def _render_completed():
         section_avgs = analytics.get("section_averages", {})
         if any(v for v in section_avgs.values()):
             weakest = analytics.get("weakest_section", "").capitalize()
-            st.warning(f"⚠️ Section paling lemah: **{weakest}** — fokus di sini untuk kenaikan skor terbesar.")
+            st.warning(
+                f"⚠️ Section paling lemah: **{weakest}** — fokus di sini untuk kenaikan skor terbesar."
+            )
 
     else:
         st.info("📊 Kumpulkan minimal 3 simulasi untuk melihat analisis tren skor.")

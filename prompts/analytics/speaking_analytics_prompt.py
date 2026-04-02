@@ -81,10 +81,16 @@ def build_speaking_analytics_prompt(
         if s.get("is_graded") and s.get("final_score", 0) > 0:
             mode_scores[mode].append(s.get("final_score", 0))
 
-    mode_avg_hint = {mode: round(sum(scores) / len(scores), 2) for mode, scores in mode_scores.items() if scores}
+    mode_avg_hint = {
+        mode: round(sum(scores) / len(scores), 2) for mode, scores in mode_scores.items() if scores
+    }
 
     # Trend dari 5 sesi terakhir
-    recent_scores = [s.get("final_score", 0) for s in sessions_data[-5:] if s.get("is_graded") and s.get("final_score", 0) > 0]
+    recent_scores = [
+        s.get("final_score", 0)
+        for s in sessions_data[-5:]
+        if s.get("is_graded") and s.get("final_score", 0) > 0
+    ]
 
     return f"""Analyze this student's speaking performance history and generate coaching insights.
 

@@ -140,7 +140,10 @@ def build_questions_prompt(
     extra_q = max(0, questions_per_passage - 6)
     extra_section = ""
     if extra_q > 0:
-        extra_section = f"\nAfter the 6 required types, add {extra_q} more question(s) " f"of any type (prefer factual or inference)."
+        extra_section = (
+            f"\nAfter the 6 required types, add {extra_q} more question(s) "
+            f"of any type (prefer factual or inference)."
+        )
 
     return f"""Generate reading comprehension questions for this passage.
 

@@ -192,13 +192,17 @@ def run_planner(mode: str) -> dict:
     is_fallback = False
 
     if mode not in _DISTRIBUTIONS:
-        logger.warning(f"[toefl_planner] Unknown mode '{mode}' — " f"falling back to {_FALLBACK_MODE}")
+        logger.warning(
+            f"[toefl_planner] Unknown mode '{mode}' — " f"falling back to {_FALLBACK_MODE}"
+        )
         mode = _FALLBACK_MODE
         is_fallback = True
 
     dist = _DISTRIBUTIONS[mode]
 
-    total_questions = dist["listening"]["total"] + dist["structure"]["total"] + dist["reading"]["total"]
+    total_questions = (
+        dist["listening"]["total"] + dist["structure"]["total"] + dist["reading"]["total"]
+    )
 
     result = {
         "mode": mode,
@@ -211,7 +215,13 @@ def run_planner(mode: str) -> dict:
         "is_fallback": is_fallback,
     }
 
-    logger.info(f"[toefl_planner] Mode={mode} — " f"L:{dist['listening']['total']} " f"S:{dist['structure']['total']} " f"R:{dist['reading']['total']} " f"Total:{total_questions} soal")
+    logger.info(
+        f"[toefl_planner] Mode={mode} — "
+        f"L:{dist['listening']['total']} "
+        f"S:{dist['structure']['total']} "
+        f"R:{dist['reading']['total']} "
+        f"Total:{total_questions} soal"
+    )
 
     return result
 

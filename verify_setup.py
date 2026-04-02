@@ -61,7 +61,11 @@ try:
     import anthropic
 
     client = anthropic.Anthropic()
-    response = client.messages.create(model="claude-haiku-4-5-20251001", max_tokens=20, messages=[{"role": "user", "content": "Say exactly: connected"}])
+    response = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=20,
+        messages=[{"role": "user", "content": "Say exactly: connected"}],
+    )
     print(f"  OK — Response: {response.content[0].text.strip()}")
 except Exception as e:
     print(f"  FAIL — {e}")

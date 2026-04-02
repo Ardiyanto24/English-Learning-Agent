@@ -173,7 +173,10 @@ def run_generator(
         else:
             final_category, final_topic = _pick_random_topic()
 
-    logger.info(f"[speaking_generator] Generating prompt — " f"sub_mode={sub_mode} category='{final_category}' topic='{final_topic}'")
+    logger.info(
+        f"[speaking_generator] Generating prompt — "
+        f"sub_mode={sub_mode} category='{final_category}' topic='{final_topic}'"
+    )
 
     try:
         result = _call_generator_llm(
@@ -192,9 +195,15 @@ def run_generator(
                 "oral_presentation": 180,
             }
             result["suggested_duration_seconds"] = defaults.get(sub_mode, 90)
-            logger.warning(f"[speaking_generator] LLM did not return 'suggested_duration_seconds' " f"— injecting default {result['suggested_duration_seconds']}s " f"for sub_mode='{sub_mode}'")
+            logger.warning(
+                f"[speaking_generator] LLM did not return 'suggested_duration_seconds' "
+                f"— injecting default {result['suggested_duration_seconds']}s "
+                f"for sub_mode='{sub_mode}'"
+            )
 
-        logger.info(f"[speaking_generator] Done — " f"prompt='{result.get('prompt_text', '')[:60]}...'")
+        logger.info(
+            f"[speaking_generator] Done — " f"prompt='{result.get('prompt_text', '')[:60]}...'"
+        )
         return result
 
     except Exception as e:

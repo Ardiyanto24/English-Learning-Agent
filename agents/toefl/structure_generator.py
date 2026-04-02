@@ -86,7 +86,10 @@ def _get_rag_context() -> tuple[str, bool]:
             context={"failed": failed, "total": total_topics},
             fallback_used=True,
         )
-        logger.warning(f"[structure_generator] {failed}/{total_topics} RAG quires failed" f"(>25% threshold) - threating is fallback")
+        logger.warning(
+            f"[structure_generator] {failed}/{total_topics} RAG quires failed"
+            f"(>25% threshold) - threating is fallback"
+        )
 
     return "\n\n".join(chunks), is_fallback
 
@@ -127,7 +130,9 @@ def _parse_response(raw: str, part_a_count: int, part_b_count: int) -> dict:
             if missing:
                 raise ValueError(f"{part_key}[{i}] missing fields: {missing}")
             if q.get("correct_answer") not in ("A", "B", "C", "D"):
-                raise ValueError(f"{part_key}[{i}] invalid correct_answer: " f"{q.get('correct_answer')}")
+                raise ValueError(
+                    f"{part_key}[{i}] invalid correct_answer: " f"{q.get('correct_answer')}"
+                )
 
     return parsed
 
@@ -179,7 +184,9 @@ def run_generator(structure_dist: dict) -> dict:
     part_a_count = structure_dist.get("part_a", 15)
     part_b_count = structure_dist.get("part_b", 25)
 
-    logger.info(f"[structure_generator] Generating " f"Part A: {part_a_count}, Part B: {part_b_count}")
+    logger.info(
+        f"[structure_generator] Generating " f"Part A: {part_a_count}, Part B: {part_b_count}"
+    )
 
     # Retrieve RAG context
     rag_context, is_fallback = _get_rag_context()
@@ -195,7 +202,11 @@ def run_generator(structure_dist: dict) -> dict:
         result["total_questions"] = total
         result["rag_fallback"] = is_fallback
 
-        logger.info(f"[structure_generator] Done — " f"A:{len(result['part_a'])} B:{len(result['part_b'])} " f"rag_fallback={is_fallback}")
+        logger.info(
+            f"[structure_generator] Done — "
+            f"A:{len(result['part_a'])} B:{len(result['part_b'])} "
+            f"rag_fallback={is_fallback}"
+        )
         return result
 
     except Exception as e:

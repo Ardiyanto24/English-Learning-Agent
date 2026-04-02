@@ -74,7 +74,10 @@ class TestQuizPlanner:
         Saat DB kosong (tidak ada topik yang pernah dilatih),
         is_cold_start harus True.
         """
-        with patch("agents.quiz.planner._get_all_topic_tracking") as mock_track, patch("agents.quiz.planner._get_practiced_topics_this_session_pool") as mock_prac:
+        with (
+            patch("agents.quiz.planner._get_all_topic_tracking") as mock_track,
+            patch("agents.quiz.planner._get_practiced_topics_this_session_pool") as mock_prac,
+        ):
 
             mock_track.return_value = {}
             mock_prac.return_value = set()  # belum ada topik dilatih
@@ -87,7 +90,10 @@ class TestQuizPlanner:
 
     def test_cold_start_difficulty_is_easy(self):
         """Cold start selalu return difficulty_target = 'easy'."""
-        with patch("agents.quiz.planner._get_all_topic_tracking") as mock_track, patch("agents.quiz.planner._get_practiced_topics_this_session_pool") as mock_prac:
+        with (
+            patch("agents.quiz.planner._get_all_topic_tracking") as mock_track,
+            patch("agents.quiz.planner._get_practiced_topics_this_session_pool") as mock_prac,
+        ):
 
             mock_track.return_value = {}
             mock_prac.return_value = set()
@@ -100,7 +106,10 @@ class TestQuizPlanner:
 
     def test_output_has_all_required_keys(self):
         """Output planner harus punya semua key yang dibutuhkan Generator."""
-        with patch("agents.quiz.planner._get_all_topic_tracking") as mock_track, patch("agents.quiz.planner._get_practiced_topics_this_session_pool") as mock_prac:
+        with (
+            patch("agents.quiz.planner._get_all_topic_tracking") as mock_track,
+            patch("agents.quiz.planner._get_practiced_topics_this_session_pool") as mock_prac,
+        ):
 
             mock_track.return_value = {}
             mock_prac.return_value = set()
@@ -124,7 +133,10 @@ class TestQuizPlanner:
 
     def test_format_distribution_sums_to_total_questions(self):
         """Sum format_distribution harus == total_questions."""
-        with patch("agents.quiz.planner._get_all_topic_tracking") as mock_track, patch("agents.quiz.planner._get_practiced_topics_this_session_pool") as mock_prac:
+        with (
+            patch("agents.quiz.planner._get_all_topic_tracking") as mock_track,
+            patch("agents.quiz.planner._get_practiced_topics_this_session_pool") as mock_prac,
+        ):
 
             mock_track.return_value = {}
             mock_prac.return_value = set()
@@ -212,7 +224,13 @@ class TestQuizPlanner:
         """
         from agents.quiz.planner import _apply_cognitive_load
 
-        accessible = ["Present Tenses", "Subject-Verb Agreement", "Articles", "Prepositions", "Pronouns"]
+        accessible = [
+            "Present Tenses",
+            "Subject-Verb Agreement",
+            "Articles",
+            "Prepositions",
+            "Pronouns",
+        ]
         practiced = set()  # Semua masih baru
 
         new_topics, review_topics = _apply_cognitive_load(accessible, practiced)
@@ -308,7 +326,10 @@ class TestQuizValidator:
             "adjusted_questions": [],
         }
 
-        with patch("agents.quiz.validator._call_validator_llm") as mock_llm, patch("agents.quiz.validator.run_generator") as mock_gen:
+        with (
+            patch("agents.quiz.validator._call_validator_llm") as mock_llm,
+            patch("agents.quiz.validator.run_generator") as mock_gen,
+        ):
 
             mock_llm.return_value = bad_resp
             mock_gen.return_value = GENERATOR_OUTPUT
@@ -332,7 +353,10 @@ class TestQuizValidator:
             "adjusted_questions": [],
         }
 
-        with patch("agents.quiz.validator._call_validator_llm") as mock_llm, patch("agents.quiz.validator.run_generator") as mock_gen:
+        with (
+            patch("agents.quiz.validator._call_validator_llm") as mock_llm,
+            patch("agents.quiz.validator.run_generator") as mock_gen,
+        ):
 
             mock_llm.return_value = bad_resp
             mock_gen.return_value = GENERATOR_OUTPUT
@@ -348,7 +372,10 @@ class TestQuizValidator:
         Output Validator selalu punya 'final_questions' — bahkan saat
         LLM gagal total. Ini memastikan UI tidak crash.
         """
-        with patch("agents.quiz.validator._call_validator_llm") as mock_llm, patch("agents.quiz.validator.run_generator") as mock_gen:
+        with (
+            patch("agents.quiz.validator._call_validator_llm") as mock_llm,
+            patch("agents.quiz.validator.run_generator") as mock_gen,
+        ):
 
             mock_llm.side_effect = Exception("LLM down")
             mock_gen.return_value = GENERATOR_OUTPUT
@@ -372,7 +399,10 @@ class TestQuizValidator:
             "adjusted_questions": [],
         }
 
-        with patch("agents.quiz.validator._call_validator_llm") as mock_llm, patch("agents.quiz.validator.run_generator") as mock_gen:
+        with (
+            patch("agents.quiz.validator._call_validator_llm") as mock_llm,
+            patch("agents.quiz.validator.run_generator") as mock_gen,
+        ):
 
             mock_llm.return_value = bad_resp
             mock_gen.side_effect = RuntimeError("Generator totally failed")
@@ -390,7 +420,10 @@ class TestQuizValidator:
         Jika LLM validator tidak pernah berhasil (selalu exception),
         is_validator_unavailable harus True.
         """
-        with patch("agents.quiz.validator._call_validator_llm") as mock_llm, patch("agents.quiz.validator.run_generator") as mock_gen:
+        with (
+            patch("agents.quiz.validator._call_validator_llm") as mock_llm,
+            patch("agents.quiz.validator.run_generator") as mock_gen,
+        ):
 
             mock_llm.side_effect = Exception("API down")
             mock_gen.return_value = GENERATOR_OUTPUT
@@ -438,7 +471,10 @@ class TestQuizCorrector:
             },
         }
 
-        with patch("agents.quiz.corrector._call_corrector_llm") as mock_llm, patch("agents.quiz.corrector._get_rag_context_for_correction") as mock_rag:
+        with (
+            patch("agents.quiz.corrector._call_corrector_llm") as mock_llm,
+            patch("agents.quiz.corrector._get_rag_context_for_correction") as mock_rag,
+        ):
 
             mock_llm.return_value = mock_result
             mock_rag.return_value = "[Topic: Present Tenses]"
@@ -473,7 +509,10 @@ class TestQuizCorrector:
             },
         }
 
-        with patch("agents.quiz.corrector._call_corrector_llm") as mock_llm, patch("agents.quiz.corrector._get_rag_context_for_correction") as mock_rag:
+        with (
+            patch("agents.quiz.corrector._call_corrector_llm") as mock_llm,
+            patch("agents.quiz.corrector._get_rag_context_for_correction") as mock_rag,
+        ):
 
             mock_llm.return_value = mock_result
             mock_rag.return_value = "[Topic: Present Tenses]"
@@ -504,7 +543,10 @@ class TestQuizCorrector:
 
         wrong_args = {**self.BASE_ARGS, "user_answer": "A"}  # jawaban salah
 
-        with patch("agents.quiz.corrector._call_corrector_llm") as mock_llm, patch("agents.quiz.corrector._get_rag_context_for_correction") as mock_rag:
+        with (
+            patch("agents.quiz.corrector._call_corrector_llm") as mock_llm,
+            patch("agents.quiz.corrector._get_rag_context_for_correction") as mock_rag,
+        ):
 
             mock_llm.return_value = mock_result
             mock_rag.return_value = "[Topic: Present Tenses]"
@@ -521,7 +563,10 @@ class TestQuizCorrector:
         LLM gagal setelah 3x retry → is_graded=False.
         Sesi TETAP JALAN — feedback fallback tetap punya 4 lapisan.
         """
-        with patch("agents.quiz.corrector._call_corrector_llm") as mock_llm, patch("agents.quiz.corrector._get_rag_context_for_correction") as mock_rag:
+        with (
+            patch("agents.quiz.corrector._call_corrector_llm") as mock_llm,
+            patch("agents.quiz.corrector._get_rag_context_for_correction") as mock_rag,
+        ):
 
             mock_llm.side_effect = Exception("LLM timeout")
             mock_rag.return_value = "[Topic: Present Tenses]"
@@ -556,7 +601,10 @@ class TestQuizCorrector:
             },
         }
 
-        with patch("agents.quiz.corrector._call_corrector_llm") as mock_llm, patch("agents.quiz.corrector.retrieve") as mock_retrieve:
+        with (
+            patch("agents.quiz.corrector._call_corrector_llm") as mock_llm,
+            patch("agents.quiz.corrector.retrieve") as mock_retrieve,
+        ):
 
             mock_llm.return_value = mock_result
             mock_retrieve.side_effect = Exception("ChromaDB down")
@@ -581,7 +629,10 @@ class TestQuizCorrector:
             },
         }
 
-        with patch("agents.quiz.corrector._call_corrector_llm") as mock_llm, patch("agents.quiz.corrector._get_rag_context_for_correction") as mock_rag:
+        with (
+            patch("agents.quiz.corrector._call_corrector_llm") as mock_llm,
+            patch("agents.quiz.corrector._get_rag_context_for_correction") as mock_rag,
+        ):
 
             mock_llm.return_value = mock_result
             mock_rag.return_value = "[Topic: Present Tenses]"

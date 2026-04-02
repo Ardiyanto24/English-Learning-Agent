@@ -59,7 +59,9 @@ def main():
     print()
     print("Langkah selanjutnya:")
     print("  Jalankan test retriever untuk verifikasi hasil indexing:")
-    print("  python -c \"from modules.rag.retriever import retrieve; print(retrieve('conditional clause', 'Conditional Clauses Type 2 and 3'))\"")
+    print(
+        "  python -c \"from modules.rag.retriever import retrieve; print(retrieve('conditional clause', 'Conditional Clauses Type 2 and 3'))\""
+    )
     print()
 
 

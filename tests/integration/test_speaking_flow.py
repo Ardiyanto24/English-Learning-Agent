@@ -104,7 +104,9 @@ class TestSpeakingFullFlow:
         )
 
         with get_db() as conn:
-            row = conn.execute("SELECT * FROM speaking_sessions WHERE session_id = ?", (sid,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM speaking_sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
 
         assert row is not None
         assert row["sub_mode"] == "prompted_response"
@@ -180,7 +182,10 @@ class TestSpeakingFullFlow:
         )
 
         with get_db() as conn:
-            row = conn.execute("SELECT user_transcript, assessor_decision " "FROM speaking_exchanges WHERE id = ?", (eid,)).fetchone()
+            row = conn.execute(
+                "SELECT user_transcript, assessor_decision " "FROM speaking_exchanges WHERE id = ?",
+                (eid,),
+            ).fetchone()
 
         assert row["user_transcript"] == "I exercise three times a week."
         assert row["assessor_decision"] == "continue"
@@ -216,7 +221,12 @@ class TestSpeakingFullFlow:
             )
 
         with get_db() as conn:
-            rows = conn.execute("SELECT exchange_number, agent_prompt, user_transcript " "FROM speaking_exchanges WHERE session_id = ? " "ORDER BY exchange_number ASC", (sid,)).fetchall()
+            rows = conn.execute(
+                "SELECT exchange_number, agent_prompt, user_transcript "
+                "FROM speaking_exchanges WHERE session_id = ? "
+                "ORDER BY exchange_number ASC",
+                (sid,),
+            ).fetchall()
 
         assert len(rows) == 3
         assert rows[0]["exchange_number"] == 1
@@ -262,7 +272,12 @@ class TestSpeakingFullFlow:
         )
 
         with get_db() as conn:
-            row = conn.execute("SELECT grammar_score, relevance_score, final_score, " "total_exchanges, is_graded, full_transcript " "FROM speaking_sessions WHERE session_id = ?", (sid,)).fetchone()
+            row = conn.execute(
+                "SELECT grammar_score, relevance_score, final_score, "
+                "total_exchanges, is_graded, full_transcript "
+                "FROM speaking_sessions WHERE session_id = ?",
+                (sid,),
+            ).fetchone()
 
         assert row["grammar_score"] == pytest.approx(8.0, abs=0.01)
         assert row["relevance_score"] == pytest.approx(7.0, abs=0.01)
@@ -308,7 +323,11 @@ class TestSpeakingFullFlow:
         )
 
         with get_db() as conn:
-            row = conn.execute("SELECT vocabulary_score, structure_score " "FROM speaking_sessions WHERE session_id = ?", (sid,)).fetchone()
+            row = conn.execute(
+                "SELECT vocabulary_score, structure_score "
+                "FROM speaking_sessions WHERE session_id = ?",
+                (sid,),
+            ).fetchone()
 
         assert row["vocabulary_score"] == pytest.approx(6.0, abs=0.01)
         assert row["structure_score"] == pytest.approx(8.0, abs=0.01)
@@ -330,7 +349,9 @@ class TestSpeakingFullFlow:
         update_session_status(sid, status="completed")
 
         with get_db() as conn:
-            row = conn.execute("SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)).fetchone()
+            row = conn.execute(
+                "SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
 
         assert row["status"] == "completed"
         assert row["completed_at"] is not None
@@ -366,7 +387,10 @@ class TestSpeakingFullFlow:
         )
 
         with get_db() as conn:
-            row = conn.execute("SELECT is_graded, full_transcript " "FROM speaking_sessions WHERE session_id = ?", (sid,)).fetchone()
+            row = conn.execute(
+                "SELECT is_graded, full_transcript " "FROM speaking_sessions WHERE session_id = ?",
+                (sid,),
+            ).fetchone()
 
         assert row["is_graded"] == 0  # False
 
@@ -492,7 +516,11 @@ class TestSpeakingFullFlow:
         n_exchanges = 2
 
         mock_assessor_responses = [
-            {"decision": "continue", "reason": "Needs more detail.", "suggested_followup": "Can you elaborate?"},
+            {
+                "decision": "continue",
+                "reason": "Needs more detail.",
+                "suggested_followup": "Can you elaborate?",
+            },
             {"decision": "stop", "reason": "Conversation complete.", "suggested_followup": None},
         ]
         mock_transcripts = [
@@ -580,19 +608,31 @@ class TestSpeakingFullFlow:
         with get_db() as conn:
 
             # 1. sessions: status completed
-            session = conn.execute("SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)).fetchone()
+            session = conn.execute(
+                "SELECT status, completed_at FROM sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
             assert session["status"] == "completed"
             assert session["completed_at"] is not None
 
             # 2. speaking_sessions: skor tersimpan
-            sp = conn.execute("SELECT grammar_score, relevance_score, final_score, " "total_exchanges, is_graded " "FROM speaking_sessions WHERE session_id = ?", (sid,)).fetchone()
+            sp = conn.execute(
+                "SELECT grammar_score, relevance_score, final_score, "
+                "total_exchanges, is_graded "
+                "FROM speaking_sessions WHERE session_id = ?",
+                (sid,),
+            ).fetchone()
             assert sp["grammar_score"] == pytest.approx(8.0, abs=0.01)
             assert sp["relevance_score"] == pytest.approx(7.0, abs=0.01)
             assert sp["final_score"] == pytest.approx(7.5, abs=0.01)
             assert sp["is_graded"] == 1
 
             # 3. speaking_exchanges: semua exchange tersimpan
-            exchanges = conn.execute("SELECT exchange_number, user_transcript, assessor_decision " "FROM speaking_exchanges WHERE session_id = ? " "ORDER BY exchange_number ASC", (sid,)).fetchall()
+            exchanges = conn.execute(
+                "SELECT exchange_number, user_transcript, assessor_decision "
+                "FROM speaking_exchanges WHERE session_id = ? "
+                "ORDER BY exchange_number ASC",
+                (sid,),
+            ).fetchall()
 
             assert len(exchanges) >= 1
 
@@ -622,8 +662,14 @@ class TestSpeakingFullFlow:
         update_session_status(sid, status="abandoned")
 
         with get_db() as conn:
-            session = conn.execute("SELECT status FROM sessions WHERE session_id = ?", (sid,)).fetchone()
-            sp = conn.execute("SELECT grammar_score, final_score, is_graded " "FROM speaking_sessions WHERE session_id = ?", (sid,)).fetchone()
+            session = conn.execute(
+                "SELECT status FROM sessions WHERE session_id = ?", (sid,)
+            ).fetchone()
+            sp = conn.execute(
+                "SELECT grammar_score, final_score, is_graded "
+                "FROM speaking_sessions WHERE session_id = ?",
+                (sid,),
+            ).fetchone()
 
         assert session["status"] == "abandoned"
         assert sp["grammar_score"] is None  # tidak ada skor

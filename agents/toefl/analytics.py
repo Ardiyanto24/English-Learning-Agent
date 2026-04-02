@@ -197,13 +197,19 @@ def run_analytics() -> dict:
     sessions = _fetch_toefl_data()
 
     if len(sessions) < MIN_SESSIONS_FOR_ANALYTICS:
-        logger.info(f"[toefl_analytics] Insufficient data: {len(sessions)} completed simulations " f"(minimum: {MIN_SESSIONS_FOR_ANALYTICS})")
+        logger.info(
+            f"[toefl_analytics] Insufficient data: {len(sessions)} completed simulations "
+            f"(minimum: {MIN_SESSIONS_FOR_ANALYTICS})"
+        )
         return _empty_insight()
 
     try:
         result = _call_analytics_llm(sessions)
         _save_snapshot(result)
-        logger.info(f"[toefl_analytics] Done — trend={result.get('score_trend')}, " f"weakest={result.get('weakest_section')}")
+        logger.info(
+            f"[toefl_analytics] Done — trend={result.get('score_trend')}, "
+            f"weakest={result.get('weakest_section')}"
+        )
         return result
 
     except Exception as e:

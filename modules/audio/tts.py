@@ -89,7 +89,10 @@ def generate_speech(
 
 
 def generate_speech_multivoice(script: str) -> Optional[bytes]:
-    pattern = r"\[(SPEAKER_A|SPEAKER_B|NARRATOR)\]:\s*" r"(.+?)(?=\[(?:SPEAKER_A|SPEAKER_B|NARRATOR)\]:|$)"
+    pattern = (
+        r"\[(SPEAKER_A|SPEAKER_B|NARRATOR)\]:\s*"
+        r"(.+?)(?=\[(?:SPEAKER_A|SPEAKER_B|NARRATOR)\]:|$)"
+    )
     matches = re.findall(pattern, script, re.DOTALL)
 
     if not matches:
