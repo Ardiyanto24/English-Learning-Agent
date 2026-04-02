@@ -60,7 +60,8 @@ def _fetch_toefl_data() -> list:
         abandoned_ids = {s["session_id"] for s in get_abandoned_sessions(mode="toefl")}
 
         with get_db() as conn:
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT
                     ts.session_id,
                     ts.mode,
@@ -77,7 +78,8 @@ def _fetch_toefl_data() -> list:
                 WHERE ts.score_status = 'completed'
                   AND s.status = 'completed'
                 ORDER BY s.completed_at ASC
-                """).fetchall()
+                """
+            ).fetchall()
 
         sessions = [dict(r) for r in rows]
 

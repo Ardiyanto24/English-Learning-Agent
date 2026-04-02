@@ -53,30 +53,36 @@ def _fetch_vocab_data() -> tuple[list, list, list]:
     try:
         with get_db() as conn:
             # Ambil semua vocab sessions yang completed
-            sessions = conn.execute("""
+            sessions = conn.execute(
+                """
                 SELECT vs.*, s.created_at, s.completed_at
                 FROM vocab_sessions vs
                 JOIN sessions s ON vs.session_id = s.session_id
                 WHERE s.status = 'completed'
                 ORDER BY s.created_at ASC
-                """).fetchall()
+                """
+            ).fetchall()
 
             # Ambil semua word tracking
-            word_tracking = conn.execute("""
+            word_tracking = conn.execute(
+                """
                 SELECT * FROM vocab_word_tracking
                 ORDER BY last_seen DESC
                 LIMIT 200
-                """).fetchall()
+                """
+            ).fetchall()
 
             # Ambil semua questions yang sudah di-grade
-            questions = conn.execute("""
+            questions = conn.execute(
+                """
                 SELECT vq.word, vq.format, vq.is_correct, vq.is_graded
                 FROM vocab_questions vq
                 JOIN sessions s ON vq.session_id = s.session_id
                 WHERE vq.is_graded = 1
                 ORDER BY s.created_at DESC
                 LIMIT 500
-                """).fetchall()
+                """
+            ).fetchall()
 
         return (
             [dict(r) for r in sessions],

@@ -46,15 +46,18 @@ def _fetch_speaking_data() -> tuple[list, list]:
     """
     try:
         with get_db() as conn:
-            sessions = conn.execute("""SELECT ss.*, s.created_at, s.completed_at
+            sessions = conn.execute(
+                """SELECT ss.*, s.created_at, s.completed_at
                    FROM speaking_sessions ss
                    JOIN sessions s ON ss.session_id = s.session_id
                    WHERE s.status = 'completed'
-                   ORDER BY s.created_at ASC""").fetchall()
+                   ORDER BY s.created_at ASC"""
+            ).fetchall()
 
             # Agregasi per sub_mode — LLM menerima data terstruktur
             # bukan raw exchanges yang bias per jumlah exchange
-            submode_stats = conn.execute("""SELECT
+            submode_stats = conn.execute(
+                """SELECT
                        sub_mode,
                        COUNT(*)                    AS total_sessions,
                        AVG(grammar_score)          AS avg_grammar,
@@ -67,7 +70,8 @@ def _fetch_speaking_data() -> tuple[list, list]:
                    JOIN sessions s ON ss.session_id = s.session_id
                    WHERE s.status = 'completed'
                      AND ss.is_graded = 1
-                   GROUP BY sub_mode""").fetchall()
+                   GROUP BY sub_mode"""
+            ).fetchall()
 
         return (
             [dict(r) for r in sessions],

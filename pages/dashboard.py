@@ -119,13 +119,15 @@ def _query_layer1() -> dict:
         with get_db() as conn:
 
             # --- Streak: hitung hari berturut-turut ada completed session ---
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT DATE(completed_at) as day
                 FROM sessions
                 WHERE status = 'completed' AND completed_at IS NOT NULL
                 GROUP BY DATE(completed_at)
                 ORDER BY day DESC
-                """).fetchall()
+                """
+            ).fetchall()
 
             streak = 0
             if rows:
@@ -144,48 +146,58 @@ def _query_layer1() -> dict:
             data["streak"] = streak
 
             # --- Last session ---
-            last = conn.execute("""
+            last = conn.execute(
+                """
                 SELECT mode, completed_at, status
                 FROM sessions
                 WHERE status = 'completed'
                 ORDER BY completed_at DESC
                 LIMIT 1
-                """).fetchone()
+                """
+            ).fetchone()
             if last:
                 last_dict = dict(last)
                 # Ambil skor dari tabel mode yang sesuai
                 mode = last_dict.get("mode")
                 score = None
                 if mode == "vocab":
-                    row = conn.execute("""SELECT score_pct FROM vocab_sessions
+                    row = conn.execute(
+                        """SELECT score_pct FROM vocab_sessions
                            WHERE session_id IN (
                                SELECT session_id FROM sessions
                                WHERE status='completed' ORDER BY completed_at DESC LIMIT 1
-                           )""").fetchone()
+                           )"""
+                    ).fetchone()
                     if row:
                         score = f"{row['score_pct']:.0f}%"
                 elif mode == "quiz":
-                    row = conn.execute("""SELECT score_pct FROM quiz_sessions
+                    row = conn.execute(
+                        """SELECT score_pct FROM quiz_sessions
                            WHERE session_id IN (
                                SELECT session_id FROM sessions
                                WHERE status='completed' ORDER BY completed_at DESC LIMIT 1
-                           )""").fetchone()
+                           )"""
+                    ).fetchone()
                     if row:
                         score = f"{row['score_pct']:.0f}%"
                 elif mode == "speaking":
-                    row = conn.execute("""SELECT final_score FROM speaking_sessions
+                    row = conn.execute(
+                        """SELECT final_score FROM speaking_sessions
                            WHERE session_id IN (
                                SELECT session_id FROM sessions
                                WHERE status='completed' ORDER BY completed_at DESC LIMIT 1
-                           )""").fetchone()
+                           )"""
+                    ).fetchone()
                     if row and row["final_score"]:
                         score = f"{row['final_score']:.0f}/100"
                 elif mode == "toefl":
-                    row = conn.execute("""SELECT estimated_score FROM toefl_sessions
+                    row = conn.execute(
+                        """SELECT estimated_score FROM toefl_sessions
                            WHERE session_id IN (
                                SELECT session_id FROM sessions
                                WHERE status='completed' ORDER BY completed_at DESC LIMIT 1
-                           )""").fetchone()
+                           )"""
+                    ).fetchone()
                     if row and row["estimated_score"]:
                         score = str(row["estimated_score"])
 
@@ -204,23 +216,27 @@ def _query_layer1() -> dict:
                 }
 
             # --- Latest TOEFL estimated score ---
-            toefl_row = conn.execute("""
+            toefl_row = conn.execute(
+                """
                 SELECT ts.estimated_score
                 FROM toefl_sessions ts
                 JOIN sessions s ON ts.session_id = s.session_id
                 WHERE s.status = 'completed' AND ts.score_status = 'completed'
                 ORDER BY s.completed_at DESC
                 LIMIT 1
-                """).fetchone()
+                """
+            ).fetchone()
             if toefl_row:
                 data["latest_toefl"] = toefl_row["estimated_score"]
 
             # --- Grammar coverage ---
-            cov_row = conn.execute("""
+            cov_row = conn.execute(
+                """
                 SELECT COUNT(*) as practiced
                 FROM quiz_topic_tracking
                 WHERE total_sessions > 0
-                """).fetchone()
+                """
+            ).fetchone()
             practiced = cov_row["practiced"] if cov_row else 0
             data["topics_practiced"] = practiced
             data["grammar_coverage"] = round((practiced / TOTAL_GRAMMAR_TOPICS) * 100, 1)
@@ -251,11 +267,13 @@ def _query_layer2() -> dict:
             mastered_row = conn.execute(
                 "SELECT COUNT(*) as cnt FROM vocab_word_tracking WHERE mastery_score >= 80"
             ).fetchone()
-            weak_rows = conn.execute("""SELECT word, topic, mastery_score
+            weak_rows = conn.execute(
+                """SELECT word, topic, mastery_score
                    FROM vocab_word_tracking
                    WHERE mastery_score < 60
                    ORDER BY mastery_score ASC
-                   LIMIT 5""").fetchall()
+                   LIMIT 5"""
+            ).fetchall()
             total_words = conn.execute("SELECT COUNT(*) as cnt FROM vocab_word_tracking").fetchone()
 
             data["vocab"] = {
@@ -265,18 +283,24 @@ def _query_layer2() -> dict:
             }
 
             # --- Quiz ---
-            strongest = conn.execute("""SELECT topic, avg_score_pct, cluster
+            strongest = conn.execute(
+                """SELECT topic, avg_score_pct, cluster
                    FROM quiz_topic_tracking
                    WHERE total_sessions > 0
                    ORDER BY avg_score_pct DESC
-                   LIMIT 3""").fetchall()
-            weakest = conn.execute("""SELECT topic, avg_score_pct, cluster
+                   LIMIT 3"""
+            ).fetchall()
+            weakest = conn.execute(
+                """SELECT topic, avg_score_pct, cluster
                    FROM quiz_topic_tracking
                    WHERE total_sessions > 0
                    ORDER BY avg_score_pct ASC
-                   LIMIT 3""").fetchall()
-            total_quiz_sessions = conn.execute("""SELECT COUNT(*) as cnt FROM sessions
-                   WHERE mode='quiz' AND status='completed'""").fetchone()
+                   LIMIT 3"""
+            ).fetchall()
+            total_quiz_sessions = conn.execute(
+                """SELECT COUNT(*) as cnt FROM sessions
+                   WHERE mode='quiz' AND status='completed'"""
+            ).fetchone()
 
             data["quiz"] = {
                 "total_sessions": total_quiz_sessions["cnt"] if total_quiz_sessions else 0,
@@ -285,7 +309,8 @@ def _query_layer2() -> dict:
             }
 
             # --- Speaking: rata-rata 3 sesi terakhir per sub-mode ---
-            speaking_rows = conn.execute("""
+            speaking_rows = conn.execute(
+                """
                 SELECT ss.sub_mode,
                        AVG(ss.grammar_score)   as avg_grammar,
                        AVG(ss.relevance_score) as avg_relevance,
@@ -301,9 +326,12 @@ def _query_layer2() -> dict:
                       LIMIT 9
                   )
                 GROUP BY ss.sub_mode
-                """).fetchall()
-            total_speaking = conn.execute("""SELECT COUNT(*) as cnt FROM sessions
-                   WHERE mode='speaking' AND status='completed'""").fetchone()
+                """
+            ).fetchall()
+            total_speaking = conn.execute(
+                """SELECT COUNT(*) as cnt FROM sessions
+                   WHERE mode='speaking' AND status='completed'"""
+            ).fetchone()
 
             data["speaking"] = {
                 "total_sessions": total_speaking["cnt"] if total_speaking else 0,
@@ -311,7 +339,8 @@ def _query_layer2() -> dict:
             }
 
             # --- TOEFL: 5 simulasi terakhir ---
-            toefl_rows = conn.execute("""
+            toefl_rows = conn.execute(
+                """
                 SELECT ts.mode, ts.estimated_score,
                        ts.listening_scaled, ts.structure_scaled, ts.reading_scaled,
                        s.completed_at
@@ -320,9 +349,12 @@ def _query_layer2() -> dict:
                 WHERE s.status = 'completed' AND ts.score_status = 'completed'
                 ORDER BY s.completed_at DESC
                 LIMIT 5
-                """).fetchall()
-            total_toefl = conn.execute("""SELECT COUNT(*) as cnt FROM sessions
-                   WHERE mode='toefl' AND status='completed'""").fetchone()
+                """
+            ).fetchall()
+            total_toefl = conn.execute(
+                """SELECT COUNT(*) as cnt FROM sessions
+                   WHERE mode='toefl' AND status='completed'"""
+            ).fetchone()
 
             data["toefl"] = {
                 "total_sessions": total_toefl["cnt"] if total_toefl else 0,

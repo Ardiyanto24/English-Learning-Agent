@@ -108,66 +108,78 @@ def _get_mode_stats() -> dict:
     try:
         with get_db() as conn:
             # Vocab stats
-            row = conn.execute("""
+            row = conn.execute(
+                """
                 SELECT COUNT(*) as total,
                        MAX(vs.score_pct) as last_score
                 FROM vocab_sessions vs
                 JOIN sessions s ON vs.session_id = s.session_id
                 WHERE s.status = 'completed'
-                """).fetchone()
+                """
+            ).fetchone()
             if row:
                 stats["vocab"]["total_sessions"] = row["total"] or 0
                 stats["vocab"]["last_score"] = row["last_score"]
 
             # Quiz stats — ambil skor sesi terakhir (bukan max)
-            row = conn.execute("""
+            row = conn.execute(
+                """
                 SELECT COUNT(*) as total
                 FROM quiz_sessions qs
                 JOIN sessions s ON qs.session_id = s.session_id
                 WHERE s.status = 'completed'
-                """).fetchone()
-            last_quiz = conn.execute("""
+                """
+            ).fetchone()
+            last_quiz = conn.execute(
+                """
                 SELECT qs.score_pct
                 FROM quiz_sessions qs
                 JOIN sessions s ON qs.session_id = s.session_id
                 WHERE s.status = 'completed'
                 ORDER BY s.completed_at DESC
                 LIMIT 1
-                """).fetchone()
+                """
+            ).fetchone()
             if row:
                 stats["quiz"]["total_sessions"] = row["total"] or 0
             if last_quiz:
                 stats["quiz"]["last_score"] = last_quiz["score_pct"]
 
             # Speaking stats
-            row = conn.execute("""
+            row = conn.execute(
+                """
                 SELECT COUNT(*) as total
                 FROM speaking_sessions ss
                 JOIN sessions s ON ss.session_id = s.session_id
                 WHERE s.status = 'completed'
-                """).fetchone()
-            last_speaking = conn.execute("""
+                """
+            ).fetchone()
+            last_speaking = conn.execute(
+                """
                 SELECT ss.final_score
                 FROM speaking_sessions ss
                 JOIN sessions s ON ss.session_id = s.session_id
                 WHERE s.status = 'completed' AND ss.is_graded = 1
                 ORDER BY s.completed_at DESC
                 LIMIT 1
-                """).fetchone()
+                """
+            ).fetchone()
             if row:
                 stats["speaking"]["total_sessions"] = row["total"] or 0
             if last_speaking:
                 stats["speaking"]["last_score"] = last_speaking["final_score"]
 
             # TOEFL stats — tampilkan best estimated score
-            row = conn.execute("""
+            row = conn.execute(
+                """
                 SELECT COUNT(*) as total,
                        MAX(ts.estimated_score) as best_score
                 FROM toefl_sessions ts
                 JOIN sessions s ON ts.session_id = s.session_id
                 WHERE s.status = 'completed'
                   AND ts.score_status = 'completed'
-                """).fetchone()
+                """
+            ).fetchone()
             if row:
                 stats["toefl"]["total_sessions"] = row["total"] or 0
                 stats["toefl"]["best_score"] = row["best_score"]
