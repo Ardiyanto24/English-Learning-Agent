@@ -133,14 +133,14 @@ def _render_summary(session_data: dict):
 # ===================================================
 # Flow: Inisialisasi sesi baru
 # ===================================================
-def _start_new_session(topic: str):
+def _start_new_session(topic: str, total_words: int = 10):
     """Jalankan Planner → Generator → Validator dan simpan ke DB."""
     _set_state("page_state", "loading")
 
     try:
         # Step 1: Planner
         with st.spinner("🧠 Menyiapkan soal untukmu..."):
-            planner_output = run_planner(topic=topic)
+            planner_output = run_planner(topic=topic, total_words=total_words)
             logger.info(f"[vocab_page] Planner done: {planner_output}")
 
         # Step 2: Generator
@@ -341,14 +341,13 @@ def main():
             key="vocab_topic_select",
         )
 
-        total_words = st.slider(
+        total_words = st.radio(
             "Jumlah soal:",
-            min_value=5,
-            max_value=20,
-            value=10,
-            step=5,
+            options=[5, 10, 15, 20],
+            index=1,  # default ke 10
+            horizontal=True,
             help="Pilih berapa soal yang ingin kamu kerjakan hari ini.",
-            key="vocab_total_words_slider",
+            key="vocab_total_words_radio",
         )
 
         col1, col2 = st.columns([1, 3])

@@ -19,9 +19,11 @@ from typing import Optional
 import anthropic
 from dotenv import load_dotenv
 
+from config.settings import HAIKU_MODEL, VOCAB_DEFAULT_TOTAL_WORDS
+
 from prompts.vocab.planner_prompt import (
     PLANNER_SYSTEM_PROMPT,
-    DEFAULT_PLANNER_CONFIG,
+    build_default_planner_config,
     build_planner_prompt,
 )
 from database.repositories.vocab_repository import (
