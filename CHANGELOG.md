@@ -5,6 +5,44 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.2] — 2026-04-05
+
+Patch release — peningkatan UX Vocab Agent berdasarkan feedback testing.
+
+### Changed
+
+- **`pages/vocab.py`** — Ubah flow answering dari evaluasi per soal menjadi
+  batch evaluation setelah semua soal selesai dijawab, menghilangkan latency
+  yang muncul setiap kali user submit jawaban.
+- **`pages/vocab.py`** — Tambah navigasi bebas antar soal (tombol Sebelumnya /
+  Berikutnya) dengan pre-fill jawaban saat user kembali ke soal sebelumnya.
+  Tombol Submit Semua hanya aktif setelah semua soal terisi.
+- **`pages/vocab.py`** — Ganti pilihan jumlah soal dari slider menjadi radio
+  button dengan 4 pilihan tetap: 5, 10, 15, 20 soal.
+- **`config/settings.py`** — Tambah `VOCAB_FORMAT_PCT` dan `VOCAB_MIN_WORDS`,
+  `VOCAB_MAX_WORDS` untuk distribusi format berbasis persentase per difficulty.
+- **`prompts/vocab/planner_prompt.py`** — Ganti `DEFAULT_PLANNER_CONFIG` static
+  dengan `build_default_planner_config()` yang menghitung distribusi format
+  secara dinamis berdasarkan `total_words`.
+- **`prompts/vocab/planner_prompt.py`** — Update system prompt untuk membatasi
+  `sinonim_antonim` maksimal 20% di semua level difficulty.
+- **`agents/vocab/planner.py`** — `run_planner()` dan `_call_planner_llm()`
+  menerima parameter `total_words` dari UI. Tambah `_fix_format_distribution()`
+  sebagai safety net di semua return path.
+
+### Fixed
+
+- **`pages/vocab.py`** — Filter word object dengan `format`, `question_text`,
+  atau `correct_answer` bernilai `None` sebelum disimpan ke DB, mencegah
+  `NOT NULL constraint failed` pada review words dari spaced repetition.
+
+### Technical Notes
+
+- Tidak ada perubahan pada agent layer (evaluator, generator, validator) —
+  semua perbaikan terjadi di UI layer dan config
+- Jumlah soal kini bisa dipilih user (5/10/15/20), default tetap 10
+
+
 ## [1.0.1] — 2026-04-02
 
 Patch release — perbaikan bug runtime, fitur tidak lengkap, dan CI pipeline.
@@ -188,40 +226,3 @@ Rilis pertama English Learning AI Agent — project selesai sepenuhnya.
 ### Added
 - Inisialisasi struktur folder project
 - Konfigurasi file dasar (.gitignore, README.md, CHANGELOG.md)
-
-## [1.0.2] — 2026-04-05
-
-Patch release — peningkatan UX Vocab Agent berdasarkan feedback testing.
-
-### Changed
-
-- **`pages/vocab.py`** — Ubah flow answering dari evaluasi per soal menjadi
-  batch evaluation setelah semua soal selesai dijawab, menghilangkan latency
-  yang muncul setiap kali user submit jawaban.
-- **`pages/vocab.py`** — Tambah navigasi bebas antar soal (tombol Sebelumnya /
-  Berikutnya) dengan pre-fill jawaban saat user kembali ke soal sebelumnya.
-  Tombol Submit Semua hanya aktif setelah semua soal terisi.
-- **`pages/vocab.py`** — Ganti pilihan jumlah soal dari slider menjadi radio
-  button dengan 4 pilihan tetap: 5, 10, 15, 20 soal.
-- **`config/settings.py`** — Tambah `VOCAB_FORMAT_PCT` dan `VOCAB_MIN_WORDS`,
-  `VOCAB_MAX_WORDS` untuk distribusi format berbasis persentase per difficulty.
-- **`prompts/vocab/planner_prompt.py`** — Ganti `DEFAULT_PLANNER_CONFIG` static
-  dengan `build_default_planner_config()` yang menghitung distribusi format
-  secara dinamis berdasarkan `total_words`.
-- **`prompts/vocab/planner_prompt.py`** — Update system prompt untuk membatasi
-  `sinonim_antonim` maksimal 20% di semua level difficulty.
-- **`agents/vocab/planner.py`** — `run_planner()` dan `_call_planner_llm()`
-  menerima parameter `total_words` dari UI. Tambah `_fix_format_distribution()`
-  sebagai safety net di semua return path.
-
-### Fixed
-
-- **`pages/vocab.py`** — Filter word object dengan `format`, `question_text`,
-  atau `correct_answer` bernilai `None` sebelum disimpan ke DB, mencegah
-  `NOT NULL constraint failed` pada review words dari spaced repetition.
-
-### Technical Notes
-
-- Tidak ada perubahan pada agent layer (evaluator, generator, validator) —
-  semua perbaikan terjadi di UI layer dan config
-- Jumlah soal kini bisa dipilih user (5/10/15/20), default tetap 10
