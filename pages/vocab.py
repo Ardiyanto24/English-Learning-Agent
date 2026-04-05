@@ -171,6 +171,25 @@ def _start_new_session(topic: str, total_words: int = 10):
 
         # Step 5: Simpan soal ke DB (incremental)
         # topic diambil dari word_obj jika ada, fallback ke planner_output topic
+
+        with st.spinner("🔍 Memvalidasi soal..."):
+            validator_result = run_validator(planner_output, generator_output)
+            final_words = validator_result.get("final_words", [])
+            is_adjusted = validator_result.get("is_adjusted", False)
+
+        # Filter word yang incomplete sebelum simpan ke DB
+        final_words = [
+            w for w in final_words
+            if w.get("format") is not None
+            and w.get("question_text") is not None
+            and w.get("correct_answer") is not None
+        ]
+
+        if not final_words:
+            st.error("Gagal membuat soal. Silakan coba lagi.")
+            _set_state("page_state", "init")
+            return
+
         question_ids = []
         for word_obj in final_words:
             q_id = save_vocab_question(
@@ -192,6 +211,7 @@ def _start_new_session(topic: str, total_words: int = 10):
         _set_state("question_ids", question_ids)
         _set_state("is_adjusted", is_adjusted)
         _set_state("current_index", 0)
+        _set_state("answers", {})
         _set_state("results", [])
         _set_state("page_state", "answering")
 
@@ -218,47 +238,46 @@ def _start_new_session(topic: str, total_words: int = 10):
 # ===================================================
 # Flow: User menjawab soal
 # ===================================================
-def _handle_answer_submission(user_answer: str):
-    """Evaluasi jawaban, simpan ke DB, lanjut ke soal berikutnya."""
-    current_index = _get_state("current_index", 0)
+def _run_batch_evaluation():
+    """
+    Evaluasi semua jawaban sekaligus setelah user selesai semua soal.
+    Dipanggil sekali saat user klik Submit Semua.
+    """
     words = _get_state("words", [])
+    answers = _get_state("answers", {})
     question_ids = _get_state("question_ids", [])
     session_id = _get_state("session_id")
-    results = _get_state("results", [])
 
-    word_obj = words[current_index]
-    q_id = question_ids[current_index]
+    results = []
 
-    # Evaluasi jawaban
-    with st.spinner("Menilai jawaban..."):
-        eval_result = run_evaluator(
-            word=word_obj["word"],
-            format=word_obj["format"],
-            question_text=word_obj["question_text"],
-            correct_answer=word_obj["correct_answer"],
-            user_answer=user_answer,
-            session_id=session_id,
-        )
+    with st.spinner("🧠 Menilai semua jawabanmu..."):
+        for i, word_obj in enumerate(words):
+            user_answer = answers.get(i, "")
 
-    # Simpan jawaban ke DB (incremental save)
-    update_vocab_answer(
-        question_id=q_id,
-        user_answer=user_answer,
-        is_correct=eval_result.get("is_correct", False),
-        is_graded=eval_result.get("is_graded", True),
-    )
+            eval_result = run_evaluator(
+                word=word_obj["word"],
+                format=word_obj["format"],
+                question_text=word_obj["question_text"],
+                correct_answer=word_obj["correct_answer"],
+                user_answer=user_answer,
+                session_id=session_id,
+            )
 
-    # Simpan hasil ke state
-    results.append(
-        {
-            **eval_result,
-            "user_answer": user_answer,
-        }
-    )
+            # Simpan jawaban ke DB
+            update_vocab_answer(
+                question_id=question_ids[i],
+                user_answer=user_answer,
+                is_correct=eval_result.get("is_correct", False),
+                is_graded=eval_result.get("is_graded", True),
+            )
+
+            results.append({
+                **eval_result,
+                "user_answer": user_answer,
+            })
+
     _set_state("results", results)
-    _set_state("last_eval", eval_result)
-    _set_state("last_word_obj", word_obj)
-    _set_state("waiting_next", True)  # Tampilkan feedback dulu
+    _complete_session()
 
 
 # ===================================================
@@ -372,53 +391,89 @@ def main():
     elif page_state == "answering":
         words = _get_state("words", [])
         current_index = _get_state("current_index", 0)
-        waiting_next = _get_state("waiting_next", False)
+        answers = _get_state("answers", {})  # ← dict {index: jawaban}
         planner_output = _get_state("planner_output", {})
-
         total = len(words)
 
         # Progress bar
-        progress = current_index / total
-        st.progress(progress, text=f"Soal {current_index + 1} dari {total}")
+        answered_count = sum(1 for i in range(total) if answers.get(i, "").strip())
+        st.progress(answered_count / total, text=f"Terjawab {answered_count} dari {total} soal")
         st.caption(
             f"Topik: **{planner_output.get('topic', '-')}** | "
             f"Level: **{planner_output.get('difficulty_target', '-').title()}**"
         )
         st.markdown("---")
 
-        # Tampilkan feedback soal sebelumnya (jika ada)
-        if waiting_next and current_index > 0:
-            last_eval = _get_state("last_eval")
-            last_word_obj = _get_state("last_word_obj")
-            if last_eval and last_word_obj:
-                _render_feedback(last_eval, last_word_obj)
-                st.markdown("---")
+        # Tampilkan soal saat ini
+        word_obj = words[current_index]
+        fmt = word_obj.get("format", "tebak_arti")
+        question_text = word_obj.get("question_text", "")
 
-        # Tampilkan soal saat ini atau tombol selesai
-        if current_index < total:
-            word_obj = words[current_index]
-            user_answer = _render_question(word_obj, current_index, total)
+        st.markdown(f"**Soal {current_index + 1} dari {total}**")
+        st.markdown(f"_{fmt.replace('_', ' ').title()}_")
+        st.markdown(f"### {question_text}")
 
-            col1, col2 = st.columns([1, 4])
-            with col1:
-                submit = st.button(
-                    "Submit ✓",
-                    type="primary",
+        # Input jawaban — pre-fill jika sudah pernah diisi
+        current_answer = answers.get(current_index, "")
+        user_answer = st.text_input(
+            "Jawaban kamu:",
+            value=current_answer,          # ← pre-fill jawaban sebelumnya
+            key=f"vocab_answer_{current_index}",
+            placeholder="Ketik jawaban di sini...",
+        )
+
+        # Simpan jawaban ke state setiap kali berubah (tanpa submit ke agent)
+        if user_answer != current_answer:
+            answers[current_index] = user_answer
+            _set_state("answers", answers)
+
+        st.markdown("---")
+
+        # Navigasi: Sebelumnya | Berikutnya
+        col_prev, col_next, col_spacer = st.columns([1, 1, 3])
+
+        with col_prev:
+            if st.button(
+                "⬅️ Sebelumnya",
+                disabled=current_index == 0,
+                use_container_width=True,
+                key="vocab_prev_btn",
+            ):
+                # Simpan jawaban saat ini sebelum pindah
+                answers[current_index] = user_answer
+                _set_state("answers", answers)
+                _set_state("current_index", current_index - 1)
+                st.rerun()
+
+        with col_next:
+            if current_index < total - 1:
+                if st.button(
+                    "Berikutnya ➡️",
                     use_container_width=True,
-                    disabled=not user_answer.strip(),
-                    key=f"vocab_submit_btn_{current_index}",
-                )
-
-            if submit and user_answer.strip():
-                _handle_answer_submission(user_answer)
-                _set_state("current_index", current_index + 1)
-                _set_state("waiting_next", True)
-
-                # Cek apakah ini soal terakhir
-                if current_index + 1 >= total:
-                    _complete_session()
-                else:
+                    key="vocab_next_btn",
+                ):
+                    # Simpan jawaban saat ini sebelum pindah
+                    answers[current_index] = user_answer
+                    _set_state("answers", answers)
+                    _set_state("current_index", current_index + 1)
                     st.rerun()
+
+        # Tombol Submit Semua — hanya muncul di soal terakhir
+        # dan hanya aktif jika semua soal sudah terisi
+        if current_index == total - 1:
+            all_answered = all(answers.get(i, "").strip() for i in range(total))
+            st.markdown("---")
+            if st.button(
+                "✅ Submit Semua Jawaban",
+                type="primary",
+                disabled=not all_answered,
+                use_container_width=True,
+                key="vocab_submit_all_btn",
+                help="Semua soal harus terisi sebelum bisa submit." if not all_answered else "",
+            ):
+                answers[current_index] = user_answer  # simpan jawaban terakhir
+                _set_state("answers", answers)
+                _run_batch_evaluation()
 
         # Tombol keluar
         st.markdown("---")
