@@ -148,16 +148,28 @@ def _determine_current_difficulty(avg_mastery: dict) -> str:
 
 
 @retry_llm
-def _call_planner_llm(topic: str, history_summary: dict) -> dict:
+def _call_planner_llm(
+    topic: str,
+    history_summary: dict,
+    total_words: int,          # ← BARU: diteruskan dari run_planner
+) -> dict:
     """
     Panggil Claude Haiku untuk generate planner config.
     Di-wrap @retry_llm: max 3x retry, exponential backoff 2s→4s→8s.
+
+    total_words diteruskan ke build_planner_prompt agar LLM tahu
+    persis berapa soal yang harus dibuat dan bisa menghitung
+    format_distribution yang tepat.
     """
-    user_prompt = build_planner_prompt(topic, history_summary)
+    user_prompt = build_planner_prompt(
+        topic,
+        history_summary,
+        total_words,           # ← BARU: inject ke prompt builder
+    )
 
     client = _get_client()
     response = client.messages.create(
-        model=MODEL,
+        model=HAIKU_MODEL,     # ← UBAH: dari MODEL lokal ke konstanta settings
         max_tokens=512,
         system=PLANNER_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_prompt}],
@@ -175,12 +187,31 @@ def _call_planner_llm(topic: str, history_summary: dict) -> dict:
     return json.loads(raw)
 
 
-def run_planner(topic: str = "sehari_hari") -> dict:
+def _fix_format_distribution(planner_output: dict) -> dict:
+    """
+    Safety net: pastikan sum(format_distribution) == total_words.
+    Koreksi selisih ke 'tebak_arti' karena format paling netral.
+    Dipanggil di semua return path run_planner.
+    """
+    total = planner_output["total_words"]
+    dist = planner_output["format_distribution"]
+    current_sum = sum(dist.values())
+    diff = total - current_sum
+    if diff != 0:
+        dist["tebak_arti"] = max(1, dist.get("tebak_arti", 0) + diff)
+    return planner_output
+
+
+def run_planner(
+    topic: str = "sehari_hari",
+    total_words: int = VOCAB_DEFAULT_TOTAL_WORDS,   # ← BARU: terima dari UI
+) -> dict:
     """
     Jalankan Vocab Planner Agent.
 
     Args:
-        topic: Topik situasi untuk sesi ini
+        topic      : Topik situasi untuk sesi ini
+        total_words: Jumlah soal yang diminta user (default dari settings)
 
     Returns:
         dict konfigurasi sesi:
@@ -190,33 +221,42 @@ def run_planner(topic: str = "sehari_hari") -> dict:
             "new_words": int,
             "review_words": int,
             "difficulty_target": str,
-            "format_distribution": dict
+            "format_distribution": dict  ← sum selalu == total_words
         }
     """
     history_summary = _build_history_summary(topic)
 
-    # Cold start: skip LLM, pakai default config
+    # ── Cold start: skip LLM, pakai config dinamis ───────
     if history_summary.get("is_cold_start"):
         logger.info("[vocab_planner] Cold start detected — using default config")
-        config = DEFAULT_PLANNER_CONFIG.copy()
-        config["topic"] = topic
-        return config
+        config = build_default_planner_config(   # ← UBAH: dari .copy() ke fungsi dinamis
+            topic=topic,
+            total_words=total_words,
+        )
+        return _fix_format_distribution(config)  # ← BARU: safety net
 
+    # ── Returning user: panggil LLM ──────────────────────
     try:
-        config = _call_planner_llm(topic, history_summary)
-        config["topic"] = topic  # Pastikan topic dari input, bukan LLM
+        config = _call_planner_llm(
+            topic,
+            history_summary,
+            total_words,                         # ← BARU: teruskan ke LLM
+        )
+        config["topic"] = topic                  # Pastikan topic dari input, bukan LLM
         logger.info(f"[vocab_planner] Config generated: {config}")
-        return config
+        return _fix_format_distribution(config)  # ← BARU: safety net
 
     except Exception as e:
-        # Setelah 3x retry tetap gagal → fallback default config
+        # Setelah 3x retry tetap gagal → fallback config dinamis
         log_error(
             error_type="llm_timeout",
             agent_name="vocab_planner",
-            context={"topic": topic, "error": str(e)},
+            context={"topic": topic, "total_words": total_words, "error": str(e)},
             fallback_used=True,
         )
         logger.warning("[vocab_planner] LLM failed after retries — using default config")
-        config = DEFAULT_PLANNER_CONFIG.copy()
-        config["topic"] = topic
-        return config
+        config = build_default_planner_config(   # ← UBAH: dari .copy() ke fungsi dinamis
+            topic=topic,
+            total_words=total_words,
+        )
+        return _fix_format_distribution(config)  # ← BARU: safety net

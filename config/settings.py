@@ -20,14 +20,28 @@ SONNET_MODEL = "claude-sonnet-4-6"
 # Vocab Agent — Default Cold Start Config
 # ===================================================
 VOCAB_DEFAULT_TOTAL_WORDS = 10
+VOCAB_MIN_WORDS = 5       # batas bawah pilihan user
+VOCAB_MAX_WORDS = 20      # batas atas pilihan user
 VOCAB_DEFAULT_NEW_WORDS = 5
 VOCAB_DEFAULT_REVIEW_WORDS = 5
 VOCAB_DEFAULT_DIFFICULTY = "easy"
 VOCAB_DEFAULT_TOPIC = "sehari_hari"
-VOCAB_DEFAULT_FORMAT_DISTRIBUTION = {
-    "tebak_arti": 4,
-    "sinonim_antonim": 3,
-    "tebak_inggris": 3,
+VOCAB_FORMAT_PCT = {
+    "easy": {
+        "tebak_arti": 0.60,
+        "sinonim_antonim": 0.20,
+        "tebak_inggris": 0.20,
+    },
+    "medium": {
+        "tebak_arti": 0.40,
+        "sinonim_antonim": 0.20,
+        "tebak_inggris": 0.40,
+    },
+    "hard": {
+        "tebak_arti": 0.30,
+        "sinonim_antonim": 0.20,
+        "tebak_inggris": 0.50,
+    },
 }
 
 # ===================================================

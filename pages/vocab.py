@@ -341,6 +341,16 @@ def main():
             key="vocab_topic_select",
         )
 
+        total_words = st.slider(
+            "Jumlah soal:",
+            min_value=5,
+            max_value=20,
+            value=10,
+            step=5,
+            help="Pilih berapa soal yang ingin kamu kerjakan hari ini.",
+            key="vocab_total_words_slider",
+        )
+
         col1, col2 = st.columns([1, 3])
         with col1:
             if st.button(
@@ -349,7 +359,7 @@ def main():
                 use_container_width=True,
                 key="vocab_start_btn",
             ):
-                _start_new_session(topic=selected_topic)
+                _start_new_session(topic=selected_topic, total_words=total_words)
 
     # -----------------------------------------------
     # STATE: loading — Sedang memproses

@@ -17,6 +17,8 @@ konfigurasi sesi vocab yang optimal berdasarkan 2 logic:
 Cold start (user baru): gunakan default config langsung tanpa LLM.
 """
 
+from config.settings import VOCAB_FORMAT_PCT
+
 PLANNER_SYSTEM_PROMPT = """You are a vocabulary learning planner for an English learning app.
 
 Your job is to analyze a student's learning history and create an optimal session plan \
@@ -36,10 +38,18 @@ that balances new learning with spaced repetition review.
 - Total words per session: 10 (default)
 
 ### 3. Format Distribution
-Distribute formats roughly equally, adjusted for difficulty:
-- easy   : tebak_arti heavy (most accessible format)
-- medium : balanced distribution
-- hard   : sinonim_antonim and tebak_inggris heavy (more challenging)
+Use PERCENTAGE-BASED distribution, then round to whole numbers.
+Caps that MUST be respected regardless of difficulty:
+- sinonim_antonim : MAXIMUM 20% of total_words (round down if needed)
+- tebak_inggris   : 20-50% of total_words depending on level
+- tebak_arti      : fill the remaining slots
+
+Per difficulty guideline:
+- easy   : tebak_arti 60%, sinonim_antonim 20%, tebak_inggris 20%
+- medium : tebak_arti 40%, sinonim_antonim 20%, tebak_inggris 40%
+- hard   : tebak_arti 30%, sinonim_antonim 20%, tebak_inggris 50%
+
+IMPORTANT: The sum of all format counts MUST equal total_words exactly.
 
 ## Output Format
 You MUST respond with a valid JSON object only. No explanation, no markdown, no extra text.
@@ -82,6 +92,7 @@ Remember: respond with JSON only."""
 def build_planner_prompt(
     topic: str,
     history_summary: dict,
+    total_words: int
 ) -> str:
     """
     Bangun user prompt untuk Vocab Planner Agent.
@@ -133,6 +144,7 @@ def build_planner_prompt(
 
 ## Student Profile
 Topic selected   : {topic}
+Total words      : {total_words}
 Total sessions   : {total_sessions}
 Current level    : {current_difficulty}
 Weak words available for review: {weak_words_count} words (mastery < 60%)
@@ -141,6 +153,9 @@ Weak words available for review: {weak_words_count} words (mastery < 60%)
 {mastery_str}
 
 ## Instructions
+- total_words is FIXED at {total_words} — do not change this value
+- The sum of format_distribution values MUST equal {total_words} exactly
+- new_words maximum is {min(5, total_words)} (cognitive load cap)
 - Determine if difficulty should stay, upgrade, or downgrade based on mastery scores
 - Set new_words to maximum 5 (cognitive load limit)
 - Set review_words = total_words - new_words (use weak words for spaced repetition)
@@ -150,18 +165,28 @@ Weak words available for review: {weak_words_count} words (mastery < 60%)
 Respond with session plan JSON only."""
 
 
-# ===================================================
-# Default config untuk cold start — tidak butuh LLM
-# ===================================================
-DEFAULT_PLANNER_CONFIG = {
-    "topic": "sehari_hari",
-    "total_words": 10,
-    "new_words": 5,
-    "review_words": 5,
-    "difficulty_target": "easy",
-    "format_distribution": {
-        "tebak_arti": 4,
-        "sinonim_antonim": 3,
-        "tebak_inggris": 3,
-    },
-}
+def build_default_planner_config(topic: str, total_words: int) -> dict:
+    """
+    Bangun default config untuk cold start secara dinamis.
+    Distribusi format dihitung dari persentase, bukan hardcode.
+    """
+    difficulty = "easy"
+    pct = VOCAB_FORMAT_PCT[difficulty]
+
+    # Hitung distribusi dengan pembulatan — pastikan total = total_words
+    tebak_arti = round(total_words * pct["tebak_arti"])
+    sinonim = round(total_words * pct["sinonim_antonim"])
+    tebak_ing = total_words - tebak_arti - sinonim  # sisa untuk hindari rounding drift
+
+    return {
+        "topic": topic,
+        "total_words": total_words,
+        "new_words": min(5, total_words),   # tetap hormati cognitive load limit
+        "review_words": max(0, total_words - min(5, total_words)),
+        "difficulty_target": difficulty,
+        "format_distribution": {
+            "tebak_arti": max(1, tebak_arti),
+            "sinonim_antonim": max(0, sinonim),
+            "tebak_inggris": max(0, tebak_ing),
+        },
+    }
