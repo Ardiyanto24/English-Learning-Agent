@@ -13,8 +13,8 @@ Cara pakai:
 # ===================================================
 # Model Names
 # ===================================================
-HAIKU_MODEL = "claude-haiku-4-5-20251001"
-SONNET_MODEL = "claude-sonnet-4-5-20251001"
+HAIKU_MODEL = "claude-haiku-4-5"
+SONNET_MODEL = "claude-sonnet-4-6"
 
 # ===================================================
 # Vocab Agent — Default Cold Start Config
