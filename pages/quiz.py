@@ -13,6 +13,8 @@ State machine (satu state lebih banyak dari Vocab karena Human in the Loop):
 
 import streamlit as st
 
+import json
+
 from agents.quiz.planner import run_planner
 from agents.quiz.generator import run_generator
 from agents.quiz.validator import run_validator
@@ -216,14 +218,13 @@ def _start_session(confirmed_topics: list[str], planner_output: dict):
         create_session(session_id, mode="quiz")
         save_quiz_session(
             session_id=session_id,
-            topics=confirmed_topics,
+            topics=json.dumps(confirmed_topics),
             total_questions=len(final_questions),
         )
 
         # Simpan soal ke DB (incremental)
         question_ids = []
         for q in final_questions:
-            import json
 
             q_id = save_quiz_question(
                 session_id=session_id,
@@ -286,12 +287,14 @@ def _handle_answer(user_answer: str):
         )
 
     # Simpan ke DB
+    feedback = correction.get("feedback", {})
+
     update_quiz_answer(
         question_id=q_id,
         user_answer=user_answer,
         is_correct=correction.get("is_correct", False),
         is_graded=correction.get("is_graded", True),
-        feedback=correction.get("feedback", {}),
+        feedback_example=str(feedback.get("example", [])),
     )
 
     results.append({**correction, "user_answer": user_answer})
