@@ -20,8 +20,8 @@ SONNET_MODEL = "claude-sonnet-4-6"
 # Vocab Agent — Default Cold Start Config
 # ===================================================
 VOCAB_DEFAULT_TOTAL_WORDS = 10
-VOCAB_MIN_WORDS = 5       # batas bawah pilihan user
-VOCAB_MAX_WORDS = 20      # batas atas pilihan user
+VOCAB_MIN_WORDS = 5  # batas bawah pilihan user
+VOCAB_MAX_WORDS = 20  # batas atas pilihan user
 VOCAB_DEFAULT_NEW_WORDS = 5
 VOCAB_DEFAULT_REVIEW_WORDS = 5
 VOCAB_DEFAULT_DIFFICULTY = "easy"

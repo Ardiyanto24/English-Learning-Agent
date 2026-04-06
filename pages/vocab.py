@@ -179,7 +179,8 @@ def _start_new_session(topic: str, total_words: int = 10):
 
         # Filter word yang incomplete sebelum simpan ke DB
         final_words = [
-            w for w in final_words
+            w
+            for w in final_words
             if w.get("format") is not None
             and w.get("question_text") is not None
             and w.get("correct_answer") is not None
@@ -271,10 +272,12 @@ def _run_batch_evaluation():
                 is_graded=eval_result.get("is_graded", True),
             )
 
-            results.append({
-                **eval_result,
-                "user_answer": user_answer,
-            })
+            results.append(
+                {
+                    **eval_result,
+                    "user_answer": user_answer,
+                }
+            )
 
     _set_state("results", results)
     _complete_session()
@@ -417,7 +420,7 @@ def main():
         current_answer = answers.get(current_index, "")
         user_answer = st.text_input(
             "Jawaban kamu:",
-            value=current_answer,          # ← pre-fill jawaban sebelumnya
+            value=current_answer,  # ← pre-fill jawaban sebelumnya
             key=f"vocab_answer_{current_index}",
             placeholder="Ketik jawaban di sini...",
         )

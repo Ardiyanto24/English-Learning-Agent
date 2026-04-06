@@ -153,7 +153,7 @@ def _determine_current_difficulty(avg_mastery: dict) -> str:
 def _call_planner_llm(
     topic: str,
     history_summary: dict,
-    total_words: int,          # ← BARU: diteruskan dari run_planner
+    total_words: int,  # ← BARU: diteruskan dari run_planner
 ) -> dict:
     """
     Panggil Claude Haiku untuk generate planner config.
@@ -166,12 +166,12 @@ def _call_planner_llm(
     user_prompt = build_planner_prompt(
         topic,
         history_summary,
-        total_words,           # ← BARU: inject ke prompt builder
+        total_words,  # ← BARU: inject ke prompt builder
     )
 
     client = _get_client()
     response = client.messages.create(
-        model=HAIKU_MODEL,     # ← UBAH: dari MODEL lokal ke konstanta settings
+        model=HAIKU_MODEL,  # ← UBAH: dari MODEL lokal ke konstanta settings
         max_tokens=512,
         system=PLANNER_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_prompt}],
@@ -206,7 +206,7 @@ def _fix_format_distribution(planner_output: dict) -> dict:
 
 def run_planner(
     topic: str = "sehari_hari",
-    total_words: int = VOCAB_DEFAULT_TOTAL_WORDS,   # ← BARU: terima dari UI
+    total_words: int = VOCAB_DEFAULT_TOTAL_WORDS,  # ← BARU: terima dari UI
 ) -> dict:
     """
     Jalankan Vocab Planner Agent.
@@ -231,7 +231,7 @@ def run_planner(
     # ── Cold start: skip LLM, pakai config dinamis ───────
     if history_summary.get("is_cold_start"):
         logger.info("[vocab_planner] Cold start detected — using default config")
-        config = build_default_planner_config(   # ← UBAH: dari .copy() ke fungsi dinamis
+        config = build_default_planner_config(  # ← UBAH: dari .copy() ke fungsi dinamis
             topic=topic,
             total_words=total_words,
         )
@@ -242,9 +242,9 @@ def run_planner(
         config = _call_planner_llm(
             topic,
             history_summary,
-            total_words,                         # ← BARU: teruskan ke LLM
+            total_words,  # ← BARU: teruskan ke LLM
         )
-        config["topic"] = topic                  # Pastikan topic dari input, bukan LLM
+        config["topic"] = topic  # Pastikan topic dari input, bukan LLM
         logger.info(f"[vocab_planner] Config generated: {config}")
         return _fix_format_distribution(config)  # ← BARU: safety net
 
@@ -257,7 +257,7 @@ def run_planner(
             fallback_used=True,
         )
         logger.warning("[vocab_planner] LLM failed after retries — using default config")
-        config = build_default_planner_config(   # ← UBAH: dari .copy() ke fungsi dinamis
+        config = build_default_planner_config(  # ← UBAH: dari .copy() ke fungsi dinamis
             topic=topic,
             total_words=total_words,
         )

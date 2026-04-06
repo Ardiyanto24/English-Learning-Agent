@@ -89,11 +89,7 @@ No history available — use default config:
 Remember: respond with JSON only."""
 
 
-def build_planner_prompt(
-    topic: str,
-    history_summary: dict,
-    total_words: int
-) -> str:
+def build_planner_prompt(topic: str, history_summary: dict, total_words: int) -> str:
     """
     Bangun user prompt untuk Vocab Planner Agent.
 
@@ -181,7 +177,7 @@ def build_default_planner_config(topic: str, total_words: int) -> dict:
     return {
         "topic": topic,
         "total_words": total_words,
-        "new_words": min(5, total_words),   # tetap hormati cognitive load limit
+        "new_words": min(5, total_words),  # tetap hormati cognitive load limit
         "review_words": max(0, total_words - min(5, total_words)),
         "difficulty_target": difficulty,
         "format_distribution": {
