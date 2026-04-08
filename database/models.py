@@ -1,7 +1,7 @@
 """
 database/models.py
 ------------------
-Definisi semua 14 tabel dan index database.
+Definisi semua 17 tabel dan index database.
 
 Semua CREATE TABLE statement dikumpulkan di sini sebagai konstanta string.
 Dieksekusi oleh init_database() di connection.py saat aplikasi pertama jalan.
@@ -378,6 +378,9 @@ CREATE_ALL_TABLES = [
     CREATE_QUIZ_SESSIONS,
     CREATE_QUIZ_QUESTIONS,
     CREATE_QUIZ_TOPIC_TRACKING,
+    CREATE_TUTOR_SESSIONS,
+    CREATE_TUTOR_QUESTIONS,
+    CREATE_TUTOR_TOPIC_TRACKING,
     CREATE_SPEAKING_SESSIONS,
     CREATE_SPEAKING_EXCHANGES,
     CREATE_TOEFL_SESSIONS,
