@@ -9,7 +9,6 @@ Agent dan UI tidak boleh menulis SQL langsung — gunakan
 fungsi-fungsi di repository ini.
 """
 
-from typing import Optional
 from database.connection import get_db
 
 
