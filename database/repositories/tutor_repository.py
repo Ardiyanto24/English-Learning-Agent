@@ -268,3 +268,74 @@ def upsert_tutor_topic_tracking(
                 ),
             )
     return True
+
+
+def get_tutor_session_count() -> int:
+    """
+    Hitung total sesi Grammar Tutor yang sudah selesai.
+
+    Digunakan Analytics Agent sebagai threshold check sebelum LLM dipanggil.
+    Jika hasilnya < 3, analytics tidak dijalankan dan _empty_insight() dikembalikan.
+
+    Returns:
+        Jumlah baris di tutor_sessions sebagai integer
+    """
+    with get_db() as conn:
+        row = conn.execute("SELECT COUNT(*) FROM tutor_sessions").fetchone()
+    return row[0] if row else 0
+
+
+def get_all_tutor_topic_tracking() -> list[dict]:
+    """
+    Ambil semua data tracking topik Grammar Tutor.
+
+    Diurutkan ascending berdasarkan avg_score_pct agar topik terlemah
+    muncul pertama — memudahkan Analytics Agent mengidentifikasi weak_topics
+    tanpa perlu sorting ulang di layer Python.
+
+    Returns:
+        List of dict seluruh kolom tutor_topic_tracking,
+        list kosong jika belum ada data
+    """
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM tutor_topic_tracking ORDER BY avg_score_pct ASC"
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_tutor_sessions_for_analytics() -> list[dict]:
+    """
+    Ambil semua sesi Grammar Tutor untuk keperluan analytics.
+
+    Diurutkan descending berdasarkan created_at agar sesi terbaru muncul
+    pertama — Analytics Agent mengambil 10 sesi terakhir untuk konteks terkini.
+
+    Returns:
+        List of dict seluruh kolom tutor_sessions,
+        list kosong jika belum ada data
+    """
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM tutor_sessions ORDER BY created_at DESC"
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_tutor_questions_for_analytics() -> list[dict]:
+    """
+    Ambil semua soal Grammar Tutor untuk keperluan analytics.
+
+    Diurutkan ascending berdasarkan created_at agar soal terlama muncul
+    pertama — Analytics Agent memproses kronologis untuk mendeteksi
+    tren performa dari waktu ke waktu.
+
+    Returns:
+        List of dict seluruh kolom tutor_questions,
+        list kosong jika belum ada data
+    """
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM tutor_questions ORDER BY created_at ASC"
+        ).fetchall()
+    return [dict(row) for row in rows]
