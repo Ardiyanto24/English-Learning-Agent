@@ -158,3 +158,113 @@ def update_tutor_question_answer(
             ),
         )
     return True
+
+
+def get_tutor_topic_tracking(topic: str) -> Optional[dict]:
+    """
+    Ambil data tracking sebuah topik Grammar Tutor.
+
+    Digunakan Planner untuk dua keperluan:
+    - Prerequisite check: apakah avg_score_pct >= 60?
+    - Penentuan proficiency level: cold_start / familiar / advanced
+
+    Args:
+        topic: Nama topik grammar, contoh: "Simple Past Tense"
+
+    Returns:
+        Dict seluruh kolom tutor_topic_tracking jika record ditemukan,
+        atau None jika topik belum pernah dilatih di Grammar Tutor (cold start)
+    """
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM tutor_topic_tracking WHERE topic = ?",
+            (topic,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def upsert_tutor_topic_tracking(
+    topic: str,
+    session_score_pct: float,
+    full_credit: int,
+    partial_credit: int,
+    no_credit: int,
+    question_count: int,
+) -> bool:
+    """
+    Insert atau update akumulasi performa user untuk satu topik Grammar Tutor.
+
+    Dipanggil satu kali di akhir setiap sesi untuk setiap topik yang dilatih.
+    avg_score_pct dihitung sebagai rata-rata tertimbang seluruh sesi historis
+    berdasarkan jumlah soal per sesi — bukan simple average antar sesi.
+
+    Args:
+        topic            : Nama topik grammar yang baru selesai dilatih
+        session_score_pct: Skor sesi yang baru selesai dalam persen (0–100)
+        full_credit      : Jumlah soal full_credit di sesi ini
+        partial_credit   : Jumlah soal partial_credit di sesi ini
+        no_credit        : Jumlah soal no_credit di sesi ini
+        question_count   : Total soal di sesi ini untuk topik ini
+
+    Returns:
+        True jika INSERT atau UPDATE berhasil
+    """
+    existing = get_tutor_topic_tracking(topic)
+
+    with get_db() as conn:
+        if existing is None:
+            # Cabang 1: topik belum pernah dilatih — INSERT baseline
+            conn.execute(
+                """
+                INSERT INTO tutor_topic_tracking (
+                    topic, total_sessions, total_questions,
+                    full_credit_count, partial_credit_count, no_credit_count,
+                    avg_score_pct, last_score_pct, last_practiced_at
+                ) VALUES (?, 1, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """,
+                (
+                    topic,
+                    question_count,
+                    full_credit,
+                    partial_credit,
+                    no_credit,
+                    session_score_pct,
+                    session_score_pct,
+                ),
+            )
+        else:
+            # Cabang 2: topik sudah ada — hitung nilai baru lalu UPDATE
+            new_total_sessions = existing["total_sessions"] + 1
+            new_total_questions = existing["total_questions"] + question_count
+            new_full_credit = existing["full_credit_count"] + full_credit
+            new_partial_credit = existing["partial_credit_count"] + partial_credit
+            new_no_credit = existing["no_credit_count"] + no_credit
+
+            # Rata-rata tertimbang: bobot proporsional terhadap jumlah soal per sesi
+            new_avg_score_pct = (
+                existing["total_questions"] * existing["avg_score_pct"]
+                + question_count * session_score_pct
+            ) / new_total_questions
+
+            conn.execute(
+                """
+                UPDATE tutor_topic_tracking
+                SET total_sessions = ?, total_questions = ?,
+                    full_credit_count = ?, partial_credit_count = ?, no_credit_count = ?,
+                    avg_score_pct = ?, last_score_pct = ?,
+                    last_practiced_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE topic = ?
+                """,
+                (
+                    new_total_sessions,
+                    new_total_questions,
+                    new_full_credit,
+                    new_partial_credit,
+                    new_no_credit,
+                    new_avg_score_pct,
+                    session_score_pct,
+                    topic,
+                ),
+            )
+    return True
