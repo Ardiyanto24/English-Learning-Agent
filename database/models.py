@@ -171,6 +171,24 @@ CREATE TABLE IF NOT EXISTS quiz_topic_tracking (
 """
 
 # ==============================================================
+# TABEL 15 — tutor_sessions
+# Menyimpan metadata setiap sesi Grammar Tutor
+# ==============================================================
+CREATE_TUTOR_SESSIONS = """
+CREATE TABLE IF NOT EXISTS tutor_sessions (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id            TEXT NOT NULL REFERENCES sessions(session_id),
+    topics                TEXT NOT NULL,
+    total_questions       INTEGER NOT NULL,
+    full_credit_count     INTEGER DEFAULT 0,
+    partial_credit_count  INTEGER DEFAULT 0,
+    no_credit_count       INTEGER DEFAULT 0,
+    score_pct             REAL DEFAULT 0,
+    created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+# ==============================================================
 # TABEL 9 — speaking_sessions
 # ==============================================================
 CREATE_SPEAKING_SESSIONS = """
