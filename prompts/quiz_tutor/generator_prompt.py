@@ -125,3 +125,85 @@ Struktur output:
     }
   ]
 }"""
+
+
+def build_generator_prompt(planner_output: dict, rag_context: str) -> str:
+    """
+    Bangun user prompt untuk Grammar Tutor Generator.
+
+    Menyusun instruksi per topik dari planner_output dan meng-inject
+    RAG context sebagai referensi materi agar LLM tidak mengarang
+    grammar rule sendiri.
+
+    Args:
+        planner_output : Output dari Tutor Planner Agent, berisi:
+                         {
+                           "status": "ok",
+                           "total_questions": int,
+                           "plan": [
+                             {
+                               "topic": str,
+                               "question_count": int,
+                               "proficiency_level": str,
+                               "type_distribution": {
+                                 "type_1_recall": int,
+                                 "type_2_pattern": int,
+                                 "type_3_classify": int,
+                                 "type_4_transform": int,
+                                 "type_5_error": int,
+                                 "type_6_reason": int
+                               }
+                             }
+                           ]
+                         }
+        rag_context    : String hasil retrieve dari ChromaDB untuk semua
+                         topik yang akan di-generate. Jika RAG gagal,
+                         berisi nama-nama topik sebagai fallback.
+
+    Returns:
+        String user prompt siap dikirim ke LLM sebagai pesan user.
+    """
+    plan = planner_output.get("plan", [])
+    total_questions = planner_output.get("total_questions", 0)
+
+    # Susun instruksi per topik menjadi teks yang mudah dibaca LLM
+    topic_instructions = []
+    for item in plan:
+        topic = item.get("topic", "")
+        question_count = item.get("question_count", 0)
+        proficiency_level = item.get("proficiency_level", "cold_start")
+        type_dist = item.get("type_distribution", {})
+
+        # Hanya tampilkan tipe soal yang jumlahnya > 0
+        type_lines = "\n".join(
+            f"    - {qtype}: {count} soal"
+            for qtype, count in type_dist.items()
+            if count > 0
+        )
+
+        topic_instructions.append(
+            f"Topik  : {topic}\n"
+            f"Jumlah : {question_count} soal\n"
+            f"Level  : {proficiency_level}\n"
+            f"Distribusi tipe:\n{type_lines}"
+        )
+
+    topics_block = "\n\n".join(topic_instructions)
+
+    return f"""Buat soal Grammar Tutor berdasarkan instruksi berikut.
+
+## Instruksi Planner
+Total soal yang harus dibuat: {total_questions}
+
+{topics_block}
+
+## Materi Referensi (gunakan sebagai sumber pengetahuan grammar)
+{rag_context}
+
+## Tugasmu
+Buat tepat {total_questions} soal sesuai distribusi tipe di atas.
+Setiap soal WAJIB sesuai dengan tipe soal yang ditentukan — jangan menukar tipe.
+Gunakan materi referensi di atas sebagai dasar soal. Jangan mengarang rule grammar sendiri.
+Semua soal WAJIB berbentuk isian — DILARANG menyertakan pilihan jawaban.
+
+Respond dengan JSON only."""
