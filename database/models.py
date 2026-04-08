@@ -360,6 +360,9 @@ CREATE_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_sessions_created ON sessions(started_at);",
     "CREATE INDEX IF NOT EXISTS idx_toefl_score ON toefl_sessions(estimated_score, created_at);",
     "CREATE INDEX IF NOT EXISTS idx_error_logs_agent ON error_logs(agent_name, timestamp);",
+    "CREATE INDEX IF NOT EXISTS idx_tutor_topic ON tutor_topic_tracking(topic);",
+    "CREATE INDEX IF NOT EXISTS idx_tutor_questions_topic ON tutor_questions(topic, session_id);",
+    "CREATE INDEX IF NOT EXISTS idx_tutor_questions_type ON tutor_questions(question_type, credit_level);",
 ]
 
 # ==============================================================
