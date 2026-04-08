@@ -189,6 +189,29 @@ CREATE TABLE IF NOT EXISTS tutor_sessions (
 """
 
 # ==============================================================
+# TABEL 16 — tutor_questions
+# Menyimpan setiap soal Grammar Tutor beserta jawaban dan feedback
+# ==============================================================
+CREATE_TUTOR_QUESTIONS = """
+CREATE TABLE IF NOT EXISTS tutor_questions (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id        TEXT NOT NULL REFERENCES sessions(session_id),
+    topic             TEXT NOT NULL,
+    question_type     TEXT NOT NULL,
+    question_text     TEXT NOT NULL,
+    reference_answer  TEXT NOT NULL,
+    user_answer       TEXT,
+    credit_level      TEXT,
+    score             REAL,
+    is_graded         BOOLEAN DEFAULT TRUE,
+    feedback_verdict  TEXT,
+    feedback_concept  TEXT,
+    feedback_tip      TEXT,
+    created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+# ==============================================================
 # TABEL 9 — speaking_sessions
 # ==============================================================
 CREATE_SPEAKING_SESSIONS = """
