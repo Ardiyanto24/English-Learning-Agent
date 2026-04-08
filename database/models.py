@@ -212,6 +212,27 @@ CREATE TABLE IF NOT EXISTS tutor_questions (
 """
 
 # ==============================================================
+# TABEL 17 — tutor_topic_tracking
+# Akumulasi performa user per topik Grammar Tutor lintas seluruh sesi
+# ==============================================================
+CREATE_TUTOR_TOPIC_TRACKING = """
+CREATE TABLE IF NOT EXISTS tutor_topic_tracking (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    topic                 TEXT UNIQUE NOT NULL,
+    total_sessions        INTEGER DEFAULT 0,
+    total_questions       INTEGER DEFAULT 0,
+    full_credit_count     INTEGER DEFAULT 0,
+    partial_credit_count  INTEGER DEFAULT 0,
+    no_credit_count       INTEGER DEFAULT 0,
+    avg_score_pct         REAL DEFAULT 0,
+    last_score_pct        REAL DEFAULT 0,
+    last_practiced_at     TIMESTAMP,
+    created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+# ==============================================================
 # TABEL 9 — speaking_sessions
 # ==============================================================
 CREATE_SPEAKING_SESSIONS = """
