@@ -9,6 +9,7 @@ Agent dan UI tidak boleh menulis SQL langsung — gunakan
 fungsi-fungsi di repository ini.
 """
 
+from typing import Optional
 from database.connection import get_db
 
 
@@ -68,5 +69,92 @@ def update_tutor_session_scores(
             WHERE session_id = ?
             """,
             (full_credit_count, partial_credit_count, no_credit_count, score_pct, session_id),
+        )
+    return True
+
+
+def save_tutor_question(
+    session_id: str,
+    topic: str,
+    question_type: str,
+    question_text: str,
+    reference_answer: str,
+) -> int:
+    """
+    Simpan soal Grammar Tutor (incremental save, sebelum user menjawab).
+
+    Kolom user_answer, credit_level, score, dan feedback dibiarkan NULL
+    karena user belum menjawab. Diisi kemudian oleh update_tutor_question_answer.
+
+    Args:
+        session_id      : ID sesi, foreign key ke sessions(session_id)
+        topic           : Topik grammar soal ini, contoh: "Simple Past Tense"
+        question_type   : Tipe soal, salah satu dari: type_1_recall, type_2_pattern,
+                          type_3_classify, type_4_transform, type_5_error, type_6_reason
+        question_text   : Teks pertanyaan yang ditampilkan ke user
+        reference_answer: Jawaban acuan dari Generator, dipakai Corrector sebagai patokan
+
+    Returns:
+        lastrowid — ID row yang baru dibuat, dibutuhkan oleh update_tutor_question_answer
+    """
+    with get_db() as conn:
+        cursor = conn.execute(
+            """
+            INSERT INTO tutor_questions
+                (session_id, topic, question_type, question_text, reference_answer)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (session_id, topic, question_type, question_text, reference_answer),
+        )
+    return cursor.lastrowid
+
+
+def update_tutor_question_answer(
+    question_id: int,
+    user_answer: str,
+    credit_level: str,
+    score: float,
+    is_graded: bool,
+    feedback_verdict: Optional[str] = None,
+    feedback_concept: Optional[str] = None,
+    feedback_tip: Optional[str] = None,
+) -> bool:
+    """
+    Update jawaban user dan hasil penilaian Corrector untuk satu soal.
+
+    Dipanggil setelah Submit All — satu kali per soal setelah Corrector
+    selesai menilai dan menghasilkan tiga lapisan feedback.
+
+    Args:
+        question_id     : ID row di tutor_questions yang akan diupdate
+        user_answer     : Jawaban yang diinput user
+        credit_level    : Tier penilaian: "full_credit", "partial_credit", atau "no_credit"
+        score           : Nilai numerik tier: 1.0, 0.5, atau 0.0
+        is_graded       : True jika Corrector berhasil menilai, False jika gagal setelah 3x retry
+        feedback_verdict: Lapisan 1 — penjelasan tier yang diterima dan alasannya
+        feedback_concept: Lapisan 2 — rule grammar yang seharusnya diaplikasikan
+        feedback_tip    : Lapisan 3 — cara mudah mengingat rule (mnemonik/analogi)
+
+    Returns:
+        True jika UPDATE berhasil
+    """
+    with get_db() as conn:
+        conn.execute(
+            """
+            UPDATE tutor_questions
+            SET user_answer = ?, credit_level = ?, score = ?, is_graded = ?,
+                feedback_verdict = ?, feedback_concept = ?, feedback_tip = ?
+            WHERE id = ?
+            """,
+            (
+                user_answer,
+                credit_level,
+                score,
+                is_graded,
+                feedback_verdict,
+                feedback_concept,
+                feedback_tip,
+                question_id,
+            ),
         )
     return True
