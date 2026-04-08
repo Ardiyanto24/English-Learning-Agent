@@ -116,3 +116,62 @@ Struktur output:
     "memory_tip": "string"
   }
 }"""
+
+
+def build_corrector_prompt(
+    topic: str,
+    question_type: str,
+    question_text: str,
+    reference_answer: str,
+    user_answer: str,
+    rag_context: str,
+) -> str:
+    """
+    Bangun user prompt untuk Grammar Tutor Corrector.
+
+    Menyajikan detail soal lengkap, jawaban acuan dari Generator,
+    jawaban user, dan materi referensi dari ChromaDB agar LLM dapat
+    menilai tier secara akurat berdasarkan pemahaman konsep.
+
+    Tidak ada pre-calculation di layer Python — keputusan tier
+    sepenuhnya diserahkan ke LLM karena membutuhkan semantic
+    understanding yang tidak bisa dilakukan dengan string matching.
+
+    Args:
+        topic            : Nama topik grammar soal ini,
+                           contoh: "Simple Past Tense"
+        question_type    : Tipe soal dari Generator, salah satu dari:
+                           type_1_recall, type_2_pattern, type_3_classify,
+                           type_4_transform, type_5_error, type_6_reason
+        question_text    : Teks soal lengkap yang ditampilkan ke user
+        reference_answer : Jawaban acuan dari Generator — digunakan LLM
+                           sebagai patokan penilaian tier
+        user_answer      : Jawaban yang diketik user di UI
+        rag_context      : Materi referensi dari ChromaDB untuk topik ini
+                           — digunakan LLM untuk memastikan akurasi
+                           concept_rule di feedback
+
+    Returns:
+        String user prompt siap dikirim ke LLM sebagai pesan user.
+    """
+    # Normalkan user_answer: jika kosong atau hanya whitespace → no_credit hint
+    normalized_answer = user_answer.strip() if user_answer else ""
+    answer_display = normalized_answer if normalized_answer else "[Tidak ada jawaban]"
+
+    return f"""Nilai jawaban siswa berikut dan tentukan tier kredit yang tepat.
+
+## Detail Soal
+Topik          : {topic}
+Tipe soal      : {question_type}
+Pertanyaan     : {question_text}
+Reference answer: {reference_answer}
+
+## Jawaban Siswa
+{answer_display}
+
+## Materi Referensi untuk {topic}
+{rag_context}
+
+Bandingkan jawaban siswa dengan reference answer menggunakan semantic understanding.
+Tentukan tier (full_credit / partial_credit / no_credit) dan berikan 3 lapisan feedback.
+Respond dengan JSON only."""
