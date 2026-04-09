@@ -168,3 +168,79 @@ def _call_generator_llm(planner_output: dict, rag_context: str) -> dict:
 
     raw = response.content[0].text
     return _parse_generator_response(raw)
+
+
+def run_generator(planner_output: dict) -> dict:
+    """
+    Jalankan Tutor Generator Agent.
+
+    Flow:
+    1. Ekstrak daftar topik unik dari planner_output["plan"]
+    2. Retrieve RAG context untuk semua topik
+    3. Panggil Claude Sonnet untuk generate soal isian
+    4. Return hasil atau raise RuntimeError jika gagal total
+
+    Args:
+        planner_output: Output dari Tutor Planner Agent. Struktur yang
+                        diharapkan:
+                        {
+                          "status": "ok",
+                          "total_questions": int,
+                          "plan": [
+                            {
+                              "topic": str,
+                              "question_count": int,
+                              "proficiency_level": str,
+                              "type_distribution": dict
+                            }
+                          ]
+                        }
+
+    Returns:
+        dict: {"questions": [list soal Grammar Tutor]}
+
+    Raises:
+        RuntimeError jika LLM gagal setelah 3x retry.
+    """
+    plan = planner_output.get("plan", [])
+    topics = [entry["topic"] for entry in plan if entry.get("topic")]
+    total = planner_output.get("total_questions", 0)
+
+    logger.info(
+        f"[tutor_generator] Generating {total} questions "
+        f"for topics={topics}"
+    )
+
+    # Step 1: Retrieve RAG context untuk semua topik
+    rag_context, is_fallback = _get_rag_context(topics)
+
+    if is_fallback:
+        logger.warning(
+            "[tutor_generator] Using fallback context "
+            "(topic names only, no KB material)"
+        )
+
+    # Step 2: Call LLM
+    try:
+        result = _call_generator_llm(planner_output, rag_context)
+        logger.info(
+            f"[tutor_generator] Generated {len(result.get('questions', []))} questions"
+            f"{' (with RAG fallback)' if is_fallback else ''}"
+        )
+        return result
+
+    except Exception as e:
+        log_error(
+            error_type="llm_timeout",
+            agent_name="tutor_generator",
+            context={
+                "topics": topics,
+                "total_questions": total,
+                "rag_fallback": is_fallback,
+                "error": str(e),
+            },
+            fallback_used=False,
+        )
+        raise RuntimeError(
+            f"Tutor Generator gagal setelah 3x retry: {e}"
+        ) from e
