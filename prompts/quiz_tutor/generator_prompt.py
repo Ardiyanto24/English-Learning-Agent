@@ -176,9 +176,7 @@ def build_generator_prompt(planner_output: dict, rag_context: str) -> str:
 
         # Hanya tampilkan tipe soal yang jumlahnya > 0
         type_lines = "\n".join(
-            f"    - {qtype}: {count} soal"
-            for qtype, count in type_dist.items()
-            if count > 0
+            f"    - {qtype}: {count} soal" for qtype, count in type_dist.items() if count > 0
         )
 
         topic_instructions.append(

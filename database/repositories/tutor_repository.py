@@ -316,9 +316,7 @@ def get_tutor_sessions_for_analytics() -> list[dict]:
         list kosong jika belum ada data
     """
     with get_db() as conn:
-        rows = conn.execute(
-            "SELECT * FROM tutor_sessions ORDER BY created_at DESC"
-        ).fetchall()
+        rows = conn.execute("SELECT * FROM tutor_sessions ORDER BY created_at DESC").fetchall()
     return [dict(row) for row in rows]
 
 
@@ -335,7 +333,5 @@ def get_tutor_questions_for_analytics() -> list[dict]:
         list kosong jika belum ada data
     """
     with get_db() as conn:
-        rows = conn.execute(
-            "SELECT * FROM tutor_questions ORDER BY created_at ASC"
-        ).fetchall()
+        rows = conn.execute("SELECT * FROM tutor_questions ORDER BY created_at ASC").fetchall()
     return [dict(row) for row in rows]

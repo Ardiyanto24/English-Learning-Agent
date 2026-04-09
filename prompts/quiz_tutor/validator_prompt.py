@@ -139,8 +139,12 @@ def build_validator_prompt(planner_output: dict, generator_output: dict) -> str:
         # Baris perbandingan per tipe soal
         type_lines = []
         all_types = [
-            "type_1_recall", "type_2_pattern", "type_3_classify",
-            "type_4_transform", "type_5_error", "type_6_reason",
+            "type_1_recall",
+            "type_2_pattern",
+            "type_3_classify",
+            "type_4_transform",
+            "type_5_error",
+            "type_6_reason",
         ]
         for qtype in all_types:
             exp = expected_dist.get(qtype, 0)
@@ -148,9 +152,7 @@ def build_validator_prompt(planner_output: dict, generator_output: dict) -> str:
             status = "✓" if exp == act else "✗"
             # Hanya tampilkan tipe yang expected > 0 atau actual > 0
             if exp > 0 or act > 0:
-                type_lines.append(
-                    f"    {status} {qtype}: expected={exp}, actual={act}"
-                )
+                type_lines.append(f"    {status} {qtype}: expected={exp}, actual={act}")
 
         count_status = "✓" if expected_count == actual_count else "✗"
         type_block = "\n".join(type_lines) if type_lines else "    (tidak ada soal)"

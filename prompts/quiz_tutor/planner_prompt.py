@@ -156,12 +156,14 @@ def build_planner_prompt(
             avg_score = history.get("avg_score_pct", 0)
             total_sessions = history.get("total_sessions", 0)
             level = "advanced" if avg_score >= 80 else "familiar"
-        topic_levels.append({
-            "topic": topic,
-            "level": level,
-            "avg_score": avg_score,
-            "total_sessions": total_sessions,
-        })
+        topic_levels.append(
+            {
+                "topic": topic,
+                "level": level,
+                "avg_score": avg_score,
+                "total_sessions": total_sessions,
+            }
+        )
 
     # --- Susun blok info per topik ---
     topic_blocks = []
@@ -170,8 +172,7 @@ def build_planner_prompt(
             history_str = "Belum pernah dilatih (cold start)"
         else:
             history_str = (
-                f"avg_score_pct={t['avg_score']:.1f}%, "
-                f"total_sessions={t['total_sessions']}"
+                f"avg_score_pct={t['avg_score']:.1f}%, " f"total_sessions={t['total_sessions']}"
             )
         topic_blocks.append(
             f"- {t['topic']}\n"

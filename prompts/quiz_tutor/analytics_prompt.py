@@ -121,12 +121,14 @@ def build_tutor_analytics_prompt(
     for qtype, count in type_counts.items():
         no_credit_count = type_no_credit.get(qtype, 0)
         rate = round(no_credit_count / count * 100, 1) if count > 0 else 0.0
-        no_credit_rates.append({
-            "question_type": qtype,
-            "total": count,
-            "no_credit_count": no_credit_count,
-            "no_credit_rate_pct": rate,
-        })
+        no_credit_rates.append(
+            {
+                "question_type": qtype,
+                "total": count,
+                "no_credit_count": no_credit_count,
+                "no_credit_rate_pct": rate,
+            }
+        )
     no_credit_rates.sort(key=lambda x: x["no_credit_rate_pct"], reverse=True)
 
     # --- Preprocessing 3: Recall vs Application average score ---
@@ -147,13 +149,11 @@ def build_tutor_analytics_prompt(
         elif qtype in application_types:
             application_scores.append(score)
 
-    recall_avg = (
-        round(sum(recall_scores) / len(recall_scores) * 100, 1)
-        if recall_scores else None
-    )
+    recall_avg = round(sum(recall_scores) / len(recall_scores) * 100, 1) if recall_scores else None
     application_avg = (
         round(sum(application_scores) / len(application_scores) * 100, 1)
-        if application_scores else None
+        if application_scores
+        else None
     )
 
     # Format untuk tampilan di prompt
@@ -165,11 +165,15 @@ def build_tutor_analytics_prompt(
     recent_scores = [s.get("score_pct", 0) for s in recent_sessions]
 
     # --- Format no_credit rate untuk tampilan di prompt ---
-    no_credit_lines = "\n".join(
-        f"  {item['question_type']}: {item['no_credit_rate_pct']}% "
-        f"({item['no_credit_count']}/{item['total']} soal)"
-        for item in no_credit_rates
-    ) if no_credit_rates else "  Belum ada data"
+    no_credit_lines = (
+        "\n".join(
+            f"  {item['question_type']}: {item['no_credit_rate_pct']}% "
+            f"({item['no_credit_count']}/{item['total']} soal)"
+            for item in no_credit_rates
+        )
+        if no_credit_rates
+        else "  Belum ada data"
+    )
 
     return f"""Analisis data latihan Grammar Tutor berikut dan hasilkan insight yang actionable.
 
