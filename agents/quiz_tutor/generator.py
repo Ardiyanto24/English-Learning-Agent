@@ -21,6 +21,7 @@ Error handling:
 - Semua retry habis : raise RuntimeError, batalkan sesi, log error
 """
 
+import json
 from typing import Optional
 
 import anthropic
