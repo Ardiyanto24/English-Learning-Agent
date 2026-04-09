@@ -160,3 +160,94 @@ def _parse_response(raw: str) -> dict:
         raise ValueError(f"Analytics response missing fields: {missing}")
 
     return parsed
+
+@retry_llm
+def _call_analytics_llm(
+    sessions: list,
+    topic_tracking: list,
+    questions: list,
+) -> dict:
+    """
+    Panggil Claude Sonnet untuk generate insight Grammar Tutor.
+    Di-wrap @retry_llm: max 3x retry, exponential backoff.
+
+    Args:
+        sessions      : List dict dari tutor_sessions (semua sesi).
+        topic_tracking: List dict dari tutor_topic_tracking (semua topik).
+        questions     : List dict dari tutor_questions (semua soal).
+
+    Returns:
+        Dict hasil analytics dengan weak_topics, weak_question_types,
+        pattern_insight, recommendations, dan overall_insight.
+    """
+    user_prompt = build_tutor_analytics_prompt(
+        sessions=sessions,
+        topic_tracking=topic_tracking,
+        questions=questions,
+    )
+
+    response = _get_client().messages.create(
+        model=SONNET_MODEL,
+        max_tokens=1024,
+        system=TUTOR_ANALYTICS_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+
+    raw = response.content[0].text
+    return _parse_response(raw)
+
+
+def run_analytics() -> dict:
+    """
+    Jalankan Tutor Analytics Agent.
+
+    Cek threshold minimum 3 sesi sebelum memanggil LLM.
+    Jika data tidak cukup atau LLM gagal, return _empty_insight()
+    agar Dashboard tetap bisa ditampilkan tanpa error.
+
+    Returns:
+        dict: {
+            "weak_topics"           : list[str],
+            "weak_question_types"   : list[str],
+            "recall_vs_application" : {"recall_score": int, "application_score": int},
+            "pattern_insight"       : str | None,
+            "recommendations"       : list[str],
+            "overall_insight"       : str | None,
+        }
+    """
+    logger.info("[tutor_analytics] Starting analytics run...")
+
+    # Step 1: Fetch data dari DB
+    sessions, topic_tracking, questions = _fetch_tutor_data()
+
+    # Step 2: Threshold check — minimum 3 sesi Grammar Tutor
+    session_count = get_tutor_session_count()
+    if session_count < TUTOR_MIN_SESSIONS:
+        logger.info(
+            f"[tutor_analytics] Insufficient data: {session_count} session(s) "
+            f"(minimum: {TUTOR_MIN_SESSIONS}) — returning empty insight"
+        )
+        return _empty_insight()
+
+    # Step 3: Call LLM
+    try:
+        result = _call_analytics_llm(sessions, topic_tracking, questions)
+        _save_snapshot(result)
+        logger.info(
+            f"[tutor_analytics] Done — "
+            f"weak_topics={result.get('weak_topics')} "
+            f"weak_question_types={result.get('weak_question_types')}"
+        )
+        return result
+
+    except Exception as e:
+        log_error(
+            error_type="llm_timeout",
+            agent_name="tutor_analytics",
+            context={
+                "session_count": session_count,
+                "error": str(e),
+            },
+            fallback_used=True,
+        )
+        return _empty_insight()
