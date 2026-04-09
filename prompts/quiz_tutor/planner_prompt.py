@@ -110,3 +110,106 @@ Few-shot example (2 topik, proficiency level berbeda, total 10 soal):
 }
 
 Respond dengan valid JSON saja. Tanpa penjelasan, tanpa markdown, tanpa teks tambahan apapun di luar JSON."""
+
+
+def build_planner_prompt(
+    selected_topics: list,
+    total_questions: int,
+    topic_history: dict,
+) -> str:
+    """
+    Bangun user prompt untuk Grammar Tutor Planner.
+
+    Menentukan proficiency level per topik di layer Python berdasarkan
+    data historis dari DB, lalu menyajikan instruksi lengkap kepada LLM
+    untuk menghitung distribusi tipe soal sesuai level tersebut.
+
+    Args:
+        selected_topics : List string topik yang dipilih user di UI,
+                          contoh: ["Simple Past Tense", "Modal Verbs"]
+        total_questions : Integer jumlah soal yang dipilih user (5/10/15/20)
+        topic_history   : Dict dengan topic sebagai key dan dict data
+                          historis sebagai value, dikompilasi dari
+                          tutor_topic_tracking di DB sebelum fungsi ini
+                          dipanggil. Contoh:
+                          {
+                            "Modal Verbs": {
+                              "avg_score_pct": 72.5,
+                              "total_sessions": 3
+                            }
+                          }
+                          Topik yang belum pernah dilatih tidak akan
+                          memiliki entry di dict ini.
+
+    Returns:
+        String user prompt siap dikirim ke LLM sebagai pesan user.
+    """
+    # --- Tentukan proficiency level per topik di layer Python ---
+    topic_levels = []
+    for topic in selected_topics:
+        history = topic_history.get(topic)
+        if history is None:
+            level = "cold_start"
+            avg_score = None
+            total_sessions = 0
+        else:
+            avg_score = history.get("avg_score_pct", 0)
+            total_sessions = history.get("total_sessions", 0)
+            level = "advanced" if avg_score >= 80 else "familiar"
+        topic_levels.append({
+            "topic": topic,
+            "level": level,
+            "avg_score": avg_score,
+            "total_sessions": total_sessions,
+        })
+
+    # --- Susun blok info per topik ---
+    topic_blocks = []
+    for t in topic_levels:
+        if t["avg_score"] is None:
+            history_str = "Belum pernah dilatih (cold start)"
+        else:
+            history_str = (
+                f"avg_score_pct={t['avg_score']:.1f}%, "
+                f"total_sessions={t['total_sessions']}"
+            )
+        topic_blocks.append(
+            f"- {t['topic']}\n"
+            f"  Proficiency level : {t['level']}\n"
+            f"  Riwayat           : {history_str}"
+        )
+
+    topics_text = "\n".join(topic_blocks)
+
+    # --- Persentase distribusi per level sebagai referensi di prompt ---
+    distribution_ref = """Persentase distribusi tipe soal per level (gunakan ini sebagai acuan):
+
+cold_start  → type_1_recall=35%, type_2_pattern=30%, type_3_classify=20%,
+              type_4_transform=10%, type_5_error=5%, type_6_reason=0%
+
+familiar    → type_1_recall=15%, type_2_pattern=20%, type_3_classify=25%,
+              type_4_transform=20%, type_5_error=10%, type_6_reason=10%
+
+advanced    → type_1_recall=5%, type_2_pattern=10%, type_3_classify=15%,
+              type_4_transform=30%, type_5_error=20%, type_6_reason=20%"""
+
+    return f"""Susun rencana distribusi soal Grammar Tutor berdasarkan data berikut.
+
+## Topik yang Dipilih User
+{topics_text}
+
+## Total Soal
+{total_questions} soal — dibagi merata ke semua topik di atas.
+Topik dengan avg_score_pct terendah mendapat soal ekstra (+1) jika tidak habis dibagi.
+Topik cold_start diprioritaskan mendapat soal ekstra jika ada beberapa topik cold_start.
+
+## {distribution_ref}
+
+## Tugasmu
+Untuk setiap topik:
+1. Gunakan proficiency level yang sudah ditetapkan di atas — jangan ubah
+2. Hitung question_count masing-masing topik (total {total_questions} soal dibagi merata)
+3. Hitung distribusi tipe soal sesuai persentase level topik tersebut
+4. Pastikan jumlah semua tipe soal = question_count topik tersebut (gunakan rounding rule)
+
+Respond dengan JSON only."""
