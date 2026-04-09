@@ -55,10 +55,12 @@ def _get_client() -> anthropic.Anthropic:
         _client = anthropic.Anthropic()
     return _client
 
+
 # ===================================================
 # Load config saat module di-import
 # ===================================================
 _CONFIG_DIR = Path("config")
+
 
 try:
     with open(_CONFIG_DIR / "prerequisite_rules.json", encoding="utf-8") as _f:
@@ -347,3 +349,105 @@ def _call_planner_llm(
 
     raw = response.content[0].text
     return _parse_planner_response(raw)
+
+
+# ===================================================
+# Main: run_planner
+# ===================================================
+def run_planner(selected_topics: list[str], total_questions: int) -> dict:
+    """
+    Jalankan Tutor Planner Agent.
+
+    Flow dua tahap:
+    1. Prerequisite Check (Python murni, tanpa LLM)
+       Jika ada topik yang diblok, return status "blocked" langsung.
+       Sesi tidak bisa dimulai — UI harus menampilkan pesan error.
+    2. Distribusi Soal (LLM via Haiku)
+       Hitung distribusi soal per topik, ambil history, lalu panggil
+       LLM untuk menyusun type_distribution berdasarkan proficiency level.
+
+    Args:
+        selected_topics : List topik yang dipilih user (1–3 topik).
+        total_questions : Jumlah soal yang diminta user (5/10/15/20).
+
+    Returns:
+        Jika blocked:
+        {
+            "status": "blocked",
+            "blocked_topics": [
+                {"topic": str, "missing_prerequisites": [str]}
+            ]
+        }
+
+        Jika ok:
+        {
+            "status": "ok",
+            "total_questions": int,
+            "plan": [
+                {
+                    "topic": str,
+                    "question_count": int,
+                    "proficiency_level": "cold_start"|"familiar"|"advanced",
+                    "type_distribution": {
+                        "type_1_recall": int,
+                        "type_2_pattern": int,
+                        "type_3_classify": int,
+                        "type_4_transform": int,
+                        "type_5_error": int,
+                        "type_6_reason": int,
+                    }
+                }
+            ]
+        }
+
+    Raises:
+        RuntimeError jika LLM gagal setelah 3x retry.
+    """
+    logger.info(
+        f"[tutor_planner] Starting planner — "
+        f"topics={selected_topics} total_questions={total_questions}"
+    )
+
+    # ── Tahap 1: Prerequisite Check ──────────────────────
+    prereq_result = _check_prerequisites(selected_topics)
+    if prereq_result["status"] == "blocked":
+        logger.warning(
+            f"[tutor_planner] Blocked — "
+            f"{len(prereq_result['blocked_topics'])} topic(s) failed prereq check"
+        )
+        return prereq_result
+
+    # ── Tahap 2: Distribusi Soal ─────────────────────────
+    question_distribution = _distribute_questions(selected_topics, total_questions)
+    logger.info(f"[tutor_planner] Question distribution: {question_distribution}")
+
+    topic_history = _get_topic_history(selected_topics)
+
+    # ── Tahap 3: LLM Call ────────────────────────────────
+    try:
+        result = _call_planner_llm(
+            selected_topics=selected_topics,
+            total_questions=total_questions,
+            topic_history=topic_history,
+            question_distribution=question_distribution,
+        )
+        logger.info(
+            f"[tutor_planner] Plan ready — "
+            f"{len(result.get('plan', []))} topic(s) planned"
+        )
+        return result
+
+    except Exception as e:
+        log_error(
+            error_type="llm_timeout",
+            agent_name="tutor_planner",
+            context={
+                "selected_topics": selected_topics,
+                "total_questions": total_questions,
+                "error": str(e),
+            },
+            fallback_used=False,
+        )
+        raise RuntimeError(
+            f"Tutor Planner gagal setelah 3x retry: {e}"
+        ) from e
