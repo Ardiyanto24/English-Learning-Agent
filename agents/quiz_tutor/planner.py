@@ -40,7 +40,7 @@ from dotenv import load_dotenv
 from config.settings import HAIKU_MODEL
 from prompts.quiz_tutor.planner_prompt import (
     TUTOR_PLANNER_SYSTEM_PROMPT,
-    build_tutor_planner_prompt,
+    build_planner_prompt,
 )
 from utils.retry import retry_llm
 
@@ -333,7 +333,7 @@ def _call_planner_llm(
     Returns:
         Dict planner output dengan plan per topik.
     """
-    user_prompt = build_tutor_planner_prompt(
+    user_prompt = build_planner_prompt(
         selected_topics=selected_topics,
         total_questions=total_questions,
         topic_history=topic_history,

@@ -31,7 +31,7 @@ from config.settings import SONNET_MODEL
 from modules.rag.retriever import format_context_for_prompt, retrieve
 from prompts.quiz_tutor.generator_prompt import (
     TUTOR_GENERATOR_SYSTEM_PROMPT,
-    build_tutor_generator_prompt,
+    build_generator_prompt,
 )
 from utils.logger import log_error, logger
 from utils.retry import retry_llm
@@ -158,7 +158,7 @@ def _call_generator_llm(planner_output: dict, rag_context: str) -> dict:
     Returns:
         Dict dengan key 'questions' berisi list soal tervalidasi.
     """
-    user_prompt = build_tutor_generator_prompt(planner_output, rag_context)
+    user_prompt = build_generator_prompt(planner_output, rag_context)
 
     response = _get_client().messages.create(
         model=SONNET_MODEL,

@@ -32,7 +32,7 @@ from config.settings import SONNET_MODEL
 from modules.rag.retriever import format_context_for_prompt, retrieve
 from prompts.quiz_tutor.corrector_prompt import (
     TUTOR_CORRECTOR_SYSTEM_PROMPT,
-    build_tutor_corrector_prompt,
+    build_corrector_prompt,
 )
 from utils.logger import log_error, logger
 from utils.retry import retry_llm
@@ -162,7 +162,7 @@ def _call_corrector_llm(
     Returns:
         Dict hasil penilaian dengan credit_level, score, is_graded, feedback.
     """
-    user_prompt = build_tutor_corrector_prompt(
+    user_prompt = build_corrector_prompt(
         topic=topic,
         question_type=question_type,
         question_text=question_text,

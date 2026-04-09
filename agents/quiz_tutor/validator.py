@@ -27,7 +27,7 @@ from dotenv import load_dotenv
 from config.settings import HAIKU_MODEL
 from prompts.quiz_tutor.validator_prompt import (
     TUTOR_VALIDATOR_SYSTEM_PROMPT,
-    build_tutor_validator_prompt,
+    build_validator_prompt,
 )
 from utils.logger import log_error, logger
 from utils.retry import retry_llm
@@ -94,7 +94,7 @@ def _call_validator_llm(
     Returns:
         Dict hasil validasi dengan match_score dan adjusted_questions.
     """
-    user_prompt = build_tutor_validator_prompt(planner_output, generator_output)
+    user_prompt = build_validator_prompt(planner_output, generator_output)
 
     response = _get_client().messages.create(
         model=HAIKU_MODEL,
