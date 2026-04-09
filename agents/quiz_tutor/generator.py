@@ -94,3 +94,77 @@ def _get_rag_context(topics: list[str]) -> tuple[str, bool]:
         )
 
     return "\n\n".join(all_chunks), rag_failed
+
+
+def _parse_generator_response(raw: str) -> dict:
+    """
+    Parse dan validasi JSON response dari Tutor Generator.
+
+    Berbeda dari Quiz Generator: field wajib per soal adalah
+    topic, question_type, question_text, reference_answer, input_type —
+    tidak ada options atau correct_answer karena semua soal isian.
+
+    Args:
+        raw: String response mentah dari LLM.
+
+    Returns:
+        Dict terstruktur dengan key 'questions'.
+
+    Raises:
+        ValueError jika struktur tidak valid atau field wajib hilang.
+    """
+    text = raw.strip()
+    if text.startswith("```"):
+        parts = text.split("```")
+        text = parts[1] if len(parts) > 1 else text
+        if text.startswith("json"):
+            text = text[4:]
+    text = text.strip()
+
+    parsed = json.loads(text)
+
+    if "questions" not in parsed:
+        raise ValueError("Response missing 'questions' key")
+    if not isinstance(parsed["questions"], list):
+        raise ValueError("'questions' must be a list")
+    if len(parsed["questions"]) == 0:
+        raise ValueError("'questions' list is empty")
+
+    required = {"topic", "question_type", "question_text", "reference_answer", "input_type"}
+    for i, q in enumerate(parsed["questions"]):
+        missing = required - set(q.keys())
+        if missing:
+            raise ValueError(f"Question[{i}] missing fields: {missing}")
+        # Pastikan tidak ada field wajib yang nilainya kosong
+        for field in required:
+            if not q.get(field, "").strip():
+                raise ValueError(f"Question[{i}] field '{field}' is empty")
+
+    return parsed
+
+
+@retry_llm
+def _call_generator_llm(planner_output: dict, rag_context: str) -> dict:
+    """
+    Panggil Claude Sonnet untuk generate soal Grammar Tutor.
+    Di-wrap @retry_llm: max 3x retry, exponential backoff.
+
+    Args:
+        planner_output: Output dari Tutor Planner — berisi plan per topik
+                        dengan question_count dan type_distribution.
+        rag_context   : Materi referensi dari ChromaDB untuk semua topik.
+
+    Returns:
+        Dict dengan key 'questions' berisi list soal tervalidasi.
+    """
+    user_prompt = build_tutor_generator_prompt(planner_output, rag_context)
+
+    response = _get_client().messages.create(
+        model=SONNET_MODEL,
+        max_tokens=4096,
+        system=TUTOR_GENERATOR_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+
+    raw = response.content[0].text
+    return _parse_generator_response(raw)
