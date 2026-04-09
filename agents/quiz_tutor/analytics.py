@@ -161,6 +161,7 @@ def _parse_response(raw: str) -> dict:
 
     return parsed
 
+
 @retry_llm
 def _call_analytics_llm(
     sessions: list,
