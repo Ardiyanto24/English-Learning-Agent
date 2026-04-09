@@ -156,16 +156,15 @@ def _check_prerequisites(selected_topics: list[str]) -> dict:
             continue
 
         # Cek setiap prerequisite
-        missing = [
-            req for req in requires
-            if not _is_prerequisite_met(req)
-        ]
+        missing = [req for req in requires if not _is_prerequisite_met(req)]
 
         if missing:
-            blocked_topics.append({
-                "topic": topic,
-                "missing_prerequisites": missing,
-            })
+            blocked_topics.append(
+                {
+                    "topic": topic,
+                    "missing_prerequisites": missing,
+                }
+            )
 
     if blocked_topics:
         logger.warning(
@@ -174,9 +173,7 @@ def _check_prerequisites(selected_topics: list[str]) -> dict:
         )
         return {"status": "blocked", "blocked_topics": blocked_topics}
 
-    logger.info(
-        f"[tutor_planner] Prerequisite check passed for all topics: {selected_topics}"
-    )
+    logger.info(f"[tutor_planner] Prerequisite check passed for all topics: {selected_topics}")
     return {"status": "ok", "blocked_topics": []}
 
 
@@ -305,9 +302,7 @@ def _parse_planner_response(raw: str) -> dict:
     for i, entry in enumerate(parsed.get("plan", [])):
         missing_entry = required_plan - set(entry.keys())
         if missing_entry:
-            raise ValueError(
-                f"Plan entry[{i}] missing fields: {missing_entry}"
-            )
+            raise ValueError(f"Plan entry[{i}] missing fields: {missing_entry}")
 
     return parsed
 
@@ -432,8 +427,7 @@ def run_planner(selected_topics: list[str], total_questions: int) -> dict:
             question_distribution=question_distribution,
         )
         logger.info(
-            f"[tutor_planner] Plan ready — "
-            f"{len(result.get('plan', []))} topic(s) planned"
+            f"[tutor_planner] Plan ready — " f"{len(result.get('plan', []))} topic(s) planned"
         )
         return result
 
@@ -448,6 +442,4 @@ def run_planner(selected_topics: list[str], total_questions: int) -> dict:
             },
             fallback_used=False,
         )
-        raise RuntimeError(
-            f"Tutor Planner gagal setelah 3x retry: {e}"
-        ) from e
+        raise RuntimeError(f"Tutor Planner gagal setelah 3x retry: {e}") from e

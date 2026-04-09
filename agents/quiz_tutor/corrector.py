@@ -113,26 +113,21 @@ def _parse_corrector_response(raw: str) -> dict:
     required_top = {"credit_level", "score", "is_graded", "feedback"}
     missing = required_top - set(parsed.keys())
     if missing:
-        raise ValueError(
-            f"Corrector response missing top-level fields: {missing}"
-        )
+        raise ValueError(f"Corrector response missing top-level fields: {missing}")
 
     # Validasi 3 layer feedback
     feedback = parsed.get("feedback", {})
     required_feedback = {"verdict", "concept_rule", "memory_tip"}
     missing_fb = required_feedback - set(feedback.keys())
     if missing_fb:
-        raise ValueError(
-            f"Corrector feedback missing layers: {missing_fb}"
-        )
+        raise ValueError(f"Corrector feedback missing layers: {missing_fb}")
 
     # Validasi nilai credit_level
     valid_credit_levels = {"full_credit", "partial_credit", "no_credit"}
     credit_level = parsed.get("credit_level")
     if credit_level not in valid_credit_levels:
         raise ValueError(
-            f"Invalid credit_level '{credit_level}'. "
-            f"Must be one of: {valid_credit_levels}"
+            f"Invalid credit_level '{credit_level}'. " f"Must be one of: {valid_credit_levels}"
         )
 
     return parsed
@@ -221,10 +216,7 @@ def run_corrector(
             }
         }
     """
-    logger.info(
-        f"[tutor_corrector] Correcting topic='{topic}' "
-        f"question_type='{question_type}'"
-    )
+    logger.info(f"[tutor_corrector] Correcting topic='{topic}' " f"question_type='{question_type}'")
 
     # Retrieve RAG context — hasil di-cache per topik
     rag_context = _get_rag_context_for_correction(topic)

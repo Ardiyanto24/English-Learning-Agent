@@ -165,9 +165,7 @@ def _apply_adjusted_questions(
                 if len(indices) > expected and indices:
                     replace_idx = indices.pop()
                     questions[replace_idx] = adj_q
-                    type_indices[adj_topic].setdefault(adj_type, []).append(
-                        replace_idx
-                    )
+                    type_indices[adj_topic].setdefault(adj_type, []).append(replace_idx)
                     break
 
     return {"questions": questions}
@@ -202,8 +200,7 @@ def run_validator(
 
     for attempt in range(MAX_REGENERATE_ATTEMPTS):
         logger.info(
-            f"[tutor_validator] Validation attempt "
-            f"{attempt + 1}/{MAX_REGENERATE_ATTEMPTS}"
+            f"[tutor_validator] Validation attempt " f"{attempt + 1}/{MAX_REGENERATE_ATTEMPTS}"
         )
 
         try:

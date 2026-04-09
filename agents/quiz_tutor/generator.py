@@ -207,18 +207,14 @@ def run_generator(planner_output: dict) -> dict:
     topics = [entry["topic"] for entry in plan if entry.get("topic")]
     total = planner_output.get("total_questions", 0)
 
-    logger.info(
-        f"[tutor_generator] Generating {total} questions "
-        f"for topics={topics}"
-    )
+    logger.info(f"[tutor_generator] Generating {total} questions " f"for topics={topics}")
 
     # Step 1: Retrieve RAG context untuk semua topik
     rag_context, is_fallback = _get_rag_context(topics)
 
     if is_fallback:
         logger.warning(
-            "[tutor_generator] Using fallback context "
-            "(topic names only, no KB material)"
+            "[tutor_generator] Using fallback context " "(topic names only, no KB material)"
         )
 
     # Step 2: Call LLM
@@ -242,6 +238,4 @@ def run_generator(planner_output: dict) -> dict:
             },
             fallback_used=False,
         )
-        raise RuntimeError(
-            f"Tutor Generator gagal setelah 3x retry: {e}"
-        ) from e
+        raise RuntimeError(f"Tutor Generator gagal setelah 3x retry: {e}") from e
