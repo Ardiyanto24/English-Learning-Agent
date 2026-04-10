@@ -11,7 +11,8 @@ Aplikasi personal berbasis AI untuk persiapan **TOEFL ITP** — fully automated 
 | Mode | Deskripsi |
 |---|---|
 | 📚 **Vocab Agent** | Latihan kosakata dengan spaced repetition — kata lemah diprioritaskan otomatis |
-| 📝 **Quiz Agent** | Latihan grammar 47 topik dengan feedback 4 lapisan: verdict, explanation, concept, example |
+| 📝 **Quiz Agent — TOEFL Style** | Latihan grammar 47 topik bergaya TOEFL ITP dengan feedback 4 lapisan: verdict, explanation, concept, example |
+| 🎓 **Quiz Agent — Grammar Tutor** | Mode tutor konseptual: 6 tipe soal isian open-ended, penilaian 3-tier (full/partial/no credit), feedback berlapis per soal |
 | 🎙️ **Speaking Agent** | 3 sub-mode: Prompted Response, Conversation Practice, Oral Presentation |
 | 🎯 **TOEFL Simulator** | Simulasi penuh ITP mode 50%/75%/100% dengan estimasi skor 310–677 |
 | 📊 **Dashboard Analytics** | 3-layer dashboard: quick snapshot, per-mode summary, deep AI analysis |
@@ -21,19 +22,19 @@ Aplikasi personal berbasis AI untuk persiapan **TOEFL ITP** — fully automated 
 ## 🏗️ Arsitektur
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Streamlit UI                      │
-├──────────┬──────────┬──────────┬────────────────────┤
-│  Vocab   │   Quiz   │ Speaking │  TOEFL Simulator   │
-│  Agent   │  Agent   │  Agent   │                    │
-├──────────┴──────────┴──────────┴────────────────────┤
-│              Orchestrator & Router                  │
-├─────────────────────┬───────────────────────────────┤
-│   Claude API        │   Google Cloud STT/TTS        │
-│ (Haiku + Sonnet)    │   (Speech-to-Text/Text-to-Speech) │
-├─────────────────────┼───────────────────────────────┤
-│   SQLite (14 tabel) │   ChromaDB (RAG)              │
-└─────────────────────┴───────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                        Streamlit UI                         │
+├──────────┬───────────────────┬──────────┬───────────────────┤
+│  Vocab   │   Quiz Agent      │ Speaking │  TOEFL Simulator  │
+│  Agent   │ TOEFL │ Tutor     │  Agent   │                   │
+├──────────┴───────────────────┴──────────┴───────────────────┤
+│                   Orchestrator & Router                     │
+├─────────────────────┬───────────────────────────────────────┤
+│   Claude API        │   Google Cloud STT/TTS               │
+│ (Haiku + Sonnet)    │   (Speech-to-Text/Text-to-Speech)    │
+├─────────────────────┼───────────────────────────────────────┤
+│   SQLite (17 tabel) │   ChromaDB (RAG)                     │
+└─────────────────────┴───────────────────────────────────────┘
 ```
 
 ---
@@ -141,12 +142,13 @@ docker-compose -f docker/docker-compose.yml up
 english_learning_agent/
 ├── agents/                  # AI Agent per mode
 │   ├── vocab/               # Planner, Generator, Validator, Evaluator
-│   ├── quiz/                # Planner, Generator, Validator, Corrector
+│   ├── quiz/                # Planner, Generator, Validator, Corrector (TOEFL Style)
+│   ├── quiz_tutor/          # Planner, Generator, Validator, Corrector, Analytics (Grammar Tutor)
 │   ├── speaking/            # Generator, Assessor, Follow-up, Evaluator
 │   ├── toefl/               # Listening/Structure/Reading Generator
 │   └── orchestrator/        # Router, Master Analytics
 ├── database/
-│   ├── models.py            # 14 tabel SQLite
+│   ├── models.py            # 17 tabel SQLite
 │   └── repositories/        # CRUD per mode
 ├── docs/                    # Dokumentasi lengkap
 ├── knowledge_base/          # Materi grammar (Markdown)
