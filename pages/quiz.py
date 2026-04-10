@@ -1104,6 +1104,32 @@ def _render_tutor_summary():
 
 
 # ===================================================
+# Grammar Tutor — State machine utama
+# ===================================================
+def _run_tutor_flow():
+    """
+    State machine Grammar Tutor. Routing berdasarkan tutor_page_state:
+      "config"    → _render_tutor_config()
+      "loading"   → _run_tutor_loading()
+      "blocked"   → _render_prerequisite_block()
+      "answering" → _run_tutor_answering()
+      "completed" → _render_tutor_summary()
+    """
+    page_state = _tget("page_state", "config")
+
+    if page_state == "config":
+        _render_tutor_config()
+    elif page_state == "loading":
+        _run_tutor_loading()
+    elif page_state == "blocked":
+        _render_prerequisite_block(_tget("blocked_topics", []))
+    elif page_state == "answering":
+        _run_tutor_answering()
+    elif page_state == "completed":
+        _render_tutor_summary()
+
+
+# ===================================================
 # Entry point
 # ===================================================
 def main():
