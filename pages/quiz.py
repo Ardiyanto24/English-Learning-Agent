@@ -572,6 +572,56 @@ def _run_tutor_loading():
 
 
 # ===================================================
+# Grammar Tutor — Render: satu soal tutor
+# ===================================================
+def _render_tutor_question(q: dict, index: int) -> str:
+    """
+    Tampilkan satu soal Grammar Tutor dan return jawaban user.
+
+    Semua soal bertipe isian (open-ended) — tidak ada pilihan ganda.
+    Widget input dipilih berdasarkan field `input_type` di soal:
+      - text_input : st.text_input  (Tipe 1, 2, 3, 5 — jawaban pendek)
+      - text_area  : st.text_area   (Tipe 4, 6 — jawaban panjang/transformasi)
+
+    Key widget tutor_ans_{index} memastikan jawaban tetap tersimpan
+    di session state saat user navigasi Previous/Next.
+
+    Args:
+        q    : dict soal dari Generator (topic, question_type,
+               question_text, reference_answer, input_type)
+        index: posisi soal dalam list (0-based)
+
+    Returns:
+        String jawaban user saat ini, bisa kosong jika belum diisi.
+    """
+    question_type = q.get("question_type", "")
+    input_type = q.get("input_type", "text_input")
+
+    st.caption(
+        f"Soal {index + 1} | "
+        f"Topik: **{q.get('topic', '-')}** | "
+        f"Tipe: *{question_type.replace('_', ' ').title()}*"
+    )
+    st.markdown(f"### {q.get('question_text', '')}")
+
+    if input_type == "text_area":
+        answer = st.text_area(
+            "Jawaban kamu:",
+            key=f"tutor_ans_{index}",
+            height=120,
+            placeholder="Tulis jawaban lengkap kamu di sini...",
+        )
+    else:
+        answer = st.text_input(
+            "Jawaban kamu:",
+            key=f"tutor_ans_{index}",
+            placeholder="Ketik jawaban kamu di sini...",
+        )
+
+    return answer or ""
+
+
+# ===================================================
 # TOEFL Quiz Flow (existing — tidak dimodifikasi)
 # ===================================================
 def _run_toefl_quiz_flow():
