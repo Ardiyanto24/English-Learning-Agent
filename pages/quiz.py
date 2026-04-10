@@ -650,10 +650,7 @@ def _run_tutor_answering():
     st.markdown("")
 
     # ── Cek semua jawaban sudah terisi ────────────────────────────
-    all_answered = all(
-        st.session_state.get(f"tutor_ans_{i}", "").strip()
-        for i in range(total)
-    )
+    all_answered = all(st.session_state.get(f"tutor_ans_{i}", "").strip() for i in range(total))
 
     # ── Tiga tombol navigasi dalam satu baris ─────────────────────
     col_prev, col_next, col_submit = st.columns([1, 1, 2])
@@ -897,9 +894,7 @@ def _complete_tutor_session(corrections: list):
     total_questions = len(questions)
 
     # ── Langkah 1: Update setiap soal di DB ───────────────────────
-    for i, (q_id, q, correction) in enumerate(
-        zip(question_ids, questions, corrections)
-    ):
+    for i, (q_id, q, correction) in enumerate(zip(question_ids, questions, corrections)):
         user_answer = st.session_state.get(f"tutor_ans_{i}", "").strip()
         feedback = correction.get("feedback", {})
         update_tutor_question_answer(
@@ -917,15 +912,9 @@ def _complete_tutor_session(corrections: list):
     total_score = sum(c.get("score", 0.0) for c in corrections)
     score_pct = round((total_score / total_questions) * 100, 1) if total_questions else 0.0
 
-    full_credit_count = sum(
-        1 for c in corrections if c.get("credit_level") == "full_credit"
-    )
-    partial_credit_count = sum(
-        1 for c in corrections if c.get("credit_level") == "partial_credit"
-    )
-    no_credit_count = sum(
-        1 for c in corrections if c.get("credit_level") == "no_credit"
-    )
+    full_credit_count = sum(1 for c in corrections if c.get("credit_level") == "full_credit")
+    partial_credit_count = sum(1 for c in corrections if c.get("credit_level") == "partial_credit")
+    no_credit_count = sum(1 for c in corrections if c.get("credit_level") == "no_credit")
 
     # ── Langkah 3: Update tutor_sessions ──────────────────────────
     update_tutor_session_scores(
@@ -961,9 +950,7 @@ def _complete_tutor_session(corrections: list):
 
     for topic, stats in topic_stats.items():
         qcount = stats["question_count"]
-        topic_score_pct = round(
-            (stats["total_score"] / qcount) * 100, 1
-        ) if qcount else 0.0
+        topic_score_pct = round((stats["total_score"] / qcount) * 100, 1) if qcount else 0.0
         upsert_tutor_topic_tracking(
             topic=topic,
             session_score_pct=topic_score_pct,

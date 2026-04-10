@@ -467,7 +467,7 @@ def _render_layer2(d: dict):
             else:
                 st.success("Tidak ada kata dengan mastery di bawah 60%! 🎉")
 
-# ---- Quiz tab ----
+    # ---- Quiz tab ----
     with tab_quiz:
         quiz = d.get("quiz", {}) or {}
         total = quiz.get("total_sessions", 0)
@@ -516,28 +516,20 @@ def _render_layer2(d: dict):
             st.metric("Total Sesi Grammar Tutor", tutor_session_count)
 
             practiced = [t for t in tutor_topic_tracking if t.get("total_sessions", 0) > 0]
-            strongest = sorted(
-                practiced, key=lambda t: t.get("avg_score_pct", 0), reverse=True
-            )[:3]
-            weakest = sorted(
-                practiced, key=lambda t: t.get("avg_score_pct", 0)
-            )[:3]
+            strongest = sorted(practiced, key=lambda t: t.get("avg_score_pct", 0), reverse=True)[:3]
+            weakest = sorted(practiced, key=lambda t: t.get("avg_score_pct", 0))[:3]
 
             col1, col2 = st.columns(2)
 
             with col1:
                 st.markdown("**🏆 Topik Terkuat:**")
                 for t in strongest:
-                    st.markdown(
-                        f"- {t['topic']} — **{t['avg_score_pct']:.0f}%**"
-                    )
+                    st.markdown(f"- {t['topic']} — **{t['avg_score_pct']:.0f}%**")
 
             with col2:
                 st.markdown("**⚠️ Topik Terlemah:**")
                 for t in weakest:
-                    st.markdown(
-                        f"- {t['topic']} — **{t['avg_score_pct']:.0f}%**"
-                    )
+                    st.markdown(f"- {t['topic']} — **{t['avg_score_pct']:.0f}%**")
 
     # ---- Speaking tab ----
     with tab_speaking:
