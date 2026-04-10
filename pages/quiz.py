@@ -392,6 +392,60 @@ def _complete_session():
 
 
 # ===================================================
+# Grammar Tutor — Render: konfigurasi sesi
+# ===================================================
+def _render_tutor_config():
+    """
+    Tampilkan UI konfigurasi sesi Grammar Tutor.
+
+    State yang diset saat konfirmasi:
+      tutor_selected_topics : list[str] topik yang dipilih user
+      tutor_total_questions : int jumlah soal yang dipilih
+      tutor_page_state      : "loading"
+    """
+    from agents.quiz_tutor.planner import PREREQUISITE_RULES
+
+    st.markdown("### 🎓 Grammar Tutor — Konfigurasi Sesi")
+
+    # ── Daftar topik ──────────────────────────────────────────────
+    all_topics = list(PREREQUISITE_RULES.keys()) if PREREQUISITE_RULES else []
+
+    st.caption(
+        "Pilih 1–3 topik grammar yang ingin dilatih. "
+        "Topik yang prerequisite-nya belum terpenuhi akan diblok otomatis oleh sistem."
+    )
+    selected_topics = st.multiselect(
+        "Topik Grammar:",
+        options=all_topics,
+        max_selections=3,
+        key="tutor_topic_multiselect",
+    )
+
+    # ── Jumlah soal ───────────────────────────────────────────────
+    total_questions = st.radio(
+        "Jumlah soal:",
+        options=[5, 10, 15, 20],
+        index=1,
+        horizontal=True,
+        key="tutor_question_count_radio",
+    )
+
+    st.markdown("")
+
+    # ── Tombol mulai ──────────────────────────────────────────────
+    if st.button(
+        "🚀 Mulai Sesi",
+        type="primary",
+        disabled=not selected_topics,
+        key="tutor_start_btn",
+    ):
+        _tset("selected_topics", selected_topics)
+        _tset("total_questions", total_questions)
+        _tset("page_state", "loading")
+        st.rerun()
+
+
+# ===================================================
 # TOEFL Quiz Flow (existing — tidak dimodifikasi)
 # ===================================================
 def _run_toefl_quiz_flow():
