@@ -46,7 +46,6 @@ from database.repositories.tutor_repository import (
     save_tutor_question,
     update_tutor_question_answer,
     upsert_tutor_topic_tracking,
-    get_tutor_session_count,
 )
 
 
