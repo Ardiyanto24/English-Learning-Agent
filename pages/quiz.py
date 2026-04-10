@@ -836,6 +836,42 @@ def _run_toefl_quiz_flow():
 
 
 # ===================================================
+# Grammar Tutor — Grading: batch Corrector
+# ===================================================
+def _run_tutor_grading():
+    """
+    Panggil Corrector untuk semua soal sekaligus setelah Submit All.
+
+    Jawaban diambil dari session state key tutor_ans_{i} yang tersimpan
+    otomatis oleh widget saat user mengetik. Semua hasil koreksi dikumpulkan
+    ke list corrections lalu diteruskan ke _complete_tutor_session().
+
+    Corrector fallback is_graded=False memastikan sesi tidak terputus
+    meski LLM gagal untuk soal tertentu.
+    """
+    questions = _tget("questions", [])
+    session_id = _tget("session_id")
+
+    corrections = []
+
+    with st.spinner(f"🔍 Menilai {len(questions)} jawaban..."):
+        for i, q in enumerate(questions):
+            user_answer = st.session_state.get(f"tutor_ans_{i}", "").strip()
+
+            correction = run_tutor_corrector(
+                topic=q["topic"],
+                question_type=q["question_type"],
+                question_text=q["question_text"],
+                reference_answer=q["reference_answer"],
+                user_answer=user_answer,
+                session_id=session_id,
+            )
+            corrections.append(correction)
+
+    _complete_tutor_session(corrections)
+
+
+# ===================================================
 # Entry point
 # ===================================================
 def main():
