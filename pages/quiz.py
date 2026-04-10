@@ -51,7 +51,7 @@ from database.repositories.tutor_repository import (
 
 
 # ===================================================
-# State helpers
+# State helpers — TOEFL Quiz (prefix: quiz_)
 # ===================================================
 def _get(key, default=None):
     return st.session_state.get(f"quiz_{key}", default)
@@ -63,6 +63,23 @@ def _set(key, value):
 
 def _reset():
     keys = [k for k in st.session_state if k.startswith("quiz_")]
+    for k in keys:
+        del st.session_state[k]
+
+
+# ===================================================
+# State helpers — Grammar Tutor (prefix: tutor_)
+# ===================================================
+def _tget(key, default=None):
+    return st.session_state.get(f"tutor_{key}", default)
+
+
+def _tset(key, value):
+    st.session_state[f"tutor_{key}"] = value
+
+
+def _treset():
+    keys = [k for k in st.session_state if k.startswith("tutor_")]
     for k in keys:
         del st.session_state[k]
 
