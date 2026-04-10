@@ -34,6 +34,21 @@ from database.repositories.quiz_repository import (
 from utils.helpers import generate_session_id, calculate_score_pct
 from utils.logger import logger
 
+# ── Tutor imports ─────────────────────────────────────────────────────────
+from agents.quiz_tutor.planner import run_planner as run_tutor_planner
+from agents.quiz_tutor.generator import run_generator as run_tutor_generator
+from agents.quiz_tutor.validator import run_validator as run_tutor_validator
+from agents.quiz_tutor.corrector import run_corrector as run_tutor_corrector
+from agents.quiz_tutor.analytics import run_analytics as run_tutor_analytics
+from database.repositories.tutor_repository import (
+    save_tutor_session,
+    update_tutor_session_scores,
+    save_tutor_question,
+    update_tutor_question_answer,
+    upsert_tutor_topic_tracking,
+    get_tutor_session_count,
+)
+
 
 # ===================================================
 # State helpers
@@ -360,10 +375,10 @@ def _complete_session():
 
 
 # ===================================================
-# Main UI
+# TOEFL Quiz Flow (existing — tidak dimodifikasi)
 # ===================================================
-def main():
-    st.title("📝 Quiz Agent")
+def _run_toefl_quiz_flow():
+    st.title("📝 Quiz Agent — TOEFL Style")
     st.caption("Latihan grammar bahasa Inggris dengan feedback 4 lapisan")
 
     page_state = _get("page_state", "init")
@@ -493,6 +508,18 @@ def main():
         if st.button("🔄 Sesi Baru", type="primary", key="quiz_new_btn"):
             _reset()
             st.rerun()
+
+
+# ===================================================
+# Entry point
+# ===================================================
+def main():
+    """
+    Entry point halaman Quiz Agent.
+    Mode selector diimplementasikan di Task 1.2.1.
+    Sementara langsung routing ke TOEFL flow.
+    """
+    _run_toefl_quiz_flow()
 
 
 if __name__ == "__main__":
