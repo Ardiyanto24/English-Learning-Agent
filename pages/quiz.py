@@ -872,6 +872,126 @@ def _run_tutor_grading():
 
 
 # ===================================================
+# Grammar Tutor — Complete session: DB save + state
+# ===================================================
+def _complete_tutor_session(corrections: list):
+    """
+    Simpan semua hasil sesi ke DB dan set state ke "completed".
+
+    Langkah:
+      1. Update setiap soal di DB dengan jawaban + feedback Corrector
+      2. Hitung score_pct dan breakdown kredit
+      3. Update tutor_sessions dengan skor akhir
+      4. Upsert tutor_topic_tracking per topik unik
+      5. Update status sesi induk ke "completed"
+      6. Simpan data summary ke tutor state → rerun
+
+    Args:
+        corrections: list dict hasil run_tutor_corrector, satu per soal.
+                     Setiap dict berisi credit_level, score, is_graded,
+                     dan feedback (verdict, concept_rule, feedback_tip).
+    """
+    questions = _tget("questions", [])
+    question_ids = _tget("question_ids", [])
+    session_id = _tget("session_id")
+    is_adjusted = _tget("is_adjusted", False)
+    total_questions = len(questions)
+
+    # ── Langkah 1: Update setiap soal di DB ───────────────────────
+    for i, (q_id, q, correction) in enumerate(
+        zip(question_ids, questions, corrections)
+    ):
+        user_answer = st.session_state.get(f"tutor_ans_{i}", "").strip()
+        feedback = correction.get("feedback", {})
+        update_tutor_question_answer(
+            question_id=q_id,
+            user_answer=user_answer,
+            credit_level=correction.get("credit_level", "no_credit"),
+            score=correction.get("score", 0.0),
+            is_graded=correction.get("is_graded", True),
+            feedback_verdict=feedback.get("verdict"),
+            feedback_concept=feedback.get("concept_rule"),
+            feedback_tip=feedback.get("feedback_tip"),
+        )
+
+    # ── Langkah 2: Hitung skor sesi ───────────────────────────────
+    total_score = sum(c.get("score", 0.0) for c in corrections)
+    score_pct = round((total_score / total_questions) * 100, 1) if total_questions else 0.0
+
+    full_credit_count = sum(
+        1 for c in corrections if c.get("credit_level") == "full_credit"
+    )
+    partial_credit_count = sum(
+        1 for c in corrections if c.get("credit_level") == "partial_credit"
+    )
+    no_credit_count = sum(
+        1 for c in corrections if c.get("credit_level") == "no_credit"
+    )
+
+    # ── Langkah 3: Update tutor_sessions ──────────────────────────
+    update_tutor_session_scores(
+        session_id=session_id,
+        full_credit_count=full_credit_count,
+        partial_credit_count=partial_credit_count,
+        no_credit_count=no_credit_count,
+        score_pct=score_pct,
+    )
+
+    # ── Langkah 4: Upsert topic tracking per topik unik ───────────
+    topic_stats: dict = {}
+    for q, correction in zip(questions, corrections):
+        topic = q["topic"]
+        if topic not in topic_stats:
+            topic_stats[topic] = {
+                "full_credit": 0,
+                "partial_credit": 0,
+                "no_credit": 0,
+                "total_score": 0.0,
+                "question_count": 0,
+            }
+        stats = topic_stats[topic]
+        stats["question_count"] += 1
+        stats["total_score"] += correction.get("score", 0.0)
+        level = correction.get("credit_level", "no_credit")
+        if level == "full_credit":
+            stats["full_credit"] += 1
+        elif level == "partial_credit":
+            stats["partial_credit"] += 1
+        else:
+            stats["no_credit"] += 1
+
+    for topic, stats in topic_stats.items():
+        qcount = stats["question_count"]
+        topic_score_pct = round(
+            (stats["total_score"] / qcount) * 100, 1
+        ) if qcount else 0.0
+        upsert_tutor_topic_tracking(
+            topic=topic,
+            session_score_pct=topic_score_pct,
+            full_credit=stats["full_credit"],
+            partial_credit=stats["partial_credit"],
+            no_credit=stats["no_credit"],
+            question_count=qcount,
+        )
+
+    # ── Langkah 5: Update status sesi induk ───────────────────────
+    update_session_status(
+        session_id=session_id,
+        status="completed",
+        is_adjusted=is_adjusted,
+    )
+
+    # ── Langkah 6: Simpan ke tutor state → completed ──────────────
+    _tset("corrections", corrections)
+    _tset("score_pct", score_pct)
+    _tset("full_credit_count", full_credit_count)
+    _tset("partial_credit_count", partial_credit_count)
+    _tset("no_credit_count", no_credit_count)
+    _tset("page_state", "completed")
+    st.rerun()
+
+
+# ===================================================
 # Entry point
 # ===================================================
 def main():
