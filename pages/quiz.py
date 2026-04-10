@@ -482,6 +482,96 @@ def _render_prerequisite_block(blocked_topics: list):
 
 
 # ===================================================
+# Grammar Tutor — Loading: Planner → Generator → Validator
+# ===================================================
+def _run_tutor_loading():
+    """
+    Jalankan tiga agent secara berurutan untuk menyiapkan sesi:
+      1. Planner  — cek prerequisite + susun distribusi soal
+      2. Generator — generate soal berdasarkan planner output
+      3. Validator — validasi dan adjust soal jika perlu
+
+    Jika Planner memblok → routing ke state "blocked".
+    Jika Generator/Validator gagal → kembali ke state "config".
+    Jika semua berhasil → simpan ke DB, routing ke state "answering".
+    """
+    selected_topics = _tget("selected_topics", [])
+    total_questions = _tget("total_questions", 10)
+
+    # ── Langkah 1: Planner ────────────────────────────────────────
+    with st.spinner("🧠 Menganalisis topik dan menyusun rencana soal..."):
+        planner_output = run_tutor_planner(
+            selected_topics=selected_topics,
+            total_questions=total_questions,
+        )
+
+    if planner_output.get("status") == "blocked":
+        _tset("blocked_topics", planner_output.get("blocked_topics", []))
+        _tset("page_state", "blocked")
+        st.rerun()
+        return
+
+    # ── Langkah 2: Generator ──────────────────────────────────────
+    try:
+        with st.spinner("✍️ Membuat soal grammar..."):
+            generator_output = run_tutor_generator(planner_output)
+    except RuntimeError as e:
+        st.error(f"😔 Gagal membuat soal. Silakan coba lagi. ({e})")
+        logger.error(f"[tutor_loading] Generator failed: {e}")
+        _tset("page_state", "config")
+        st.rerun()
+        return
+
+    # ── Langkah 3: Validator ──────────────────────────────────────
+    with st.spinner("🔍 Memvalidasi soal..."):
+        validator_result = run_tutor_validator(planner_output, generator_output)
+
+    final_questions = validator_result.get("final_questions", [])
+    if not final_questions:
+        st.error("😔 Gagal menyiapkan soal yang valid. Silakan coba lagi.")
+        logger.error("[tutor_loading] Validator returned empty final_questions")
+        _tset("page_state", "config")
+        st.rerun()
+        return
+
+    is_adjusted = validator_result.get("is_adjusted", False)
+
+    # ── Simpan ke DB ──────────────────────────────────────────────
+    session_id = generate_session_id()
+    create_session(session_id, mode="tutor")
+    save_tutor_session(
+        session_id=session_id,
+        topics=json.dumps(selected_topics),
+        total_questions=len(final_questions),
+    )
+
+    question_ids = []
+    for q in final_questions:
+        q_id = save_tutor_question(
+            session_id=session_id,
+            topic=q["topic"],
+            question_type=q["question_type"],
+            question_text=q["question_text"],
+            reference_answer=q["reference_answer"],
+        )
+        question_ids.append(q_id)
+
+    # ── Simpan ke tutor state ─────────────────────────────────────
+    _tset("session_id", session_id)
+    _tset("questions", final_questions)
+    _tset("question_ids", question_ids)
+    _tset("planner_output", planner_output)
+    _tset("is_adjusted", is_adjusted)
+    _tset("current_index", 0)
+    _tset("page_state", "answering")
+
+    if is_adjusted:
+        st.warning("⚠️ Soal disesuaikan otomatis karena validasi tidak sempurna.")
+
+    st.rerun()
+
+
+# ===================================================
 # TOEFL Quiz Flow (existing — tidak dimodifikasi)
 # ===================================================
 def _run_toefl_quiz_flow():
