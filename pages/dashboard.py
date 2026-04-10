@@ -35,6 +35,10 @@ from agents.orchestrator.router import (
     update_user_profile,
 )
 from database.connection import get_db
+from database.repositories.tutor_repository import (
+    get_all_tutor_topic_tracking,
+    get_tutor_session_count,
+)
 
 # ===================================================
 # Konstanta
@@ -463,7 +467,7 @@ def _render_layer2(d: dict):
             else:
                 st.success("Tidak ada kata dengan mastery di bawah 60%! 🎉")
 
-    # ---- Quiz tab ----
+# ---- Quiz tab ----
     with tab_quiz:
         quiz = d.get("quiz", {}) or {}
         total = quiz.get("total_sessions", 0)
@@ -487,6 +491,53 @@ def _render_layer2(d: dict):
                 st.markdown("**⚠️ Topik Terlemah:**")
                 for t in quiz.get("weakest", []):
                     st.markdown(f"- {t['topic']} — **{t['avg_score_pct']:.0f}%**")
+
+        # ── Grammar Tutor panel ───────────────────────────────────
+        st.markdown("---")
+        st.markdown("### 🎓 Grammar Tutor")
+
+        try:
+            tutor_session_count = get_tutor_session_count()
+            tutor_topic_tracking = get_all_tutor_topic_tracking()
+        except Exception as e:
+            st.caption(f"⚠️ Gagal load data Grammar Tutor: {e}")
+            tutor_session_count = 0
+            tutor_topic_tracking = []
+
+        if tutor_session_count == 0:
+            st.info(
+                "Belum ada sesi Grammar Tutor.\n\n"
+                "Setelah sesi pertama selesai, kamu akan melihat:\n"
+                "- Total sesi Grammar Tutor\n"
+                "- Topik grammar terkuat dan terlemah\n"
+                "- Persentase penguasaan per topik"
+            )
+        else:
+            st.metric("Total Sesi Grammar Tutor", tutor_session_count)
+
+            practiced = [t for t in tutor_topic_tracking if t.get("total_sessions", 0) > 0]
+            strongest = sorted(
+                practiced, key=lambda t: t.get("avg_score_pct", 0), reverse=True
+            )[:3]
+            weakest = sorted(
+                practiced, key=lambda t: t.get("avg_score_pct", 0)
+            )[:3]
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("**🏆 Topik Terkuat:**")
+                for t in strongest:
+                    st.markdown(
+                        f"- {t['topic']} — **{t['avg_score_pct']:.0f}%**"
+                    )
+
+            with col2:
+                st.markdown("**⚠️ Topik Terlemah:**")
+                for t in weakest:
+                    st.markdown(
+                        f"- {t['topic']} — **{t['avg_score_pct']:.0f}%**"
+                    )
 
     # ---- Speaking tab ----
     with tab_speaking:
