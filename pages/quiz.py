@@ -516,10 +516,42 @@ def _run_toefl_quiz_flow():
 def main():
     """
     Entry point halaman Quiz Agent.
-    Mode selector diimplementasikan di Task 1.2.1.
-    Sementara langsung routing ke TOEFL flow.
+
+    Menampilkan mode selector di bagian atas, lalu routing
+    ke flow yang sesuai berdasarkan pilihan user.
+
+    Key quiz_prev_mode disimpan tanpa prefix agar tidak ikut
+    terhapus oleh _reset() (TOEFL) atau _treset() (Tutor)
+    ketika user berpindah mode.
     """
-    _run_toefl_quiz_flow()
+    st.title("📝 Quiz Agent")
+    st.caption(
+        "Pilih mode latihan: TOEFL Style untuk soal bergaya ujian, "
+        "Grammar Tutor untuk membangun pemahaman konsep grammar."
+    )
+
+    mode = st.radio(
+        "Pilih mode latihan:",
+        options=["📝 TOEFL Style", "🎓 Grammar Tutor"],
+        key="quiz_mode_selection",
+        horizontal=True,
+    )
+
+    # ── Deteksi perpindahan mode, reset state mode sebelumnya ──
+    prev_mode = st.session_state.get("quiz_prev_mode")
+    if prev_mode is not None and prev_mode != mode:
+        _reset()
+        _treset()
+
+    st.session_state["quiz_prev_mode"] = mode
+
+    st.markdown("---")
+
+    # ── Routing ──
+    if mode == "📝 TOEFL Style":
+        _run_toefl_quiz_flow()
+    else:
+        _run_tutor_flow()
 
 
 if __name__ == "__main__":
