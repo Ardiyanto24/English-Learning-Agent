@@ -5,6 +5,53 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.1.0] — 2026-04-10
+
+Feature release — penambahan mode **Grammar Tutor** di dalam Quiz Agent.
+
+### Added — Grammar Tutor Stack
+
+- **`agents/quiz_tutor/planner.py`** — Planner dua tahap: prerequisite check murni
+  Python (threshold 60% dari `tutor_topic_tracking` atau `quiz_topic_tracking`),
+  lalu distribusi tipe soal via LLM Haiku berdasarkan proficiency level per topik
+  (`cold_start` / `familiar` / `advanced`)
+- **`agents/quiz_tutor/generator.py`** — Generator soal 6 tipe isian open-ended
+  via Claude Sonnet + RAG ChromaDB per topik
+- **`agents/quiz_tutor/validator.py`** — Validator struktur soal via Haiku,
+  loop regenerate max 3x, forced adjustment sebagai fallback terakhir
+- **`agents/quiz_tutor/corrector.py`** — Corrector penilaian 3-tier
+  (`full_credit=1.0`, `partial_credit=0.5`, `no_credit=0.0`) via Claude Sonnet,
+  feedback 3 layer: `verdict`, `concept_rule`, `feedback_tip`. Fallback
+  `is_graded=False` memastikan sesi tidak terputus saat LLM gagal
+- **`agents/quiz_tutor/analytics.py`** — Analytics Agent via Claude Sonnet,
+  threshold minimum 3 sesi, output: `weak_topics`, `weak_question_types`,
+  `recall_vs_application`, `recommendations`, `overall_insight`
+- **`prompts/quiz_tutor/`** — 5 prompt file untuk seluruh Grammar Tutor stack
+- **`database/repositories/tutor_repository.py`** — Repository CRUD untuk 3 tabel baru
+- **`database/models.py`** — 3 tabel baru: `tutor_sessions`, `tutor_questions`,
+  `tutor_topic_tracking` (total DB: 14 → 17 tabel)
+
+### Changed
+
+- **`pages/quiz.py`** — Tambah mode selector ("📝 TOEFL Style" / "🎓 Grammar Tutor")
+  di bagian atas halaman. TOEFL flow dibungkus ke `_run_toefl_quiz_flow()` tanpa
+  perubahan logika. Grammar Tutor flow baru di `_run_tutor_flow()` dengan state
+  machine: `config → loading → answering → completed`. UI answering menggunakan
+  navigasi Previous/Next bebas + tombol Submit All (batch evaluation)
+- **`pages/dashboard.py`** — Tambah panel Grammar Tutor di tab Quiz: total sesi,
+  topik terkuat, dan topik terlemah dari `tutor_topic_tracking`
+
+### Technical Notes
+
+- Grammar Tutor stack sepenuhnya independen dari TOEFL Quiz stack —
+  tidak ada cross-import antara `agents/quiz/` dan `agents/quiz_tutor/`
+- Semua state Grammar Tutor menggunakan prefix `tutor_` di session state
+  agar tidak konflik dengan state TOEFL Quiz (prefix `quiz_`)
+- Prerequisite check membaca dua tabel secara berurutan: `tutor_topic_tracking`
+  lalu `quiz_topic_tracking` — cukup salah satu yang memenuhi threshold 60%
+
+---
+
 ## [1.0.2] — 2026-04-05
 
 Patch release — peningkatan UX Vocab Agent berdasarkan feedback testing.
