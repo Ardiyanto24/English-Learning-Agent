@@ -992,6 +992,118 @@ def _complete_tutor_session(corrections: list):
 
 
 # ===================================================
+# Grammar Tutor — Render: summary akhir sesi
+# ===================================================
+def _render_tutor_summary():
+    """
+    Tampilkan ringkasan hasil sesi Grammar Tutor.
+
+    Tiga bagian:
+      1. Metrik skor (score_pct, breakdown kredit, topik)
+      2. Detail per soal dengan feedback 3 layer dari Corrector
+      3. Panel analytics on-demand (tombol jika belum ada, hasil jika sudah)
+    """
+    questions = _tget("questions", [])
+    corrections = _tget("corrections", [])
+    score_pct = _tget("score_pct", 0.0)
+    full_credit_count = _tget("full_credit_count", 0)
+    partial_credit_count = _tget("partial_credit_count", 0)
+    no_credit_count = _tget("no_credit_count", 0)
+    planner_output = _tget("planner_output", {})
+    topics = planner_output.get("selected_topics", [])
+
+    # ── Header + 3 metrik ─────────────────────────────────────────
+    st.markdown("## 🎉 Sesi Grammar Tutor Selesai!")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Skor", f"{score_pct:.1f}%")
+    with col2:
+        st.metric(
+            "Breakdown Kredit",
+            f"{full_credit_count} full / {partial_credit_count} partial "
+            f"/ {no_credit_count} no credit",
+        )
+    with col3:
+        st.metric("Topik", ", ".join(topics) if topics else "—")
+
+    # ── Detail per soal ───────────────────────────────────────────
+    st.markdown("### Detail Jawaban")
+
+    credit_icons = {
+        "full_credit": "✅",
+        "partial_credit": "🔶",
+        "no_credit": "❌",
+    }
+
+    for i, (q, correction) in enumerate(zip(questions, corrections)):
+        credit_level = correction.get("credit_level", "no_credit")
+        icon = credit_icons.get(credit_level, "❌")
+        user_answer = st.session_state.get(f"tutor_ans_{i}", "—").strip()
+        feedback = correction.get("feedback", {})
+
+        with st.expander(
+            f"{icon} Soal {i + 1} — {q.get('topic', '-')}",
+            expanded=(credit_level != "full_credit"),
+        ):
+            st.markdown(f"**Soal:** {q.get('question_text', '-')}")
+            st.markdown(f"**Jawaban kamu:** {user_answer or '*(kosong)*'}")
+            st.markdown(f"**Jawaban acuan:** {q.get('reference_answer', '-')}")
+
+            if not correction.get("is_graded", True):
+                st.warning("⚠️ Soal ini tidak berhasil dinilai karena kendala teknis.")
+            else:
+                st.markdown(f"**Verdict:** {feedback.get('verdict', '-')}")
+                st.info(f"📖 **Konsep:** {feedback.get('concept_rule', '-')}")
+                st.caption(f"💡 Tip: {feedback.get('feedback_tip', '-')}")
+
+    # ── Panel analytics ───────────────────────────────────────────
+    st.markdown("---")
+    analytics = _tget("analytics")
+
+    if analytics:
+        st.markdown("### 💡 Insight dari AI")
+
+        overall = analytics.get("overall_insight")
+        if overall:
+            st.info(overall)
+
+        weak_topics = analytics.get("weak_topics", [])
+        if weak_topics:
+            st.markdown("**Topik yang perlu diperkuat:**")
+            for t in weak_topics[:3]:
+                st.markdown(f"- {t}")
+
+        recommendations = analytics.get("recommendations", [])
+        if recommendations:
+            st.markdown("**Rekomendasi:**")
+            for r in recommendations:
+                st.markdown(f"- {r}")
+
+    else:
+        if st.button(
+            "💡 Minta Analisis AI",
+            type="secondary",
+            key="tutor_analytics_btn",
+        ):
+            with st.spinner("Menganalisis progress Grammar Tutor kamu..."):
+                analytics_result = run_tutor_analytics()
+            _tset("analytics", analytics_result)
+            st.rerun()
+
+        st.caption(
+            "Analisis AI memberikan insight tentang topik lemah dan "
+            "rekomendasi latihan. Tersedia setelah minimal 3 sesi selesai."
+        )
+
+    # ── Tombol sesi baru ──────────────────────────────────────────
+    st.markdown("---")
+    if st.button("🔄 Sesi Baru", type="primary", key="tutor_new_session_btn"):
+        _treset()
+        st.rerun()
+
+
+# ===================================================
 # Entry point
 # ===================================================
 def main():
