@@ -622,6 +622,84 @@ def _render_tutor_question(q: dict, index: int) -> str:
 
 
 # ===================================================
+# Grammar Tutor — Answering: navigasi + Submit All
+# ===================================================
+def _run_tutor_answering():
+    """
+    State menjawab soal Grammar Tutor.
+
+    User bisa bebas navigasi Previous/Next antar soal.
+    Jawaban tersimpan otomatis di session state via widget key tutor_ans_{i}.
+    Submit All hanya aktif ketika semua soal sudah memiliki jawaban non-kosong.
+    Corrector dipanggil batch di _run_tutor_grading() setelah Submit All.
+    """
+    questions = _tget("questions", [])
+    current_index = _tget("current_index", 0)
+    total = len(questions)
+
+    # ── Progress bar ──────────────────────────────────────────────
+    st.progress(
+        (current_index + 1) / total,
+        text=f"Soal {current_index + 1} dari {total}",
+    )
+    st.markdown("---")
+
+    # ── Soal saat ini ─────────────────────────────────────────────
+    q = questions[current_index]
+    _render_tutor_question(q, current_index)
+
+    st.markdown("")
+
+    # ── Cek semua jawaban sudah terisi ────────────────────────────
+    all_answered = all(
+        st.session_state.get(f"tutor_ans_{i}", "").strip()
+        for i in range(total)
+    )
+
+    # ── Tiga tombol navigasi dalam satu baris ─────────────────────
+    col_prev, col_next, col_submit = st.columns([1, 1, 2])
+
+    with col_prev:
+        if st.button(
+            "← Sebelumnya",
+            disabled=(current_index == 0),
+            use_container_width=True,
+            key="tutor_prev_btn",
+        ):
+            _tset("current_index", current_index - 1)
+            st.rerun()
+
+    with col_next:
+        if st.button(
+            "Berikutnya →",
+            disabled=(current_index == total - 1),
+            use_container_width=True,
+            key="tutor_next_btn",
+        ):
+            _tset("current_index", current_index + 1)
+            st.rerun()
+
+    with col_submit:
+        if st.button(
+            "✅ Submit All",
+            type="primary",
+            disabled=not all_answered,
+            use_container_width=True,
+            key="tutor_submit_all_btn",
+        ):
+            _run_tutor_grading()
+
+    # ── Tombol keluar ─────────────────────────────────────────────
+    st.markdown("---")
+    if st.button("❌ Keluar", type="secondary", key="tutor_exit_btn"):
+        session_id = _tget("session_id")
+        if session_id:
+            update_session_status(session_id, status="abandoned")
+        _treset()
+        st.rerun()
+
+
+# ===================================================
 # TOEFL Quiz Flow (existing — tidak dimodifikasi)
 # ===================================================
 def _run_toefl_quiz_flow():
