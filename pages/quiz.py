@@ -446,6 +446,42 @@ def _render_tutor_config():
 
 
 # ===================================================
+# Grammar Tutor — Render: prerequisite block
+# ===================================================
+def _render_prerequisite_block(blocked_topics: list):
+    """
+    Tampilkan pesan hard block ketika ada topik yang prerequisite-nya
+    belum terpenuhi. User tidak bisa melanjutkan sesi sampai prerequisite
+    diselesaikan di TOEFL Quiz atau Grammar Tutor dengan skor >= 60%.
+
+    Args:
+        blocked_topics: list dict, setiap dict berisi:
+            - topic              : str nama topik yang diblok
+            - missing_prerequisites: list[str] topik prereq yang belum dikuasai
+    """
+    st.error(
+        "🚫 Sesi tidak bisa dimulai karena ada topik yang prerequisite-nya "
+        "belum dikuasai. Selesaikan topik prerequisite terlebih dahulu di "
+        "TOEFL Quiz atau Grammar Tutor dengan skor minimal **60%**."
+    )
+
+    st.markdown("#### Topik yang Diblok:")
+    for item in blocked_topics:
+        topic = item.get("topic", "")
+        missing = item.get("missing_prerequisites", [])
+        with st.container(border=True):
+            st.markdown(f"**{topic}**")
+            st.markdown("Prerequisite yang harus diselesaikan dulu:")
+            for prereq in missing:
+                st.markdown(f"- {prereq}")
+
+    st.markdown("")
+    if st.button("← Kembali", key="tutor_prereq_back_btn"):
+        _tset("page_state", "config")
+        st.rerun()
+
+
+# ===================================================
 # TOEFL Quiz Flow (existing — tidak dimodifikasi)
 # ===================================================
 def _run_toefl_quiz_flow():
