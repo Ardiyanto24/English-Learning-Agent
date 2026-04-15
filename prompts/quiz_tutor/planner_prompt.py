@@ -116,6 +116,7 @@ def build_planner_prompt(
     selected_topics: list,
     total_questions: int,
     topic_history: dict,
+    question_distribution: dict[str, int] | None = None,
 ) -> str:
     """
     Bangun user prompt untuk Grammar Tutor Planner.
