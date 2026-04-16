@@ -66,6 +66,17 @@ def _reset():
         del st.session_state[k]
 
 
+def _get_quiz_answer(i: int) -> str:
+    """
+    Ambil jawaban untuk soal ke-i dari widget state atau saved state.
+    Menggabungkan dua sumber agar jawaban tidak hilang saat navigasi.
+    """
+    return (
+        st.session_state.get(f"quiz_ans_val_{i}", "")
+        or _get(f"saved_ans_{i}", "")
+    ).strip()
+
+
 # ===================================================
 # State helpers — Grammar Tutor (prefix: tutor_)
 # ===================================================
@@ -336,7 +347,7 @@ def _run_toefl_grading():
 
     with st.spinner(f"🔍 Menilai {len(questions)} jawaban..."):
         for i, q in enumerate(questions):
-            user_answer = st.session_state.get(f"quiz_ans_val_{i}", "")
+            user_answer = _get_quiz_answer(i)
             # Normalisasi radio: "A. She goes..." → "A"
             if user_answer and "." in user_answer:
                 user_answer = user_answer.split(".")[0].strip()
@@ -844,13 +855,27 @@ def _run_toefl_quiz_flow():
         )
         st.markdown(f"### {q.get('question_text', '')}")
 
-        # Input widget — nilai tersimpan otomatis di session state
+        # Restore jawaban sebelumnya agar tidak hilang saat navigasi
+        widget_key = f"quiz_ans_val_{current_index}"
+        if widget_key not in st.session_state:
+            saved = _get(f"saved_ans_{current_index}", "")
+            if saved:
+                st.session_state[widget_key] = saved
+
+        # Input widget
         if fmt in ("multiple_choice", "fill_blank", "error_id") and options:
+            # Tentukan index pilihan yang sudah dipilih sebelumnya
+            saved_val = _get(f"saved_ans_{current_index}", "")
+            try:
+                saved_index = options.index(saved_val) if saved_val in options else None
+            except ValueError:
+                saved_index = None
+
             st.radio(
                 "Pilih jawaban:",
                 options=options,
                 key=f"quiz_ans_val_{current_index}",
-                index=None,
+                index=saved_index,
             )
         else:
             st.text_input(
@@ -860,11 +885,8 @@ def _run_toefl_quiz_flow():
 
         st.markdown("")
 
-        # Cek semua soal sudah dijawab
-        all_answered = all(
-            st.session_state.get(f"quiz_ans_val_{i}", "")
-            for i in range(total)
-        )
+        # Cek semua soal sudah dijawab (gabungkan widget + saved)
+        all_answered = all(_get_quiz_answer(i) for i in range(total))
 
         # Navigasi + Submit All
         col_prev, col_next, col_submit = st.columns([1, 1, 2])
@@ -876,6 +898,11 @@ def _run_toefl_quiz_flow():
                 use_container_width=True,
                 key="quiz_prev_btn",
             ):
+                # Simpan jawaban soal saat ini sebelum navigasi
+                _set(
+                    f"saved_ans_{current_index}",
+                    st.session_state.get(f"quiz_ans_val_{current_index}", ""),
+                )
                 _set("current_index", current_index - 1)
                 st.rerun()
 
@@ -886,6 +913,11 @@ def _run_toefl_quiz_flow():
                 use_container_width=True,
                 key="quiz_next_btn",
             ):
+                # Simpan jawaban soal saat ini sebelum navigasi
+                _set(
+                    f"saved_ans_{current_index}",
+                    st.session_state.get(f"quiz_ans_val_{current_index}", ""),
+                )
                 _set("current_index", current_index + 1)
                 st.rerun()
 
