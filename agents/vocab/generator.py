@@ -279,7 +279,7 @@ def run_generator(planner_output: dict) -> dict:
         f"(new={new_count}, review={review_count})"
     )
 
-    # ── Step 1: Ambil review words dari DB via spaced repetition ──────────
+# ── Step 1: Ambil review words dari DB via spaced repetition ──────────
     # Python yang memilih kata — bukan LLM
     # Prioritas: kata yang paling lama tidak dilihat (last_seen_at ASC)
     review_words = []
@@ -303,10 +303,22 @@ def run_generator(planner_output: dict) -> dict:
             f"{len(review_words)}/{review_count} review words from DB"
         )
 
+    # ── Step 1b: Kompensasi jika review words dari DB kurang ─────────────
+    # Jika DB tidak punya cukup kata untuk review (mastery_score < 60%),
+    # sisa slot dialihkan ke new words agar total tetap sesuai planner.
+    actual_review_count = len(review_words)
+    shortfall = review_count - actual_review_count
+    if shortfall > 0:
+        new_count = new_count + shortfall
+        logger.info(
+            f"[vocab_generator] Review shortfall={shortfall} — "
+            f"compensating with extra new words, new_count adjusted to {new_count}"
+        )
+
     # ── Step 2: Split format_distribution ────────────────────────────────
     # format_distribution planner adalah untuk TOTAL kata (new + review).
-    # LLM generator hanya boleh menerima format distribution untuk new_count kata.
-    # Jika dikirim format_distribution penuh, LLM generate sebanyak total format.
+    # Gunakan actual_review_count (bukan review_count) agar split akurat
+    # sesuai kondisi nyata dari DB.
     new_formats, review_formats = _split_format_distribution(
         planner_output.get("format_distribution", {}),
         new_count,
