@@ -83,6 +83,22 @@ def _treset():
         del st.session_state[k]
 
 
+def _get_tutor_answer(i: int) -> str:
+    """
+    Ambil jawaban untuk soal ke-i dari widget state atau saved state.
+
+    Streamlit menghapus st.session_state[key] ketika widget dengan key
+    tersebut tidak di-render pada suatu rerun (misalnya saat navigasi
+    ke soal lain). Fungsi ini menggabungkan dua sumber:
+      - tutor_ans_{i}       : nilai langsung dari widget (soal aktif saat ini)
+      - tutor_saved_ans_{i} : nilai yang disimpan eksplisit sebelum navigasi
+    """
+    return (
+        st.session_state.get(f"tutor_ans_{i}", "")
+        or _tget(f"saved_ans_{i}", "")
+    ).strip()
+
+
 # ===================================================
 # Render: soal sesuai format
 # ===================================================
@@ -582,8 +598,9 @@ def _render_tutor_question(q: dict, index: int) -> str:
       - text_input : st.text_input  (Tipe 1, 2, 3, 5 — jawaban pendek)
       - text_area  : st.text_area   (Tipe 4, 6 — jawaban panjang/transformasi)
 
-    Key widget tutor_ans_{index} memastikan jawaban tetap tersimpan
-    di session state saat user navigasi Previous/Next.
+    Jawaban yang sebelumnya disimpan lewat _get_tutor_answer() di-restore
+    ke session state sebelum widget di-render, sehingga user melihat
+    kembali jawabannya saat kembali ke soal yang sudah dijawab.
 
     Args:
         q    : dict soal dari Generator (topic, question_type,
@@ -595,6 +612,13 @@ def _render_tutor_question(q: dict, index: int) -> str:
     """
     question_type = q.get("question_type", "")
     input_type = q.get("input_type", "text_input")
+
+    # Restore jawaban yang sudah disimpan agar tidak kosong saat kembali
+    widget_key = f"tutor_ans_{index}"
+    if widget_key not in st.session_state:
+        saved = _tget(f"saved_ans_{index}", "")
+        if saved:
+            st.session_state[widget_key] = saved
 
     st.caption(
         f"Soal {index + 1} | "
@@ -650,7 +674,7 @@ def _run_tutor_answering():
     st.markdown("")
 
     # ── Cek semua jawaban sudah terisi ────────────────────────────
-    all_answered = all(st.session_state.get(f"tutor_ans_{i}", "").strip() for i in range(total))
+    all_answered = all(_get_tutor_answer(i) for i in range(total))
 
     # ── Tiga tombol navigasi dalam satu baris ─────────────────────
     col_prev, col_next, col_submit = st.columns([1, 1, 2])
@@ -662,6 +686,9 @@ def _run_tutor_answering():
             use_container_width=True,
             key="tutor_prev_btn",
         ):
+            # Simpan jawaban soal saat ini sebelum navigasi
+            _tset(f"saved_ans_{current_index}",
+                  st.session_state.get(f"tutor_ans_{current_index}", ""))
             _tset("current_index", current_index - 1)
             st.rerun()
 
@@ -672,6 +699,9 @@ def _run_tutor_answering():
             use_container_width=True,
             key="tutor_next_btn",
         ):
+            # Simpan jawaban soal saat ini sebelum navigasi
+            _tset(f"saved_ans_{current_index}",
+                  st.session_state.get(f"tutor_ans_{current_index}", ""))
             _tset("current_index", current_index + 1)
             st.rerun()
 
@@ -852,7 +882,7 @@ def _run_tutor_grading():
 
     with st.spinner(f"🔍 Menilai {len(questions)} jawaban..."):
         for i, q in enumerate(questions):
-            user_answer = st.session_state.get(f"tutor_ans_{i}", "").strip()
+            user_answer = _get_tutor_answer(i)
 
             correction = run_tutor_corrector(
                 topic=q["topic"],
@@ -895,7 +925,7 @@ def _complete_tutor_session(corrections: list):
 
     # ── Langkah 1: Update setiap soal di DB ───────────────────────
     for i, (q_id, q, correction) in enumerate(zip(question_ids, questions, corrections)):
-        user_answer = st.session_state.get(f"tutor_ans_{i}", "").strip()
+        user_answer = _get_tutor_answer(i)
         feedback = correction.get("feedback", {})
         update_tutor_question_answer(
             question_id=q_id,
@@ -1025,7 +1055,7 @@ def _render_tutor_summary():
     for i, (q, correction) in enumerate(zip(questions, corrections)):
         credit_level = correction.get("credit_level", "no_credit")
         icon = credit_icons.get(credit_level, "❌")
-        user_answer = st.session_state.get(f"tutor_ans_{i}", "—").strip()
+        user_answer = _get_tutor_answer(i) or "—"
         feedback = correction.get("feedback", {})
 
         with st.expander(
