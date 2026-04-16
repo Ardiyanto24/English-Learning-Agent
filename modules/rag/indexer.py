@@ -11,6 +11,7 @@ Untuk switch ke OpenAI saat production:
   Ubah EMBEDDING_PROVIDER = "openai"
 """
 
+import json
 import os
 import re
 from pathlib import Path
@@ -29,6 +30,14 @@ EMBEDDING_PROVIDER = "local"  # "local" | "openai"
 GRAMMAR_KB_PATH = Path("knowledge_base/grammar")
 CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "./vector_store/chroma_db")
 COLLECTION_NAME = "grammar_knowledge_base"
+
+# Load prerequisite_rules untuk cluster lookup
+_PREREQ_CONFIG_PATH = Path("config/prerequisite_rules.json")
+try:
+    with open(_PREREQ_CONFIG_PATH, encoding="utf-8") as _f:
+        _PREREQ_RULES: dict = json.load(_f)
+except Exception:
+    _PREREQ_RULES = {}
 
 MAX_CHUNK_TOKENS = 500
 OVERLAP_RATIO = 0.2
@@ -142,24 +151,39 @@ def split_long_chunk(chunk: dict) -> list[dict]:
     return result_chunks if result_chunks else [chunk]
 
 
+def _normalize_topic(text: str) -> str:
+    """Normalisasi tanda baca untuk fuzzy match nama topik."""
+    return text.replace("–", "-").replace("—", "-").lower()
+
+
 def parse_topic_from_file(filepath: Path) -> tuple[str, str]:
     """
     Ekstrak topic name dan cluster dari path file.
-    Cluster diambil dari nama folder parent.
 
-    Struktur: knowledge_base/grammar/<ClusterName>/<topic>.md
-    Contoh  : grammar/Tenses/perfect_tenses.md → cluster = "Tenses"
+    - Topic  : diambil dari H1 heading; prefix "Chapter N — " diabaikan.
+    - Cluster: dicari dari prerequisite_rules.json berdasarkan topic name.
+               Jika tidak ditemukan, fallback ke "General".
+
+    Contoh: "# Chapter 5 — Present Tenses" → topic = "Present Tenses"
     """
-    cluster = filepath.parent.name
-    if cluster == "grammar":
-        cluster = "General"
-
     try:
         with open(filepath, "r", encoding="utf-8") as f:
             first_line = f.readline().strip()
-        topic = first_line.lstrip("#").strip() if first_line.startswith("#") else filepath.stem
+        raw = first_line.lstrip("#").strip() if first_line.startswith("#") else filepath.stem
+        # Hapus prefix "Chapter N — " (toleran terhadap em-dash dan en-dash)
+        topic = re.sub(r"^Chapter\s+\d+\s*[—–-]+\s*", "", raw).strip()
+        if not topic:
+            topic = filepath.stem.replace("_", " ").title()
     except Exception:
         topic = filepath.stem.replace("_", " ").title()
+
+    # Cari cluster dari prerequisite_rules — normalisasi untuk toleransi en-dash vs hyphen
+    topic_norm = _normalize_topic(topic)
+    cluster = "General"
+    for rule_topic, rule_data in _PREREQ_RULES.items():
+        if _normalize_topic(rule_topic) == topic_norm:
+            cluster = rule_data.get("cluster", "General")
+            break
 
     return topic, cluster
 
@@ -194,7 +218,7 @@ def index_knowledge_base(
         metadata={"hnsw:space": "cosine"},
     )
 
-    # Baca semua .md secara rekursif (termasuk subfolder cluster)
+    # Baca semua .md secara rekursif
     md_files = sorted(kb_path.rglob("*.md"))
     if not md_files:
         return {"total_files": 0, "total_chunks": 0, "status": "no_files"}
