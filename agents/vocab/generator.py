@@ -10,13 +10,15 @@ Output : dict dengan key "words" berisi list soal vocab
 
 Flow:
 1. Ambil review words dari DB via spaced repetition (Python, bukan LLM)
-2. LLM generate NEW words saja (review words tidak disebutkan ke LLM)
-3. LLM enrich review words dari DB (tambah format + question_text + correct_answer)
-4. Gabung new words + enriched review words → return
+2. Split format_distribution planner menjadi 2 bagian: new_formats & review_formats
+3. LLM generate NEW words saja menggunakan new_formats
+4. LLM enrich review words dari DB menggunakan review_formats
+5. Gabung new words + enriched review words → return
 
 Error handling:
 - @retry_llm: max 3x retry untuk LLM call
 - JSON parse error: retry sekali dengan instruksi lebih ketat
+- Enrich gagal: skip review words, sesi tetap jalan dengan new words saja
 - Setelah semua retry habis: raise exception → sesi dibatalkan
 """
 
@@ -25,15 +27,13 @@ from typing import Optional
 
 import anthropic
 from dotenv import load_dotenv
-from database.repositories.vocab_repository import (
-    get_spaced_repetition_words,
-)
 
+from database.repositories.vocab_repository import get_spaced_repetition_words
 from prompts.vocab.generator_prompt import (
-    GENERATOR_SYSTEM_PROMPT,
     ENRICH_SYSTEM_PROMPT,
-    build_generator_prompt,
+    GENERATOR_SYSTEM_PROMPT,
     build_enrich_prompt,
+    build_generator_prompt,
 )
 from utils.logger import log_error, logger
 from utils.retry import retry_llm
@@ -50,6 +50,10 @@ def _get_client() -> anthropic.Anthropic:
         _client = anthropic.Anthropic()
     return _client
 
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Parse helpers
+# ──────────────────────────────────────────────────────────────────────────────
 
 def _parse_generator_response(raw: str) -> dict:
     """
@@ -121,19 +125,85 @@ def _parse_enrich_response(raw: str) -> list:
     return parsed["words"]
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Format distribution helper
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _split_format_distribution(
+    planner_format_dist: dict,
+    new_words_count: int,
+) -> tuple[dict, dict]:
+    """
+    Bagi format_distribution planner menjadi 2 bagian:
+    - new_formats   : slot format khusus untuk new words (dikirim ke generator LLM)
+    - review_formats: slot format khusus untuk review words (dikirim ke enrich LLM)
+
+    format_distribution dari planner adalah untuk TOTAL kata (new + review).
+    Fungsi ini mengambil new_words_count slot pertama untuk new words,
+    sisanya otomatis menjadi jatah review words.
+
+    Contoh:
+        planner_format_dist = {tebak_arti: 3, sinonim_antonim: 1, tebak_inggris: 1}
+        new_words_count = 1
+        → new_formats    = {tebak_arti: 1}
+        → review_formats = {tebak_arti: 2, sinonim_antonim: 1, tebak_inggris: 1}
+
+    Contoh 2:
+        planner_format_dist = {tebak_arti: 3, sinonim_antonim: 1, tebak_inggris: 1}
+        new_words_count = 3
+        → new_formats    = {tebak_arti: 3}
+        → review_formats = {sinonim_antonim: 1, tebak_inggris: 1}
+
+    Args:
+        planner_format_dist: Format distribution dari planner (total new + review)
+        new_words_count    : Jumlah new words yang harus di-generate LLM
+
+    Returns:
+        (new_formats, review_formats)
+    """
+    new_formats: dict = {}
+    review_formats: dict = {}
+    slots_left = new_words_count
+
+    for fmt, count in planner_format_dist.items():
+        if slots_left <= 0:
+            # Semua slot new words sudah terpenuhi → sisanya untuk review
+            review_formats[fmt] = count
+        elif count <= slots_left:
+            # Format ini seluruhnya masuk ke new words
+            new_formats[fmt] = count
+            slots_left -= count
+        else:
+            # Format ini dibagi: sebagian new, sebagian review
+            new_formats[fmt] = slots_left
+            review_formats[fmt] = count - slots_left
+            slots_left = 0
+
+    return new_formats, review_formats
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# LLM call helpers
+# ──────────────────────────────────────────────────────────────────────────────
+
 @retry_llm
 def _call_generator_llm(
     planner_output: dict,
     new_words_count: int,
+    new_format_distribution: dict,
 ) -> dict:
     """
     Panggil LLM untuk generate NEW words saja.
     Review words TIDAK disebutkan di sini — sudah diambil dari DB.
+
+    Args:
+        new_format_distribution: Format distribution KHUSUS untuk new words saja.
+                                 Bukan format_distribution penuh dari planner.
     """
     user_prompt = build_generator_prompt(
         topic=planner_output["topic"],
         difficulty_target=planner_output["difficulty_target"],
-        format_distribution=planner_output["format_distribution"],
+        format_distribution=new_format_distribution,
         new_words=new_words_count,
     )
 
@@ -179,56 +249,9 @@ def _call_enrich_llm(
     return _parse_enrich_response(raw)
 
 
-def _calculate_remaining_formats(
-    planner_format_dist: dict,
-    new_words_count: int,
-) -> dict:
-    """
-    Hitung sisa slot format untuk review words.
-
-    Planner menetapkan total format distribution untuk semua kata (new + review).
-    Setelah new words di-generate, sisa slot format adalah jatah untuk review words.
-
-    Contoh:
-        planner: {tebak_arti: 3, sinonim_antonim: 1, tebak_inggris: 1} → total 5 kata
-        new_words_count = 3
-        → new words ambil 3 slot pertama: {tebak_arti: 3}
-        → sisa untuk review: {sinonim_antonim: 1, tebak_inggris: 1}
-
-    Catatan: ini adalah estimasi — format aktual new words baru diketahui
-    setelah LLM generate. Kita pakai sisa dari total dikurangi new_count
-    secara proporsional.
-    """
-    total_planned = sum(planner_format_dist.values())
-    review_count = total_planned - new_words_count
-
-    if review_count <= 0:
-        return {}
-
-    # Hitung proporsi sisa secara sederhana:
-    # Kurangi setiap format secara berurutan sampai sisa = review_count
-    remaining = {}
-    slots_left = review_count
-
-    for fmt, count in planner_format_dist.items():
-        if slots_left <= 0:
-            break
-        take = min(count, slots_left)
-        # Ambil dari belakang — new words biasanya mengambil slot awal
-        give_to_review = count - take
-        if give_to_review > 0:
-            remaining[fmt] = give_to_review
-            slots_left -= give_to_review
-
-    # Fallback jika kalkulasi tidak pas: bagi rata
-    if not remaining and review_count > 0:
-        formats = list(planner_format_dist.keys())
-        for i in range(review_count):
-            fmt = formats[i % len(formats)]
-            remaining[fmt] = remaining.get(fmt, 0) + 1
-
-    return remaining
-
+# ──────────────────────────────────────────────────────────────────────────────
+# Main entry point
+# ──────────────────────────────────────────────────────────────────────────────
 
 def run_generator(planner_output: dict) -> dict:
     """
@@ -239,11 +262,11 @@ def run_generator(planner_output: dict) -> dict:
 
     Returns:
         dict: {"words": [list of word objects]}
-        - new words   : di-generate oleh LLM (Step 2)
-        - review words: diambil dari DB + di-enrich oleh LLM (Step 1 + Step 3)
+        - new words   : di-generate oleh LLM (Step 3)
+        - review words: diambil dari DB + di-enrich oleh LLM (Step 1 + Step 4)
 
     Raises:
-        RuntimeError jika LLM gagal setelah semua retry habis
+        RuntimeError jika LLM generate new words gagal setelah semua retry habis
     """
     topic = planner_output.get("topic")
     new_count = planner_output.get("new_words", 5)
@@ -257,6 +280,8 @@ def run_generator(planner_output: dict) -> dict:
     )
 
     # ── Step 1: Ambil review words dari DB via spaced repetition ──────────
+    # Python yang memilih kata — bukan LLM
+    # Prioritas: kata yang paling lama tidak dilihat (last_seen_at ASC)
     review_words = []
     if review_count > 0:
         db_words = get_spaced_repetition_words(
@@ -278,12 +303,26 @@ def run_generator(planner_output: dict) -> dict:
             f"{len(review_words)}/{review_count} review words from DB"
         )
 
-    # ── Step 2: LLM generate NEW words saja ──────────────────────────────
+    # ── Step 2: Split format_distribution ────────────────────────────────
+    # format_distribution planner adalah untuk TOTAL kata (new + review).
+    # LLM generator hanya boleh menerima format distribution untuk new_count kata.
+    # Jika dikirim format_distribution penuh, LLM generate sebanyak total format.
+    new_formats, review_formats = _split_format_distribution(
+        planner_output.get("format_distribution", {}),
+        new_count,
+    )
+    logger.info(
+        f"[vocab_generator] Format split — "
+        f"new: {new_formats}, review: {review_formats}"
+    )
+
+    # ── Step 3: LLM generate NEW words saja ──────────────────────────────
     # Review words TIDAK disebutkan ke LLM — sudah diambil dari DB di Step 1
     try:
         result = _call_generator_llm(
             planner_output,
             new_words_count=new_count,
+            new_format_distribution=new_formats,
         )
     except Exception as e:
         log_error(
@@ -298,26 +337,22 @@ def run_generator(planner_output: dict) -> dict:
         )
         raise RuntimeError(f"Vocab Generator gagal setelah 3x retry: {e}") from e
 
-    # ── Step 3: LLM enrich review words dari DB ───────────────────────────
+    # ── Step 4: LLM enrich review words dari DB ───────────────────────────
     # Review words dari DB hanya punya word + difficulty.
-    # Perlu ditambah format + question_text + correct_answer.
+    # Perlu ditambah format + question_text + correct_answer agar lolos validator.
     enriched_reviews = []
     if review_words:
-        remaining_formats = _calculate_remaining_formats(
-            planner_output.get("format_distribution", {}),
-            new_count,
-        )
         try:
             enriched_reviews = _call_enrich_llm(
                 review_words=review_words,
                 planner_output=planner_output,
-                remaining_format_distribution=remaining_formats,
+                remaining_format_distribution=review_formats,
             )
             logger.info(
                 f"[vocab_generator] Enriched {len(enriched_reviews)} review words"
             )
         except Exception as e:
-            # Enrich gagal — tetap lanjut dengan review words kosong
+            # Enrich gagal — tetap lanjut dengan new words saja
             # Lebih baik sesi jalan dengan kata lebih sedikit daripada crash
             logger.warning(
                 f"[vocab_generator] Enrich failed — skipping review words: {e}"
@@ -325,11 +360,14 @@ def run_generator(planner_output: dict) -> dict:
             log_error(
                 error_type="enrich_failed",
                 agent_name="vocab_generator",
-                context={"review_words": [w["word"] for w in review_words], "error": str(e)},
+                context={
+                    "review_words": [w["word"] for w in review_words],
+                    "error": str(e),
+                },
                 fallback_used=True,
             )
 
-    # ── Step 4: Gabung new words + enriched review words ─────────────────
+    # ── Step 5: Gabung new words + enriched review words ─────────────────
     all_words = result["words"] + enriched_reviews
 
     logger.info(
