@@ -309,45 +309,61 @@ def _start_session(confirmed_topics: list[str], planner_output: dict):
 
 
 # ===================================================
-# Flow: handle jawaban
+# Flow: kumpulkan jawaban (tanpa koreksi langsung)
 # ===================================================
-def _handle_answer(user_answer: str):
-    """Koreksi jawaban, simpan ke DB."""
-    index = _get("current_index", 0)
+def _collect_answers() -> list[str]:
+    """Ambil semua jawaban user dari session state."""
+    questions = _get("questions", [])
+    return [
+        st.session_state.get(f"quiz_ans_val_{i}", "")
+        for i in range(len(questions))
+    ]
+
+
+# ===================================================
+# Flow: batch grading + selesaikan sesi
+# ===================================================
+def _run_toefl_grading():
+    """
+    Panggil Corrector untuk semua soal setelah Submit All.
+    Jawaban diambil dari session state key quiz_ans_val_{i}.
+    """
     questions = _get("questions", [])
     question_ids = _get("question_ids", [])
     session_id = _get("session_id")
-    results = _get("results", [])
 
-    q = questions[index]
-    q_id = question_ids[index]
+    results = []
 
-    with st.spinner("Menilai jawaban..."):
-        correction = run_corrector(
-            topic=q["topic"],
-            format=q["format"],
-            question_text=q["question_text"],
-            options=q.get("options", []),
-            correct_answer=q["correct_answer"],
-            user_answer=user_answer,
-            session_id=session_id,
-        )
+    with st.spinner(f"🔍 Menilai {len(questions)} jawaban..."):
+        for i, q in enumerate(questions):
+            user_answer = st.session_state.get(f"quiz_ans_val_{i}", "")
+            # Normalisasi radio: "A. She goes..." → "A"
+            if user_answer and "." in user_answer:
+                user_answer = user_answer.split(".")[0].strip()
+            q_id = question_ids[i]
 
-    # Simpan ke DB
-    feedback = correction.get("feedback", {})
+            correction = run_corrector(
+                topic=q["topic"],
+                format=q["format"],
+                question_text=q["question_text"],
+                options=q.get("options", []),
+                correct_answer=q["correct_answer"],
+                user_answer=user_answer,
+                session_id=session_id,
+            )
 
-    update_quiz_answer(
-        question_id=q_id,
-        user_answer=user_answer,
-        is_correct=correction.get("is_correct", False),
-        is_graded=correction.get("is_graded", True),
-        feedback_example=str(feedback.get("example", [])),
-    )
+            feedback = correction.get("feedback", {})
+            update_quiz_answer(
+                question_id=q_id,
+                user_answer=user_answer,
+                is_correct=correction.get("is_correct", False),
+                is_graded=correction.get("is_graded", True),
+                feedback_example=str(feedback.get("example", [])),
+            )
 
-    results.append({**correction, "user_answer": user_answer})
-    _set("results", results)
-    _set("last_correction", correction)
-    _set("last_question", q)
+            results.append({**correction, "user_answer": user_answer})
+
+    _complete_session(results)
 
 
 # ===================================================
@@ -809,40 +825,79 @@ def _run_toefl_quiz_flow():
         total = len(questions)
 
         # Progress bar
-        st.progress(current_index / total, text=f"Soal {current_index + 1} dari {total}")
+        st.progress(
+            (current_index + 1) / total,
+            text=f"Soal {current_index + 1} dari {total}",
+        )
         st.markdown("---")
 
-        # Feedback soal sebelumnya
-        last_correction = _get("last_correction")
-        last_question = _get("last_question")
-        if last_correction and last_question and current_index > 0:
-            _render_feedback(last_correction, last_question)
-            st.markdown("---")
-
         # Soal saat ini
-        if current_index < total:
-            q = questions[current_index]
-            user_answer = _render_question(q, current_index, total)
+        q = questions[current_index]
+        fmt = q.get("format", "multiple_choice")
+        options = q.get("options", [])
 
-            col1, col2 = st.columns([1, 4])
-            with col1:
-                submit = st.button(
-                    "Submit ✓",
-                    type="primary",
-                    use_container_width=True,
-                    key=f"quiz_submit_{current_index}",
-                    disabled=not user_answer,
-                )
+        st.markdown(f"**Soal {current_index + 1} dari {total}**")
+        st.caption(
+            f"Topik: **{q.get('topic')}** | "
+            f"Format: *{fmt.replace('_', ' ').title()}* | "
+            f"Level: *{q.get('difficulty', '').title()}*"
+        )
+        st.markdown(f"### {q.get('question_text', '')}")
 
-            if submit and user_answer:
-                _handle_answer(user_answer)
+        # Input widget — nilai tersimpan otomatis di session state
+        if fmt in ("multiple_choice", "fill_blank", "error_id") and options:
+            st.radio(
+                "Pilih jawaban:",
+                options=options,
+                key=f"quiz_ans_val_{current_index}",
+                index=None,
+            )
+        else:
+            st.text_input(
+                "Jawaban:",
+                key=f"quiz_ans_val_{current_index}",
+            )
+
+        st.markdown("")
+
+        # Cek semua soal sudah dijawab
+        all_answered = all(
+            st.session_state.get(f"quiz_ans_val_{i}", "")
+            for i in range(total)
+        )
+
+        # Navigasi + Submit All
+        col_prev, col_next, col_submit = st.columns([1, 1, 2])
+
+        with col_prev:
+            if st.button(
+                "← Sebelumnya",
+                disabled=(current_index == 0),
+                use_container_width=True,
+                key="quiz_prev_btn",
+            ):
+                _set("current_index", current_index - 1)
+                st.rerun()
+
+        with col_next:
+            if st.button(
+                "Berikutnya →",
+                disabled=(current_index == total - 1),
+                use_container_width=True,
+                key="quiz_next_btn",
+            ):
                 _set("current_index", current_index + 1)
+                st.rerun()
 
-                if current_index + 1 >= total:
-                    # Tampilkan feedback soal terakhir sebelum complete
-                    _complete_session()
-                else:
-                    st.rerun()
+        with col_submit:
+            if st.button(
+                "✅ Submit All",
+                type="primary",
+                disabled=not all_answered,
+                use_container_width=True,
+                key="quiz_submit_all_btn",
+            ):
+                _run_toefl_grading()
 
         st.markdown("---")
         if st.button("❌ Keluar", type="secondary", key="quiz_exit_btn"):
