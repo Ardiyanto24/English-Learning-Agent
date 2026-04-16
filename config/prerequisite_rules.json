@@ -49,6 +49,10 @@
     "requires": ["Subject-Verb Agreement"],
     "cluster": "Subject-Verb Agreement"
   },
+  "Subject-Verb in Special Structures": {
+    "requires": ["Subject-Verb Agreement", "Intervening Phrases", "Compound Subjects"],
+    "cluster": "Subject-Verb Agreement"
+  },
 
   "Noun Clause That": {
     "requires": ["Present Tenses", "Past Tenses"],
