@@ -50,11 +50,11 @@ def _fetch_quiz_data() -> tuple[list, list, list]:
     try:
         with get_db() as conn:
             sessions = conn.execute(
-                """SELECT qs.*, s.created_at, s.completed_at
+                """SELECT qs.*, s.started_at, s.completed_at
                    FROM quiz_sessions qs
                    JOIN sessions s ON qs.session_id = s.session_id
                    WHERE s.status = 'completed'
-                   ORDER BY s.created_at ASC"""
+                   ORDER BY s.started_at ASC"""
             ).fetchall()
 
             topic_tracking = conn.execute(
@@ -67,7 +67,7 @@ def _fetch_quiz_data() -> tuple[list, list, list]:
                    FROM quiz_questions qq
                    JOIN sessions s ON qq.session_id = s.session_id
                    WHERE qq.is_graded = 1
-                   ORDER BY s.created_at DESC LIMIT 500"""
+                   ORDER BY s.started_at DESC LIMIT 500"""
             ).fetchall()
 
         return (
