@@ -191,9 +191,12 @@ def build_enrich_prompt(
         ensure_ascii=False,
     )
 
-    format_lines = "\n".join(
-        f"  - {fmt}: {count} soal" for fmt, count in format_distribution.items() if count > 0
-    ) or "  - tebak_arti: assign all"
+    format_lines = (
+        "\n".join(
+            f"  - {fmt}: {count} soal" for fmt, count in format_distribution.items() if count > 0
+        )
+        or "  - tebak_arti: assign all"
+    )
 
     return f"""Create quiz questions for the following REVIEW words (words the student has seen before).
 
