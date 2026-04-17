@@ -5,6 +5,48 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.1.1] — 2026-04-17
+
+Patch release — perbaikan bug TOEFL Quiz batch evaluation dan analytics.
+
+### Fixed — TOEFL Quiz Batch Evaluation
+
+- **`pages/quiz.py`** — Ubah flow TOEFL Style dari evaluasi per soal menjadi
+  batch evaluation: user menjawab semua soal terlebih dahulu dengan navigasi
+  bebas Previous/Next, Corrector dipanggil sekaligus setelah Submit All.
+  Menghilangkan latency LLM yang muncul setiap kali user submit jawaban.
+- **`pages/quiz.py`** — Tambah fungsi `_run_toefl_grading()` sebagai batch
+  Corrector runner, menggantikan `_handle_answer()` yang per-soal.
+- **`pages/quiz.py`** — Tambah fungsi `_get_quiz_answer(i)` untuk menggabungkan
+  dua sumber jawaban: widget state aktif dan saved state persisten, agar jawaban
+  tidak hilang saat navigasi antar soal.
+- **`pages/quiz.py`** — Simpan jawaban ke `quiz_saved_{i}` sebelum `st.rerun()`
+  di tombol Previous/Next, dan restore ke session state sebelum widget di-render,
+  mengikuti pola yang sama dengan Grammar Tutor.
+- **`pages/quiz.py`** — Fix `_complete_session()` signature dari `def _complete_session()`
+  menjadi `def _complete_session(results: list)` agar sesuai dengan pemanggilan
+  dari `_run_toefl_grading()`. Tambah `_set("results", results)` dan `st.rerun()`
+  di akhir fungsi.
+- **`pages/quiz.py`** — Guard `None` dari radio widget (`index=None`) di
+  `_get_quiz_answer()`: ganti `.get(key, "")` dengan `.get(key) or ""` agar
+  tidak crash saat radio belum dipilih.
+
+### Fixed — Quiz Analytics
+
+- **`agents/quiz/analytics.py`** — Ganti kolom `s.created_at` dengan `s.started_at`
+  di tiga titik query SQL `_fetch_quiz_data()`: SELECT clause, ORDER BY query
+  sessions, dan ORDER BY query questions. Kolom `created_at` tidak ada di tabel
+  `sessions` — nama yang benar sesuai schema adalah `started_at`.
+
+### Technical Notes
+
+- TOEFL Quiz batch evaluation mengikuti pola yang sama persis dengan Grammar Tutor
+  (`_run_tutor_grading()` + `saved_ans` pattern) untuk konsistensi UX
+- `sentence-transformers==5.4.1` ditambahkan ke `requirements.txt` sebagai explicit
+  pin — sebelumnya masuk sebagai transitive dependency dari ChromaDB tanpa versi terkunci
+
+---
+
 ## [1.1.0] — 2026-04-10
 
 Feature release — penambahan mode **Grammar Tutor** di dalam Quiz Agent.
