@@ -55,6 +55,7 @@ def _get_client() -> anthropic.Anthropic:
 # Parse helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def _parse_generator_response(raw: str) -> dict:
     """
     Parse JSON response dari LLM Generator.
@@ -129,6 +130,7 @@ def _parse_enrich_response(raw: str) -> list:
 # Format distribution helper
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def _split_format_distribution(
     planner_format_dist: dict,
     new_words_count: int,
@@ -185,6 +187,7 @@ def _split_format_distribution(
 # ──────────────────────────────────────────────────────────────────────────────
 # LLM call helpers
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @retry_llm
 def _call_generator_llm(
@@ -253,6 +256,7 @@ def _call_enrich_llm(
 # Main entry point
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def run_generator(planner_output: dict) -> dict:
     """
     Jalankan Vocab Generator Agent.
@@ -279,7 +283,7 @@ def run_generator(planner_output: dict) -> dict:
         f"(new={new_count}, review={review_count})"
     )
 
-# ── Step 1: Ambil review words dari DB via spaced repetition ──────────
+    # ── Step 1: Ambil review words dari DB via spaced repetition ──────────
     # Python yang memilih kata — bukan LLM
     # Prioritas: kata yang paling lama tidak dilihat (last_seen_at ASC)
     review_words = []
@@ -324,8 +328,7 @@ def run_generator(planner_output: dict) -> dict:
         new_count,
     )
     logger.info(
-        f"[vocab_generator] Format split — "
-        f"new: {new_formats}, review: {review_formats}"
+        f"[vocab_generator] Format split — " f"new: {new_formats}, review: {review_formats}"
     )
 
     # ── Step 3: LLM generate NEW words saja ──────────────────────────────
@@ -360,15 +363,11 @@ def run_generator(planner_output: dict) -> dict:
                 planner_output=planner_output,
                 remaining_format_distribution=review_formats,
             )
-            logger.info(
-                f"[vocab_generator] Enriched {len(enriched_reviews)} review words"
-            )
+            logger.info(f"[vocab_generator] Enriched {len(enriched_reviews)} review words")
         except Exception as e:
             # Enrich gagal — tetap lanjut dengan new words saja
             # Lebih baik sesi jalan dengan kata lebih sedikit daripada crash
-            logger.warning(
-                f"[vocab_generator] Enrich failed — skipping review words: {e}"
-            )
+            logger.warning(f"[vocab_generator] Enrich failed — skipping review words: {e}")
             log_error(
                 error_type="enrich_failed",
                 agent_name="vocab_generator",

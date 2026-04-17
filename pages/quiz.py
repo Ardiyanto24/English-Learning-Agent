@@ -104,10 +104,7 @@ def _get_tutor_answer(i: int) -> str:
       - tutor_ans_{i}       : nilai langsung dari widget (soal aktif saat ini)
       - tutor_saved_ans_{i} : nilai yang disimpan eksplisit sebelum navigasi
     """
-    return (
-        st.session_state.get(f"tutor_ans_{i}", "")
-        or _tget(f"saved_ans_{i}", "")
-    ).strip()
+    return (st.session_state.get(f"tutor_ans_{i}", "") or _tget(f"saved_ans_{i}", "")).strip()
 
 
 # ===================================================
@@ -325,10 +322,7 @@ def _start_session(confirmed_topics: list[str], planner_output: dict):
 def _collect_answers() -> list[str]:
     """Ambil semua jawaban user dari session state."""
     questions = _get("questions", [])
-    return [
-        st.session_state.get(f"quiz_ans_val_{i}", "")
-        for i in range(len(questions))
-    ]
+    return [st.session_state.get(f"quiz_ans_val_{i}", "") for i in range(len(questions))]
 
 
 # ===================================================
@@ -715,8 +709,9 @@ def _run_tutor_answering():
             key="tutor_prev_btn",
         ):
             # Simpan jawaban soal saat ini sebelum navigasi
-            _tset(f"saved_ans_{current_index}",
-                  st.session_state.get(f"tutor_ans_{current_index}", ""))
+            _tset(
+                f"saved_ans_{current_index}", st.session_state.get(f"tutor_ans_{current_index}", "")
+            )
             _tset("current_index", current_index - 1)
             st.rerun()
 
@@ -728,8 +723,9 @@ def _run_tutor_answering():
             key="tutor_next_btn",
         ):
             # Simpan jawaban soal saat ini sebelum navigasi
-            _tset(f"saved_ans_{current_index}",
-                  st.session_state.get(f"tutor_ans_{current_index}", ""))
+            _tset(
+                f"saved_ans_{current_index}", st.session_state.get(f"tutor_ans_{current_index}", "")
+            )
             _tset("current_index", current_index + 1)
             st.rerun()
 
