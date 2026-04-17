@@ -70,11 +70,11 @@ def _get_quiz_answer(i: int) -> str:
     """
     Ambil jawaban untuk soal ke-i dari widget state atau saved state.
     Menggabungkan dua sumber agar jawaban tidak hilang saat navigasi.
+    Radio dengan index=None menyimpan None — di-guard dengan or "".
     """
-    return (
-        st.session_state.get(f"quiz_ans_val_{i}", "")
-        or _get(f"saved_ans_{i}", "")
-    ).strip()
+    widget_val = st.session_state.get(f"quiz_ans_val_{i}") or ""
+    saved_val = _get(f"saved_ans_{i}") or ""
+    return (widget_val or saved_val).strip()
 
 
 # ===================================================
