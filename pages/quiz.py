@@ -380,10 +380,9 @@ def _run_toefl_grading():
 # ===================================================
 # Flow: selesaikan sesi
 # ===================================================
-def _complete_session():
+def _complete_session(results: list):
     session_id = _get("session_id")
     questions = _get("questions", [])
-    results = _get("results", [])
     planner = _get("planner_output", {})
     is_adjusted = _get("is_adjusted", False)
 
@@ -429,8 +428,10 @@ def _complete_session():
     )
 
     analytics = run_analytics()
+    _set("results", results)
     _set("analytics", analytics)
     _set("page_state", "completed")
+    st.rerun()
 
 
 # ===================================================
